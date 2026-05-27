@@ -5,7 +5,7 @@ description = "Typed wrappers over the W3C semantic stack (rdflib + owlready2 + 
 requires-python = ">=3.11"
 dependencies = [
     "rdflib>=7.0",
-    "owlready2>=0.46",
+    "owlready2>=0.50",
     "pyshacl>=0.25",
     "networkx>=3.2",
 ]
