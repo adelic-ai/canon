@@ -1,0 +1,90 @@
+{
+  "fetched_at": "2026-05-27",
+  "source": "https://d3fend.mitre.org/api/offensive-technique/attack/T1558.003.json",
+  "defensive_techniques": [
+    {
+      "iri": "http://d3fend.mitre.org/ontologies/d3fend.owl#ApplicationProtocolCommandAnalysis",
+      "label": "Application Protocol Command Analysis"
+    },
+    {
+      "iri": "http://d3fend.mitre.org/ontologies/d3fend.owl#AuthenticationCacheInvalidation",
+      "label": "Authentication Cache Invalidation"
+    },
+    {
+      "iri": "http://d3fend.mitre.org/ontologies/d3fend.owl#Client-serverPayloadProfiling",
+      "label": "Client-server Payload Profiling"
+    },
+    {
+      "iri": "http://d3fend.mitre.org/ontologies/d3fend.owl#CredentialCompromiseScopeAnalysis",
+      "label": "Credential Compromise Scope Analysis"
+    },
+    {
+      "iri": "http://d3fend.mitre.org/ontologies/d3fend.owl#CredentialHardening",
+      "label": "Credential Hardening"
+    },
+    {
+      "iri": "http://d3fend.mitre.org/ontologies/d3fend.owl#CredentialRevocation",
+      "label": "Credential Revocation"
+    },
+    {
+      "iri": "http://d3fend.mitre.org/ontologies/d3fend.owl#CredentialRotation",
+      "label": "Credential Rotation"
+    },
+    {
+      "iri": "http://d3fend.mitre.org/ontologies/d3fend.owl#CredentialTransmissionScoping",
+      "label": "Credential Transmission Scoping"
+    },
+    {
+      "iri": "http://d3fend.mitre.org/ontologies/d3fend.owl#DecoyUserCredential",
+      "label": "Decoy User Credential"
+    },
+    {
+      "iri": "http://d3fend.mitre.org/ontologies/d3fend.owl#Multi-factorAuthentication",
+      "label": "Multi-factor Authentication"
+    },
+    {
+      "iri": "http://d3fend.mitre.org/ontologies/d3fend.owl#NetworkTrafficCommunityDeviation",
+      "label": "Network Traffic Community Deviation"
+    },
+    {
+      "iri": "http://d3fend.mitre.org/ontologies/d3fend.owl#NetworkTrafficFiltering",
+      "label": "Network Traffic Filtering"
+    },
+    {
+      "iri": "http://d3fend.mitre.org/ontologies/d3fend.owl#NetworkTrafficSignatureAnalysis",
+      "label": "Network Traffic Signature Analysis"
+    },
+    {
+      "iri": "http://d3fend.mitre.org/ontologies/d3fend.owl#PerHostDownload-UploadRatioAnalysis",
+      "label": "Per Host Download-Upload Ratio Analysis"
+    },
+    {
+      "iri": "http://d3fend.mitre.org/ontologies/d3fend.owl#ProtocolMetadataAnomalyDetection",
+      "label": "Protocol Metadata Anomaly Detection"
+    },
+    {
+      "iri": "http://d3fend.mitre.org/ontologies/d3fend.owl#RPCTrafficAnalysis",
+      "label": "RPC Traffic Analysis"
+    },
+    {
+      "iri": "http://d3fend.mitre.org/ontologies/d3fend.owl#ReissueCredential",
+      "label": "Reissue Credential"
+    },
+    {
+      "iri": "http://d3fend.mitre.org/ontologies/d3fend.owl#RemoteTerminalSessionDetection",
+      "label": "Remote Terminal Session Detection"
+    },
+    {
+      "iri": "http://d3fend.mitre.org/ontologies/d3fend.owl#Token-basedAuthentication",
+      "label": "Token-based Authentication"
+    },
+    {
+      "iri": "http://d3fend.mitre.org/ontologies/d3fend.owl#TokenBinding",
+      "label": "Token Binding"
+    },
+    {
+      "iri": "http://d3fend.mitre.org/ontologies/d3fend.owl#UserGeolocationLogonPatternAnalysis",
+      "label": "User Geolocation Logon Pattern Analysis"
+    }
+  ]
+}
