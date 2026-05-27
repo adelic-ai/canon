@@ -15,7 +15,7 @@ from dataclasses import dataclass
 
 from semantic_core.graph import Graph
 
-from . import attack, d3fend
+from . import attack, d3fend, ukc
 from .attack import AttackBundle, Technique
 
 
@@ -92,6 +92,58 @@ def coverage_by_tactic(
     for t in techs:
         report = defensive_coverage(d3fend_graph, attack_bundle, t.attack_id)
         if report is not None:
+            reports.append(report)
+    reports.sort(key=lambda r: r.technique.attack_id)
+    return reports
+
+
+def coverage_by_ukc_phase(
+    d3fend_graph: Graph,
+    attack_bundle: AttackBundle,
+    ukc_phase: str,
+) -> list[CoverageReport]:
+    """Return CoverageReports for techniques in a Unified Kill Chain phase.
+
+    Maps the UKC phase to its ATT&CK tactic set (see
+    ``semantic_cyber.ukc.UKC_PHASE_TO_ATTACK_TACTICS``) and unions
+    ``coverage_by_tactic`` across them. Returns ``[]`` if ``ukc_phase``
+    isn't a known UKC phase key, or if it's a UKC-novel phase
+    (``social-engineering``, ``exploitation``, ``pivoting``,
+    ``objectives``) with no ATT&CK tactic analogue.
+    """
+    tactics = ukc.UKC_PHASE_TO_ATTACK_TACTICS.get(ukc_phase, frozenset())
+    return _fan_coverage_over_tactics(d3fend_graph, attack_bundle, tactics)
+
+
+def coverage_by_ukc_stage(
+    d3fend_graph: Graph,
+    attack_bundle: AttackBundle,
+    stage: str,
+) -> list[CoverageReport]:
+    """Return CoverageReports for techniques in a UKC stage (``in``/``through``/``out``).
+
+    Unions the ATT&CK tactics of every UKC phase belonging to the stage,
+    then folds ``coverage_by_tactic`` across them. UKC-novel phases
+    contribute nothing (their tactic sets are empty).
+    """
+    tactics: set[str] = set()
+    for phase in ukc.phases_for_stage(stage):
+        tactics.update(ukc.UKC_PHASE_TO_ATTACK_TACTICS[phase])
+    return _fan_coverage_over_tactics(d3fend_graph, attack_bundle, tactics)
+
+
+def _fan_coverage_over_tactics(
+    d3fend_graph: Graph,
+    attack_bundle: AttackBundle,
+    tactics,
+) -> list[CoverageReport]:
+    seen: set[str] = set()
+    reports: list[CoverageReport] = []
+    for tactic in tactics:
+        for report in coverage_by_tactic(d3fend_graph, attack_bundle, tactic):
+            if report.technique.attack_id in seen:
+                continue
+            seen.add(report.technique.attack_id)
             reports.append(report)
     reports.sort(key=lambda r: r.technique.attack_id)
     return reports
