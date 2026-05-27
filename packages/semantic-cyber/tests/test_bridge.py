@@ -12,6 +12,7 @@ from semantic_cyber import attack, d3fend
 from semantic_cyber.bridge import (
     CoverageReport,
     DefenseSummary,
+    coverage_by_tactic,
     defensive_coverage,
 )
 
@@ -198,3 +199,73 @@ def test_real_t1003_bridge_preserves_parity():
     assert report.technique.name == "OS Credential Dumping"
     assert report.technique.is_subtechnique is False
     assert len(report.defenses) == 48
+
+
+# --- coverage_by_tactic ---
+
+
+def test_coverage_by_tactic_returns_one_per_technique(d3fend_graph, attack_bundle):
+    reports = coverage_by_tactic(d3fend_graph, attack_bundle, "credential-access")
+    assert len(reports) == 1
+    assert reports[0].technique.attack_id == "T1558.003"
+    assert len(reports[0].defenses) == 1
+
+
+def test_coverage_by_tactic_empty_for_unknown(d3fend_graph, attack_bundle):
+    assert coverage_by_tactic(d3fend_graph, attack_bundle, "no-such-tactic") == []
+
+
+def test_coverage_by_tactic_sorted_by_attack_id(d3fend_graph, tmp_path):
+    """Multi-technique bundle: results sorted lexicographically by attack_id."""
+    bundle_data = {
+        "type": "bundle",
+        "id": "b",
+        "objects": [
+            {
+                "type": "attack-pattern",
+                "id": "attack-pattern--t1558-003",
+                "name": "Kerberoasting",
+                "external_references": [
+                    {"source_name": "mitre-attack", "external_id": "T1558.003"}
+                ],
+                "kill_chain_phases": [
+                    {"kill_chain_name": "mitre-attack", "phase_name": "credential-access"}
+                ],
+            },
+            {
+                "type": "attack-pattern",
+                "id": "attack-pattern--t1110",
+                "name": "Brute Force",
+                "external_references": [
+                    {"source_name": "mitre-attack", "external_id": "T1110"}
+                ],
+                "kill_chain_phases": [
+                    {"kill_chain_name": "mitre-attack", "phase_name": "credential-access"}
+                ],
+            },
+        ],
+    }
+    p = tmp_path / "b.json"
+    p.write_text(json.dumps(bundle_data))
+    bundle = attack.load(p)
+    reports = coverage_by_tactic(d3fend_graph, bundle, "credential-access")
+    ids = [r.technique.attack_id for r in reports]
+    assert ids == ["T1110", "T1558.003"]
+
+
+@pytest.mark.skipif(
+    not (REAL_D3FEND.exists() and REAL_ATTACK.exists()),
+    reason="real data not fetched",
+)
+def test_real_coverage_by_credential_access():
+    """Sanity floor on a real tactic — credential-access has dozens of
+    techniques, and well-known ones (T1558.003, T1110) appear with
+    expected defense counts.
+    """
+    g = d3fend.load(REAL_D3FEND)
+    bundle = attack.load(REAL_ATTACK)
+    reports = coverage_by_tactic(g, bundle, "credential-access")
+    assert len(reports) >= 30
+    by_id = {r.technique.attack_id: r for r in reports}
+    assert len(by_id["T1558.003"].defenses) == 21
+    assert len(by_id["T1110"].defenses) == 27

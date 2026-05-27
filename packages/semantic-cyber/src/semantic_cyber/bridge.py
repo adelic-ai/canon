@@ -74,3 +74,24 @@ def defensive_coverage(
     )
 
     return CoverageReport(technique=technique, defenses=defenses)
+
+
+def coverage_by_tactic(
+    d3fend_graph: Graph,
+    attack_bundle: AttackBundle,
+    tactic_shortname: str,
+) -> list[CoverageReport]:
+    """Return CoverageReports for every technique tagged with the tactic.
+
+    Both parent techniques and sub-techniques appear if their
+    ``kill_chain_phases`` includes the tactic. Empty list if the tactic
+    has no members. Results are sorted by ATT&CK ID for stable output.
+    """
+    techs = attack.techniques_for_tactic(attack_bundle, tactic_shortname)
+    reports = []
+    for t in techs:
+        report = defensive_coverage(d3fend_graph, attack_bundle, t.attack_id)
+        if report is not None:
+            reports.append(report)
+    reports.sort(key=lambda r: r.technique.attack_id)
+    return reports
