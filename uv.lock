@@ -9,6 +9,7 @@ resolution-markers = [
 [manifest]
 members = [
     "semantic-core",
+    "semantic-cyber",
 ]
 
 [[package]]
@@ -197,6 +198,28 @@ requires-dist = [
     { name = "pyshacl", specifier = ">=0.25" },
     { name = "pytest", marker = "extra == 'dev'" },
     { name = "rdflib", specifier = ">=7.0" },
+]
+provides-extras = ["dev"]
+
+[[package]]
+name = "semantic-cyber"
+version = "0.0.1"
+source = { editable = "packages/semantic-cyber" }
+dependencies = [
+    { name = "rdflib" },
+    { name = "semantic-core" },
+]
+
+[package.optional-dependencies]
+dev = [
+    { name = "pytest" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "pytest", marker = "extra == 'dev'" },
+    { name = "rdflib", specifier = ">=7.0" },
+    { name = "semantic-core", editable = "packages/semantic-core" },
 ]
 provides-extras = ["dev"]
 

@@ -14,4 +14,5 @@ build/
 # Reproducible upstream data — re-fetch from d3fend.mitre.org
 design/probes/d3fend/d3fend.ttl
 design/probes/d3fend/d3fend.owl
+packages/semantic-cyber/data/
 
