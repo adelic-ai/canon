@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Three-layer architecture (unhedged)</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+         max-width: 920px; margin: 2em auto; padding: 0 1.5em; line-height: 1.55;
+         color: #222; background: #fafafa; }
+  h1 { border-bottom: 2px solid #444; padding-bottom: 0.2em; }
+  h2 { border-bottom: 1px solid #bbb; padding-bottom: 0.15em; margin-top: 2em; }
+  h3 { margin-top: 1.4em; }
+  code { background: #eee; padding: 0.1em 0.35em; border-radius: 3px;
+         font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 0.93em; }
+  pre { background: #1e1e1e; color: #d4d4d4; padding: 1em; border-radius: 4px;
+        overflow-x: auto; line-height: 1.4; font-size: 0.88em; }
+  pre code { background: transparent; padding: 0; color: inherit; }
+  table { border-collapse: collapse; margin: 1em 0; width: 100%; }
+  th, td { border: 1px solid #ccc; padding: 0.5em 0.8em; text-align: left; }
+  th { background: #efefef; }
+  blockquote { border-left: 3px solid #888; padding-left: 1em; color: #555; margin: 1em 0; }
+  ul { padding-left: 1.4em; }
+  li { margin: 0.25em 0; }
+  strong { color: #111; }
+  .thesis { background: #fffbe6; border-left: 4px solid #d4a017; padding: 0.8em 1em;
+            margin: 1em 0; }
+</style>
+</head>
+<body>
+
+<h1>Three-layer architecture (unhedged — adopt off-the-shelf, build only what's novel)</h1>
+
+<div class="thesis">
+<strong>Thesis.</strong> Don't rebuild what the W3C semantic stack already provides. Adopt D3FEND as the cyber knowledge graph. Dissolve TASC into a small adapter package. Build only what's genuinely novel: typed math (mathabc-core), feature-engineering substrate with lineage (forge-core), and the few small glue layers between them.
+</div>
+
+<h2>What's off-the-shelf</h2>
+
+<ul>
+  <li><strong>D3FEND</strong> — MITRE's defensive OWL ontology, published Jun 2021. Already has typed relationships (<code>d3f:provides-attack-detection</code>, <code>d3f:enables</code>, <code>d3f:produces-artifact-of-type</code>, <code>d3f:related-attack-technique</code>), defensive artifacts and capabilities as typed instances, built-in ATT&amp;CK technique linkages, SPARQL-queryable, updated by MITRE. The 80% solution to "cyber concept lattice." You SPARQL-query it, you don't re-derive it.</li>
+  <li><strong>ATT&amp;CK STIX 2.1</strong> — offensive-side concept graph, already structured.</li>
+  <li><strong>OCSF JSON Schema</strong> — typed telemetry vocabulary (per the existing <code>ocsf-data-shape-standard</code> pin).</li>
+  <li><strong>Sigma manifests, CAR analytics</strong> — loadable as graph nodes via custom adapters.</li>
+  <li><strong>rdflib</strong> — RDF/SPARQL substrate.</li>
+  <li><strong>owlready2</strong> — OWL DL reasoning via HermiT/Pellet. Real entailment, not just BT/NT walking.</li>
+  <li><strong>pySHACL</strong> — SHACL validation. The self-falsifying piece at the graph layer.</li>
+  <li><strong>NetworkX</strong> — graph algorithms.</li>
+</ul>
+
+<p>What these together provide: a complete, maintained, more-capable replacement for everything TASC's custom SKOS inference engine recapitulates.</p>
+
+<h2>What's genuinely novel and worth building</h2>
+
+<p>Short list:</p>
+
+<ol>
+  <li><strong>FCA implication-basis extraction</strong> from the unified graph, output as a <code>mathabc.order.Lattice</code> instance — ~500 LOC on NetworkX.</li>
+  <li><strong>Cross-framework SKOS bridges</strong> that aren't published anywhere (Sigma↔D3FEND, CAR↔D3FEND, OCSF↔ATT&amp;CK at fine granularity). Real curation work; not infrastructure.</li>
+  <li><strong><code>Feature.semantic: ConceptId</code></strong> linking layer in forge-core — ties feature engineering outputs to concept-lattice positions — ~500 LOC.</li>
+  <li><strong>mathabc-core</strong> — typed abstract algebra in Python. Genuinely no off-the-shelf equivalent at this granularity (DisCoPy is closest, SageMath has it but is heavy). ~3-4k LOC trimmed from current mathabc.</li>
+  <li><strong>forge-core</strong> — feature engineering with Surface/lattice/lineage substrate. No off-the-shelf equivalent for the composition-with-provenance pattern. ~10-11k LOC post-restructure.</li>
+</ol>
+
+<p>Total novel construction across the stack: ~17-18k LOC. Most of which (~13-14k) is mathabc-core trim + forge-core restructure — code you mostly have. Real new code: ~3-4k LOC.</p>
+
+<h2>The minimal viable stack</h2>
+
+<pre><code>mathabc-core           # 3-4k LOC, trim of current mathabc
+semantic-core          # wraps rdflib + owlready2 + pySHACL + FCA: ~1.5k LOC
+forge-core             # 10-11k LOC, post-restructure
+semantic-cyber         # ~800 LOC: D3FEND loader + ATT&CK STIX loader
+                       # + OCSF/Sigma/CAR bridges + SHACL shapes
+forge-cyber            # ~1.5k LOC: DomainSchema reads OCSF, optional
+                       # ConceptId attachment from semantic-cyber
+</code></pre>
+
+<p><code>semantic-core</code> shrinks from earlier 2-3k estimate to ~1.5k because once you delegate heavy lifting to <code>owlready2</code>/<code>pySHACL</code>/<code>rdflib</code>, you're writing Protocols + the FCA layer + glue. That's small.</p>
+
+<p><code>semantic-cyber</code> shrinks from earlier 2k to ~800 LOC because loading published OWL ontologies (D3FEND.ttl is downloadable) is an <code>rdflib.Graph().parse()</code> call + bridge definitions for the things D3FEND doesn't cover.</p>
+
+<h2>Architecture</h2>
+
+<pre><code>                        ┌─────────────────┐
+                        │  mathabc-core   │  (foundation + algebra + order
+                        │  ~3-4k LOC      │   + logic + categories)
+                        └────────▲────────┘
+                                 │
+                ┌────────────────┴────────────────┐
+                │                                 │
+       ┌────────┴────────┐               ┌────────┴────────┐
+       │  semantic-core  │               │   forge-core    │
+       │  ~1.5k LOC      │               │  ~10-11k LOC    │
+       │  (wraps W3C     │               │  (Surface,      │
+       │   stack +       │               │   lattice,      │
+       │   FCA +         │               │   lineage,      │
+       │   Protocols)    │               │   primitives)   │
+       └────────▲────────┘               └────────▲────────┘
+                │                                 │
+   ┌────────────┼────────────┐         ┌──────────┼──────────┐
+   │            │            │         │          │          │
+semantic-   semantic-   semantic-   forge-      forge-     forge-
+  cyber      math*        geo       cyber        eeg      wellbore
+  (~800)   (provided     (later)    (~1.5k)     (later)    (later)
+            by mathabc)
+</code></pre>
+
+<p><code>*semantic-math</code> is <em>provided by</em> mathabc — mathabc plays double role as both the typed-math foundation AND its own domain ontology.</p>
+
+<h2>TASC dissolves into semantic-cyber</h2>
+
+<p>The "TASC" project name doesn't survive. Its decomposition:</p>
+
+<ul>
+  <li><strong>The 4900+ catalog nodes</strong> → data files loaded into the rdflib graph at startup.</li>
+  <li><strong>The 9 framework adapters</strong> → bridge definitions (FrameworkAdapter Protocol implementations) between D3FEND/ATT&amp;CK and the other frameworks (Sigma, CAR, OCSF, etc.).</li>
+  <li><strong>The SKOS inference engine</strong> → thrown out, replaced by <code>owlready2</code>+<code>pySHACL</code>. The off-the-shelf stack is more capable.</li>
+  <li><strong>The catalog-curation decisions</strong> → preserved as data and bridge definitions. Real value.</li>
+  <li><strong>L0 axes that doubled as runtime-matcher state</strong> → deleted (cyber data-shape lives in OCSF per the existing pin).</li>
+</ul>
+
+<p>What was TASC as a project becomes <code>semantic-cyber/</code> — one domain adapter in a larger architecture. ~800 LOC of code + the migrated catalog data.</p>
+
+<h2>Cost estimate (unhedged build)</h2>
+
+<table>
+<thead>
+<tr><th>Layer</th><th>LOC</th><th>Time (focused)</th></tr>
+</thead>
+<tbody>
+<tr><td>mathabc-core trim</td><td>~3-4k (mostly from existing)</td><td>1-2 weeks</td></tr>
+<tr><td>semantic-core (wrap W3C stack + FCA)</td><td>~1.5k</td><td>1-2 weeks</td></tr>
+<tr><td>forge-core restructure</td><td>~10-11k (mostly existing)</td><td>2-3 weeks</td></tr>
+<tr><td>semantic-cyber (adopt D3FEND + bridges + migrate TASC data)</td><td>~800 + migrate 9.3MB data</td><td>1 week</td></tr>
+<tr><td>forge-cyber (port substrate-prototype)</td><td>~1.5k</td><td>1 week</td></tr>
+<tr><td>forge-eeg + semantic-eeg (first non-cyber)</td><td>~1.5k combined</td><td>1-1.5 weeks</td></tr>
+<tr><td><strong>Total</strong></td><td><strong>~17-19k LOC, ~10MB data</strong></td><td><strong>7-10 weeks focused</strong></td></tr>
+</tbody>
+</table>
+
+<p>Down from the hedged estimate of 10-13 weeks. The reduction comes from:</p>
+<ul>
+  <li>Adopting D3FEND instead of building cyber ontology (-2 weeks)</li>
+  <li>Delegating to <code>owlready2</code>+<code>pySHACL</code>+<code>rdflib</code> instead of building custom inference (-1-2 weeks)</li>
+</ul>
+
+<p>So <strong>~2 months</strong> as the realistic unhedged build, not 3 months.</p>
+
+<h2>On the time-wasted question</h2>
+
+<p>Honest answer: yes, some, not catastrophic.</p>
+
+<p><strong>Genuinely wasted:</strong> the parts of TASC's 11.5k LOC that recapitulate W3C infrastructure. Probably 30-40% of code (~4k LOC) is doing what <code>owlready2</code>/<code>pySHACL</code>/<code>rdflib</code> do better. SKOS inference, SHACL-equivalent validation done custom, graph traversal logic that SPARQL handles natively.</p>
+
+<p><strong>Not wasted, even though it could have been "skipped":</strong> the framing work. <code>tasc_is_a_thesaurus</code> (library-science). <code>substrate_self_falsifying</code> (generator-validator pairs). <code>minimum_primitives_lattice</code> (FCA-derived basis). <code>bootstrap_construction_pipeline</code> (LLM as callable tool, not the system). <code>llm_smoothing_caught_by_tools</code> (measured LLM failure modes). These are real intellectual progress. Without them you wouldn't <em>recognize</em> that D3FEND has the right shape when you see it.</p>
+
+<p><strong>The hard truth about the discovery:</strong> D3FEND was discoverable earlier. A literature scan with the right keywords ("defensive ontology", "cyber knowledge graph", "MITRE D3FEND") would have surfaced it in an hour. You didn't do that scan because the framing that would <em>motivate</em> the scan hadn't crystallized yet. The framing work bought the discoverability; the discoverability was sitting there the whole time.</p>
+
+<p>Time cost ballpark: probably 2-4 weeks of TASC implementation time would have been redirected toward integration if D3FEND had been on the radar from the start. Maybe more. The data-curation and adapter work isn't wasted at all — that's substance.</p>
+
+<h2>The load-bearing decision</h2>
+
+<p><strong>Does TASC continue as a separate project name and identity, or does it dissolve into <code>semantic-cyber</code>?</strong></p>
+
+<p>Everything else flows from that.</p>
+
+<p><strong>If TASC dissolves:</strong></p>
+<ul>
+  <li>The dev2 migration plan changes shape (TASC restructure → adopt D3FEND + write small adapter).</li>
+  <li>Time-to-cyber-feature-detection-end-to-end probably <em>decreases</em> because the heavy lifting is delegated to <code>owlready2</code>.</li>
+  <li>The catalog-data work survives, framed as semantic-cyber's bridge definitions.</li>
+  <li>Total stack build is ~2 months focused, not 3.</li>
+</ul>
+
+<p><strong>If TASC continues:</strong></p>
+<ul>
+  <li>You're maintaining infrastructure that has free alternatives.</li>
+  <li>The W3C-stack adoption is a TASC-internal refactor, not a re-architecture.</li>
+</ul>
+
+<p><strong>Recommendation: dissolve TASC.</strong></p>
+
+<h2>What dissolves, what survives, what gets dropped</h2>
+
+<p><strong>Survives:</strong></p>
+<ul>
+  <li>mathabc's FOUNDATIONS-v2 (trimmed to mathabc-core)</li>
+  <li>TASC's 4900+ catalog nodes + 9 framework adapters (migrated as semantic-cyber data + bridges)</li>
+  <li>forge's Surface + lattice + lineage (becomes forge-core)</li>
+  <li>substrate-prototype labs (become cyber-labs implementing DomainValidator)</li>
+  <li>Lab discipline (HYPOTHESIS/manifest/run/validate/RESULT skeleton)</li>
+  <li>All directional pins in memory (forge-vnext-architecture, tasc-role-correction, ocsf-data-shape-standard, etc.) — they describe the same target architecture; "TASC" is the name that dissolves</li>
+</ul>
+
+<p><strong>Dropped:</strong></p>
+<ul>
+  <li>TASC's custom SKOS inference engine (~4k LOC replaced by owlready2+pySHACL)</li>
+  <li>TASC's L0 axes that were runtime-matcher state (deleted; data-shape in OCSF)</li>
+  <li><code>forge.signal._infer.py</code> schema-inference machinery as central path (opt-in only)</li>
+  <li><code>cli.py</code>, <code>sklearn.py</code>, <code>torch.py</code> from forge core (move to <code>forge-tools</code> if useful)</li>
+  <li>adele (already deprecated), pickering/signalforge/csat (frozen/junkyard), memoria (junkyard)</li>
+</ul>
+
+<p><strong>Dissolves into:</strong></p>
+<ul>
+  <li>TASC → semantic-cyber</li>
+  <li>substrate-prototype → cyber-labs</li>
+</ul>
+
+</body>
+</html>
