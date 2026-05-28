@@ -9,6 +9,7 @@ import pytest
 
 from semantic_core.graph import Graph
 from semantic_cyber import attack, d3fend
+from semantic_cyber import sigma as sigma_mod
 from semantic_cyber.bridge import (
     CoverageReport,
     DefenseSummary,
@@ -16,6 +17,7 @@ from semantic_cyber.bridge import (
     coverage_by_ukc_phase,
     coverage_by_ukc_stage,
     defensive_coverage,
+    detection_coverage,
 )
 
 
@@ -87,6 +89,13 @@ def attack_bundle(tmp_path):
     p = tmp_path / "bundle.json"
     p.write_text(json.dumps(ATTACK_BUNDLE_DATA))
     return attack.load(p)
+
+
+def test_defensive_coverage_leaves_sigma_rules_empty(d3fend_graph, attack_bundle):
+    """defensive_coverage doesn't take sigma rules; the field on its
+    returned CoverageReport stays at the empty default."""
+    report = defensive_coverage(d3fend_graph, attack_bundle, "T1558.003")
+    assert report.sigma_rules == ()
 
 
 def test_defensive_coverage_returns_report(d3fend_graph, attack_bundle):
@@ -413,6 +422,134 @@ def test_real_ukc_credential_access_parity():
     by_id = {r.technique.attack_id: r for r in via_ukc}
     assert len(by_id["T1558.003"].defenses) == 21
     assert len(by_id["T1110"].defenses) == 27
+
+
+# --- detection_coverage (D3FEND + Sigma composition) ---
+
+
+_SIGMA_KERBEROAST = (
+    "title: Kerberoasting Activity\n"
+    "id: 11111111-aaaa-bbbb-cccc-000000000001\n"
+    "status: stable\n"
+    "level: medium\n"
+    "logsource: {product: windows, service: security}\n"
+    "detection: {sel: {EventID: 4769}, condition: sel}\n"
+    "tags: [attack.credential-access, attack.t1558.003]\n"
+)
+
+_SIGMA_KERBEROAST_2 = (
+    "title: Kerberoasting Variant\n"
+    "id: 22222222-aaaa-bbbb-cccc-000000000002\n"
+    "status: test\n"
+    "level: high\n"
+    "logsource: {product: windows, service: security}\n"
+    "detection: {sel: {EventID: 4769}, condition: sel}\n"
+    "tags: [attack.t1558.003]\n"
+)
+
+_SIGMA_UNRELATED = (
+    "title: Process Creation\n"
+    "id: 33333333-aaaa-bbbb-cccc-000000000003\n"
+    "logsource: {product: windows}\n"
+    "detection: {sel: {EventID: 1}, condition: sel}\n"
+    "tags: [attack.t1059]\n"
+)
+
+
+@pytest.fixture
+def sigma_rules(tmp_path):
+    (tmp_path / "kerb1.yml").write_text(_SIGMA_KERBEROAST)
+    (tmp_path / "kerb2.yml").write_text(_SIGMA_KERBEROAST_2)
+    (tmp_path / "other.yml").write_text(_SIGMA_UNRELATED)
+    return sigma_mod.load_rules(tmp_path)
+
+
+def test_detection_coverage_populates_both_sides(
+    d3fend_graph, attack_bundle, sigma_rules
+):
+    report = detection_coverage(
+        d3fend_graph, attack_bundle, sigma_rules, "T1558.003"
+    )
+    assert report is not None
+    assert report.technique.attack_id == "T1558.003"
+    assert len(report.defenses) == 1  # ServiceTicketAnalysis from D3FEND fixture
+    assert len(report.sigma_rules) == 2
+    titles = {r.title for r in report.sigma_rules}
+    assert titles == {"Kerberoasting Activity", "Kerberoasting Variant"}
+
+
+def test_detection_coverage_filters_out_unrelated_sigma(
+    d3fend_graph, attack_bundle, sigma_rules
+):
+    """The T1059 rule must not appear in T1558.003's coverage."""
+    report = detection_coverage(
+        d3fend_graph, attack_bundle, sigma_rules, "T1558.003"
+    )
+    titles = {r.title for r in report.sigma_rules}
+    assert "Process Creation" not in titles
+
+
+def test_detection_coverage_sigma_rules_sorted_stable(
+    d3fend_graph, attack_bundle, sigma_rules
+):
+    """Sigma rules come back sorted by (id, title) — sigma_rules order
+    must be deterministic across runs."""
+    report = detection_coverage(
+        d3fend_graph, attack_bundle, sigma_rules, "T1558.003"
+    )
+    ids = [r.id for r in report.sigma_rules]
+    assert ids == sorted(ids)
+
+
+def test_detection_coverage_empty_sigma_list(d3fend_graph, attack_bundle):
+    """Caller passes [] → defensive side still populated, sigma side empty."""
+    report = detection_coverage(d3fend_graph, attack_bundle, [], "T1558.003")
+    assert report is not None
+    assert len(report.defenses) == 1
+    assert report.sigma_rules == ()
+
+
+def test_detection_coverage_no_matching_sigma(
+    d3fend_graph, attack_bundle, sigma_rules
+):
+    """Sigma rules exist but none cover this technique → sigma_rules=()."""
+    report = detection_coverage(
+        d3fend_graph, attack_bundle, sigma_rules, "T1059"
+    )
+    # T1059 isn't in the attack_bundle fixture either — assert None.
+    assert report is None
+
+
+def test_detection_coverage_unknown_technique(
+    d3fend_graph, attack_bundle, sigma_rules
+):
+    assert (
+        detection_coverage(d3fend_graph, attack_bundle, sigma_rules, "T9999")
+        is None
+    )
+
+
+REAL_SIGMA = Path(__file__).resolve().parent.parent / "data" / "sigma-rules"
+
+
+@pytest.mark.skipif(
+    not (REAL_D3FEND.exists() and REAL_ATTACK.exists() and REAL_SIGMA.exists()),
+    reason="real data not fetched",
+)
+def test_real_detection_coverage_kerberoasting():
+    """T1558.003 over real corpora: 21 D3FEND defenses + 17 Sigma rules
+    co-occur in one composed CoverageReport, each side provenance-traceable."""
+    g = d3fend.load(REAL_D3FEND)
+    bundle = attack.load(REAL_ATTACK)
+    rules = sigma_mod.load_rules(REAL_SIGMA)
+    report = detection_coverage(g, bundle, rules, "T1558.003")
+    assert report is not None
+    assert report.technique.name == "Kerberoasting"
+    assert len(report.defenses) == 21
+    assert len(report.sigma_rules) >= 10  # corpus: 17 at fetch time
+    # Sigma side traceability: every rule should retain its source path
+    # so a consumer can audit which file produced the join.
+    assert all(r.path is not None for r in report.sigma_rules)
 
 
 @pytest.mark.skipif(

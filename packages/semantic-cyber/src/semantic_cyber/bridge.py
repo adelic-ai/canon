@@ -1,22 +1,25 @@
-"""ATT&CK ↔ D3FEND bridge.
+"""ATT&CK ↔ D3FEND ↔ Sigma bridge.
 
 Folds ``d3fend.derive_counters`` output (per-artifact CounterMatch rows)
-into per-defense summaries, and combines with ``attack.get_technique``
-metadata (name, tactics, sub-technique flag, platforms) so a single call
-answers "what's the defensive picture for this ATT&CK technique?"
+into per-defense summaries, combines with ``attack.get_technique``
+metadata, and optionally attaches ``sigma.rules_for_technique`` matches —
+so a single call answers "what's the full picture (defensive techniques
++ detection rules) for this ATT&CK technique?"
 
-The bridge owns no derivation logic of its own — both sides keep their
-own implementations and tests. This module is the join.
+The bridge owns no derivation logic of its own — D3FEND, ATT&CK and
+Sigma each keep their own implementations and tests. This module is
+the join.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from semantic_core.graph import Graph
 
-from . import attack, d3fend, ukc
+from . import attack, d3fend, sigma, ukc
 from .attack import AttackBundle, Technique
+from .sigma import SigmaRule
 
 
 @dataclass(frozen=True)
@@ -32,10 +35,18 @@ class DefenseSummary:
 
 @dataclass(frozen=True)
 class CoverageReport:
-    """Defensive picture for one ATT&CK technique."""
+    """Coverage picture for one ATT&CK technique.
+
+    ``defenses`` lists D3FEND defensive techniques (always populated when
+    the technique exists in the ATT&CK bundle, possibly empty). ``sigma_rules``
+    lists detection rules tagged with the technique — populated only when
+    the report came from ``detection_coverage``; ``defensive_coverage`` and
+    its fan-out variants leave it as the empty tuple.
+    """
 
     technique: Technique
     defenses: tuple[DefenseSummary, ...]
+    sigma_rules: tuple[SigmaRule, ...] = field(default=())
 
 
 def defensive_coverage(
@@ -74,6 +85,39 @@ def defensive_coverage(
     )
 
     return CoverageReport(technique=technique, defenses=defenses)
+
+
+def detection_coverage(
+    d3fend_graph: Graph,
+    attack_bundle: AttackBundle,
+    sigma_rules: list[SigmaRule],
+    attack_id: str,
+) -> CoverageReport | None:
+    """Return the full coverage picture for one ATT&CK technique.
+
+    Composes ``defensive_coverage`` (D3FEND defensive techniques) with
+    ``sigma.rules_for_technique`` (detection rules tagged with the
+    technique). Each side keeps its own provenance: ``defenses`` carries
+    the artifacts that produced each defensive match, ``sigma_rules``
+    carries each rule's full ``SigmaRule`` (including ``path``) so a
+    consumer can trace any reported coverage back to the source artifact.
+
+    Returns ``None`` if the technique isn't in the ATT&CK bundle. Empty
+    ``defenses`` and/or empty ``sigma_rules`` are valid (technique exists,
+    but the corresponding framework has no coverage). Sigma rules are
+    sorted by ``(id, title)`` for stable output.
+    """
+    report = defensive_coverage(d3fend_graph, attack_bundle, attack_id)
+    if report is None:
+        return None
+
+    matching = sigma.rules_for_technique(sigma_rules, attack_id)
+    ordered = tuple(sorted(matching, key=lambda r: (r.id or "", r.title)))
+    return CoverageReport(
+        technique=report.technique,
+        defenses=report.defenses,
+        sigma_rules=ordered,
+    )
 
 
 def coverage_by_tactic(
