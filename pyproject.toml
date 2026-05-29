@@ -1,2 +1,13 @@
 [tool.uv.workspace]
 members = ["packages/*"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+]
+
+[tool.pytest.ini_options]
+# importlib import mode + src layout: lets the three packages' identically-named
+# `tests` dirs coexist in one workspace run without sys.modules name collisions.
+addopts = "--import-mode=importlib"
+testpaths = ["packages"]
