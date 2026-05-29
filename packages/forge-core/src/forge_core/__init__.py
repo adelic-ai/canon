@@ -15,6 +15,12 @@ from forge_core.lattice import (
     covers,
     hops_back_walk,
 )
+from forge_core.detection import (
+    ca_cfar,
+    os_cfar,
+    ca_cfar_alpha,
+    os_cfar_alpha,
+)
 
 __all__ = [
     "Signal",
@@ -30,4 +36,8 @@ __all__ = [
     "prime_factors",
     "covers",
     "hops_back_walk",
+    "ca_cfar",
+    "os_cfar",
+    "ca_cfar_alpha",
+    "os_cfar_alpha",
 ]
