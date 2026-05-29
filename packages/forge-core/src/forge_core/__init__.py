@@ -26,6 +26,7 @@ from forge_core.energy import (
     energy_threshold,
     energy_pd,
 )
+from forge_core.spectral import Spectrum, welch_psd
 
 __all__ = [
     "Signal",
@@ -48,4 +49,6 @@ __all__ = [
     "energy_detector",
     "energy_threshold",
     "energy_pd",
+    "Spectrum",
+    "welch_psd",
 ]
