@@ -21,6 +21,11 @@ from forge_core.detection import (
     ca_cfar_alpha,
     os_cfar_alpha,
 )
+from forge_core.energy import (
+    energy_detector,
+    energy_threshold,
+    energy_pd,
+)
 
 __all__ = [
     "Signal",
@@ -40,4 +45,7 @@ __all__ = [
     "os_cfar",
     "ca_cfar_alpha",
     "os_cfar_alpha",
+    "energy_detector",
+    "energy_threshold",
+    "energy_pd",
 ]
