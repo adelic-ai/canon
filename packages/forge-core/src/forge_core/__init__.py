@@ -29,6 +29,12 @@ from forge_core.energy import (
 from forge_core.spectral import Spectrum, welch_psd
 from forge_core.changepoint import cusum, cusum_arl
 from forge_core.goertzel import goertzel
+from forge_core.filters import (
+    butter_filter,
+    notch_filter,
+    band_power_bank,
+    EEG_BANDS,
+)
 
 __all__ = [
     "Signal",
@@ -56,4 +62,8 @@ __all__ = [
     "cusum",
     "cusum_arl",
     "goertzel",
+    "butter_filter",
+    "notch_filter",
+    "band_power_bank",
+    "EEG_BANDS",
 ]
