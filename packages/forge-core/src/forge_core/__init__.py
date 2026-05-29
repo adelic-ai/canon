@@ -28,6 +28,7 @@ from forge_core.energy import (
 )
 from forge_core.spectral import Spectrum, welch_psd
 from forge_core.changepoint import cusum, cusum_arl
+from forge_core.goertzel import goertzel
 
 __all__ = [
     "Signal",
@@ -54,4 +55,5 @@ __all__ = [
     "welch_psd",
     "cusum",
     "cusum_arl",
+    "goertzel",
 ]
