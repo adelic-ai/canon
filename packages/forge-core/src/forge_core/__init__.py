@@ -35,6 +35,7 @@ from forge_core.filters import (
     band_power_bank,
     EEG_BANDS,
 )
+from forge_core.lock_in import lock_in
 
 __all__ = [
     "Signal",
@@ -66,4 +67,5 @@ __all__ = [
     "notch_filter",
     "band_power_bank",
     "EEG_BANDS",
+    "lock_in",
 ]
