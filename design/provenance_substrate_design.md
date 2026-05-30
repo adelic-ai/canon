@@ -1,5 +1,17 @@
 # Canon provenance substrate — design + migration plan
 
+> **⚠ SUPERSEDED IN PART (2026-05-30). READ `self_validation_architecture.md` FIRST.**
+> This document's phased plan (Phases 0–6) was the provenance-only roadmap. Phases 0–4
+> were **built** (circular stats, provenance core, [rdf] extra, forge-core lazy-op seam,
+> semantic-cyber composition-link). The effort was then **reframed to FULL self-validation
+> / kigimi** — provenance is now the *master joint* of a larger architecture (every
+> cross-cutting concern a `≤_k`-monotone fold over one content-addressed DAG; chain of
+> custody; honest guarantee tiers; the `~/canon/contracts/` narrow-waist base). **Phase 5
+> here (semantic-core wiring) is subsumed, not the standalone next step.** Current
+> direction: `self_validation_architecture.md` + `self_validation_v{1,2}_*.md` +
+> `~/canon/contracts/`. The provenance facts below are still accurate as built; the
+> "what's next" framing is not.
+
 **Status:** proposed 2026-05-29. Decision committed: unified canon-wide, PROV-O-shaped,
 full lazy DAG-primary, in a new sibling `provenance` package. **CASE/UCO gate cleared**
 (2026-05-29) — do not adopt CASE/UCO; borrowed two methodology patterns (OWL+SHACL
