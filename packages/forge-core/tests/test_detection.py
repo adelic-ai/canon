@@ -59,7 +59,7 @@ def test_edge_region_is_no_decision():
     guard, train = 2, 8
     half = guard + train
     s = Signal(samples=np.ones(64), fs=1.0)
-    out = ca_cfar_op(s, guard=guard, train=train)
+    out = ca_cfar_op(s, guard=guard, train=train).value()
     assert np.all(np.isnan(out["threshold"][:half]))
     assert np.all(np.isnan(out["threshold"][-half:]))
     assert not out["detections"][:half].any()
@@ -77,7 +77,7 @@ def test_rejects_non_real():
 def test_rejects_too_short():
     s = Signal(samples=np.ones(10), fs=1.0)
     with pytest.raises(ValueError):
-        ca_cfar_op(s, guard=2, train=8)
+        ca_cfar_op(s, guard=2, train=8).value()  # length checked in the kernel
 
 
 # ── behaviour ─────────────────────────────────────────────────────────────────
@@ -91,7 +91,7 @@ def _noise_floor(n: int, seed: int = 0) -> np.ndarray:
 def test_ca_detects_isolated_spike():
     x = _noise_floor(256)
     x[128] += 50.0  # a lone target well above the floor
-    out = ca_cfar_op(Signal(samples=x, fs=1.0), guard=2, train=8, pfa=1e-4)
+    out = ca_cfar_op(Signal(samples=x, fs=1.0), guard=2, train=8, pfa=1e-4).value()
     assert out["detections"][128]
     # no spurious detections elsewhere at this low Pfa
     assert list(out["indices"]) == [128]
@@ -110,8 +110,8 @@ def test_os_beats_ca_under_interferer_masking():
         x[k] += 150.0
     s = Signal(samples=x, fs=1.0)
 
-    ca = ca_cfar_op(s, guard=guard, train=train, pfa=pfa)
-    os = os_cfar_op(s, guard=guard, train=train, pfa=pfa)
+    ca = ca_cfar_op(s, guard=guard, train=train, pfa=pfa).value()
+    os = os_cfar_op(s, guard=guard, train=train, pfa=pfa).value()
 
     assert not ca["detections"][cut]  # masked by the interferers
     assert os["detections"][cut]      # interferers rejected, target survives

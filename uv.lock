@@ -32,12 +32,14 @@ version = "0.1.0"
 source = { editable = "packages/forge-core" }
 dependencies = [
     { name = "numpy" },
+    { name = "provenance" },
     { name = "scipy" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "numpy", specifier = ">=1.26" },
+    { name = "provenance", editable = "packages/provenance" },
     { name = "scipy", specifier = ">=1.11" },
 ]
 

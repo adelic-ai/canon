@@ -57,7 +57,7 @@ def test_op_registered():
 def test_window_geometry():
     x = np.zeros(1000)
     out = energy_op(Signal(samples=x, fs=1.0), nperseg=100, noverlap=50,
-                    noise_var=1.0)
+                    noise_var=1.0).value()
     # step = 50; starts 0,50,...,900  -> 19 windows
     assert out["window_starts"][0] == 0
     assert out["window_starts"][-1] == 900
@@ -74,13 +74,13 @@ def test_rejects_non_real():
 
 def test_rejects_window_longer_than_signal():
     with pytest.raises(ValueError):
-        energy_op(Signal(samples=np.ones(50), fs=1.0), nperseg=64)
+        energy_op(Signal(samples=np.ones(50), fs=1.0), nperseg=64).value()
 
 
 def test_rejects_bad_overlap():
     with pytest.raises(ValueError):
         energy_op(Signal(samples=np.ones(512), fs=1.0), nperseg=64,
-                  noverlap=64)
+                  noverlap=64).value()
 
 
 # ── behaviour ─────────────────────────────────────────────────────────────────
@@ -93,7 +93,7 @@ def test_detects_energy_burst():
     # burst aligned to a window boundary so it lands in exactly one window
     x[1024:1152] += rng.standard_normal(128) * 6.0
     out = energy_op(Signal(samples=x, fs=1.0), nperseg=nperseg, noverlap=0,
-                    noise_var=1.0, pfa=1e-4)
+                    noise_var=1.0, pfa=1e-4).value()
     burst_win = 1024 // nperseg  # window covering the burst (noverlap=0)
     assert out["detections"][burst_win]
     # quiet windows stay below threshold at this Pfa
@@ -109,6 +109,6 @@ def test_auto_noise_var_estimate():
     x = rng.standard_normal(4096) * 2.0        # sigma**2 = 4
     x[2048:2176] += rng.standard_normal(128) * 10.0  # window-aligned burst
     out = energy_op(Signal(samples=x, fs=1.0), nperseg=nperseg, noverlap=0,
-                    pfa=1e-4)
+                    pfa=1e-4).value()
     assert out["noise_var"] == pytest.approx(4.0, rel=0.15)
     assert out["detections"][2048 // nperseg]

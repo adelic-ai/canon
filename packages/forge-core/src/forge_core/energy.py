@@ -75,7 +75,7 @@ def energy_pd(nperseg: int, pfa: float, ncp: float) -> float:
 # ── op ───────────────────────────────────────────────────────────────────────
 
 
-@op("energy_detector")
+@op("energy_detector", accepts=(SignalKind.REAL,))
 def energy_detector(
     signal: Signal,
     *,

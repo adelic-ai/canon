@@ -35,12 +35,16 @@ from forge_core.ops import op
 from forge_core.signal import Signal, SignalKind
 
 
-@op("matched_filter")
+@op(
+    "matched_filter",
+    accepts=(SignalKind.REAL, SignalKind.COMPLEX),
+    inputs=("template", "noise_cov"),
+)
 def matched_filter(
     signal: Signal,
-    *,
     template: np.ndarray,
     noise_cov: np.ndarray | None = None,
+    *,
     noise_var: float = 1.0,
     **_: Any,
 ) -> dict[str, Any]:

@@ -86,7 +86,7 @@ class Spectrum:
         return float(np.trapezoid(p[order], f[order]))
 
 
-@op("welch")
+@op("welch", accepts=(SignalKind.REAL, SignalKind.COMPLEX))
 def welch_psd(
     signal: Signal,
     *,

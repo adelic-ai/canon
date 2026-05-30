@@ -59,7 +59,7 @@ def _check_band(lo: float, hi: float, nyq: float, label: str) -> None:
         raise ValueError(f"{label}: hi ({hi}) must be < Nyquist ({nyq})")
 
 
-@op("butter")
+@op("butter", accepts=(SignalKind.REAL, SignalKind.COMPLEX))
 def butter_filter(
     signal: Signal,
     *,
@@ -106,7 +106,7 @@ def butter_filter(
     return signal.with_samples(y)
 
 
-@op("notch")
+@op("notch", accepts=(SignalKind.REAL, SignalKind.COMPLEX))
 def notch_filter(
     signal: Signal,
     *,
@@ -130,7 +130,7 @@ def notch_filter(
     return signal.with_samples(y)
 
 
-@op("band_power_bank")
+@op("band_power_bank", accepts=(SignalKind.REAL,))
 def band_power_bank(
     signal: Signal,
     *,

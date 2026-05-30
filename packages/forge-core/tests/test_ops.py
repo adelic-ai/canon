@@ -21,7 +21,7 @@ def test_op_decorator_registers_and_runs():
     assert "mean" in ops.registered()
     got = ops.get("mean")
     s = Signal(samples=[1.0, 2.0, 3.0], fs=1.0)
-    assert got(s) == pytest.approx(2.0)
+    assert got(s).value() == pytest.approx(2.0)  # ops build a lazy Entity
 
 
 def test_duplicate_registration_raises():
@@ -54,5 +54,5 @@ def test_params_passed_through():
         return sig.with_samples(sig.samples * factor)
 
     s = Signal(samples=[1.0, 2.0], fs=1.0)
-    out = ops.get("scale")(s, factor=3.0)
+    out = ops.get("scale")(s, factor=3.0).value()
     assert list(out.samples) == [3.0, 6.0]

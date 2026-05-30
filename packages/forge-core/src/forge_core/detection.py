@@ -128,7 +128,7 @@ def _validate(signal: Signal, guard: int, train: int) -> np.ndarray:
 # ── ops ──────────────────────────────────────────────────────────────────────
 
 
-@op("ca_cfar")
+@op("ca_cfar", accepts=(SignalKind.REAL,))
 def ca_cfar(
     signal: Signal,
     *,
@@ -182,7 +182,7 @@ def ca_cfar(
     }
 
 
-@op("os_cfar")
+@op("os_cfar", accepts=(SignalKind.REAL,))
 def os_cfar(
     signal: Signal,
     *,

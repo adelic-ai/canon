@@ -37,7 +37,7 @@ def test_recovers_amplitude_buried_in_noise():
     t = np.arange(n) / fs
     # noise std 3 >> signal amplitude 1: the tone is invisible in the raw trace
     x = amp * np.cos(2 * np.pi * f0 * t) + 3.0 * rng.standard_normal(n)
-    out = lock_in_op(Signal(samples=x, fs=fs), freq=f0, bandwidth=2.0)
+    out = lock_in_op(Signal(samples=x, fs=fs), freq=f0, bandwidth=2.0).value()
     recovered = np.median(_central(out["amplitude"]))
     assert recovered == pytest.approx(amp, abs=0.3)
 
@@ -47,8 +47,9 @@ def test_recovers_phase():
     rng = np.random.default_rng(1)
     t = np.arange(n) / fs
     x = np.cos(2 * np.pi * f0 * t + phi) + 1.0 * rng.standard_normal(n)
-    out = lock_in_op(Signal(samples=x, fs=fs), freq=f0, bandwidth=2.0)
-    assert np.median(_central(out["phase"])) == pytest.approx(phi, abs=0.2)
+    out = lock_in_op(Signal(samples=x, fs=fs), freq=f0, bandwidth=2.0).value()
+    # phase is a CYCLIC Signal now; take its angle samples for the median.
+    assert np.median(_central(out["phase"].samples)) == pytest.approx(phi, abs=0.2)
 
 
 def test_off_frequency_rejected():
@@ -56,9 +57,9 @@ def test_off_frequency_rejected():
     t = np.arange(n) / fs
     x = np.cos(2 * np.pi * f0 * t)  # tone only at 50 Hz
     on = np.median(_central(lock_in_op(Signal(samples=x, fs=fs), freq=f0,
-                                       bandwidth=2.0)["amplitude"]))
+                                       bandwidth=2.0).value()["amplitude"]))
     off = np.median(_central(lock_in_op(Signal(samples=x, fs=fs), freq=200.0,
-                                        bandwidth=2.0)["amplitude"]))
+                                        bandwidth=2.0).value()["amplitude"]))
     assert off < 0.05 * on
 
 
@@ -70,7 +71,7 @@ def test_amplitude_localises_tone_in_time():
     t = np.arange(n) / fs
     x = np.zeros(n)
     x[4000:8000] = np.cos(2 * np.pi * f0 * t[4000:8000])  # tone only in the middle
-    out = lock_in_op(Signal(samples=x, fs=fs), freq=f0, bandwidth=5.0)
+    out = lock_in_op(Signal(samples=x, fs=fs), freq=f0, bandwidth=5.0).value()
     amp = out["amplitude"]
     assert np.median(amp[5000:7000]) > 10 * np.median(amp[500:2000])
 
@@ -78,8 +79,10 @@ def test_amplitude_localises_tone_in_time():
 def test_outputs_have_signal_length():
     fs, n = 1000.0, 4096
     out = lock_in_op(Signal(samples=np.cos(2 * np.pi * 50 * np.arange(n) / fs),
-                            fs=fs), freq=50.0, bandwidth=2.0)
-    assert out["demod"].shape == out["amplitude"].shape == out["phase"].shape == (n,)
+                            fs=fs), freq=50.0, bandwidth=2.0).value()
+    assert out["demod"].shape == out["amplitude"].shape == (n,)
+    assert out["phase"].samples.shape == (n,)
+    assert out["phase"].is_cyclic  # phase is a CYCLIC Signal
     assert np.iscomplexobj(out["demod"])
 
 
@@ -97,6 +100,6 @@ def test_validates_freq_and_bandwidth():
     s = Signal(samples=np.cos(2 * np.pi * 50 * np.arange(2048) / 1000.0),
                fs=1000.0)
     with pytest.raises(ValueError):
-        lock_in_op(s, freq=600.0, bandwidth=2.0)   # > Nyquist
+        lock_in_op(s, freq=600.0, bandwidth=2.0).value()   # > Nyquist
     with pytest.raises(ValueError):
-        lock_in_op(s, freq=50.0, bandwidth=0.0)    # bandwidth must be > 0
+        lock_in_op(s, freq=50.0, bandwidth=0.0).value()    # bandwidth must be > 0

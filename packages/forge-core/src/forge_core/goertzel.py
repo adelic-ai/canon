@@ -35,7 +35,7 @@ from forge_core.ops import op
 from forge_core.signal import Signal, SignalKind
 
 
-@op("goertzel")
+@op("goertzel", accepts=(SignalKind.REAL, SignalKind.COMPLEX))
 def goertzel(
     signal: Signal,
     *,

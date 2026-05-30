@@ -2,13 +2,14 @@
 name = "forge-core"
 version = "0.1.0"
 requires-python = ">=3.11"
-dependencies = ["numpy>=1.26", "scipy>=1.11"]
+dependencies = ["numpy>=1.26", "scipy>=1.11", "provenance"]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.uv.sources]
+provenance = { workspace = true }
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/forge_core"]

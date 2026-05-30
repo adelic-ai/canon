@@ -47,7 +47,7 @@ def test_locates_template_white():
     s = np.hanning(L)
     x = rng.standard_normal(4096)
     x[m : m + L] += amp * s                    # embed the template at offset m
-    out = mf_op(Signal(samples=x, fs=1.0), template=s)
+    out = mf_op(Signal(samples=x, fs=1.0), template=s).value()
     assert out["peak_lag"] == m
     assert out["statistic"].size == 4096 - L + 1
     # normalised peak ~ amp * ||s||  (unit-variance noise)
@@ -61,7 +61,7 @@ def test_locates_template_complex():
     s = np.exp(2j * np.pi * 0.1 * t)           # complex template
     x = (rng.standard_normal(2048) + 1j * rng.standard_normal(2048))
     x[m : m + L] += amp * s
-    out = mf_op(Signal(samples=x, fs=1.0, kind=SignalKind.COMPLEX), template=s)
+    out = mf_op(Signal(samples=x, fs=1.0, kind=SignalKind.COMPLEX), template=s).value()
     assert out["peak_lag"] == m               # conjugation handled correctly
     assert np.abs(out["peak_value"]) == pytest.approx(amp * np.linalg.norm(s), rel=0.25)
 
@@ -70,7 +70,7 @@ def test_white_unit_h0_variance():
     rng = np.random.default_rng(2)
     s = np.hanning(32)
     x = rng.standard_normal(16384)            # noise only, unit variance
-    out = mf_op(Signal(samples=x, fs=1.0), template=s)
+    out = mf_op(Signal(samples=x, fs=1.0), template=s).value()
     assert np.std(out["statistic"]) == pytest.approx(1.0, abs=0.1)
 
 
@@ -84,8 +84,8 @@ def test_prewhitener_calibrates_under_colored_noise():
     s = np.hanning(L)
     sig = Signal(samples=noise, fs=1.0)
 
-    whitened = mf_op(sig, template=s, noise_cov=R)
-    naive = mf_op(sig, template=s)             # white assumption -> miscalibrated
+    whitened = mf_op(sig, template=s, noise_cov=R).value()
+    naive = mf_op(sig, template=s).value()     # white assumption -> miscalibrated
 
     # The whitened detector has unit H0 variance; the naive one does not.
     assert np.std(whitened["statistic"]) == pytest.approx(1.0, abs=0.12)
@@ -101,7 +101,7 @@ def test_prewhitener_locates_template_in_colored_noise():
     s = np.hanning(L)
     x = noise.copy()
     x[m : m + L] += amp * s
-    out = mf_op(Signal(samples=x, fs=1.0), template=s, noise_cov=R)
+    out = mf_op(Signal(samples=x, fs=1.0), template=s, noise_cov=R).value()
     assert out["peak_lag"] == m
 
 
@@ -111,20 +111,20 @@ def test_prewhitener_locates_template_in_colored_noise():
 def test_rejects_template_longer_than_signal():
     s = np.ones(100)
     with pytest.raises(ValueError):
-        mf_op(Signal(samples=np.ones(50), fs=1.0), template=s)
+        mf_op(Signal(samples=np.ones(50), fs=1.0), template=s).value()
 
 
 def test_rejects_non_pd_cov():
     s = np.ones(4)
     bad = -np.eye(4)                           # negative-definite
     with pytest.raises(ValueError):
-        mf_op(Signal(samples=np.ones(64), fs=1.0), template=s, noise_cov=bad)
+        mf_op(Signal(samples=np.ones(64), fs=1.0), template=s, noise_cov=bad).value()
 
 
 def test_rejects_wrong_cov_shape():
     s = np.ones(8)
     with pytest.raises(ValueError):
-        mf_op(Signal(samples=np.ones(64), fs=1.0), template=s, noise_cov=np.eye(5))
+        mf_op(Signal(samples=np.ones(64), fs=1.0), template=s, noise_cov=np.eye(5)).value()
 
 
 def test_rejects_complex_with_noise_cov():
@@ -132,7 +132,7 @@ def test_rejects_complex_with_noise_cov():
     sig = Signal(samples=np.ones(64, dtype=complex), fs=1.0,
                  kind=SignalKind.COMPLEX)
     with pytest.raises(ValueError):
-        mf_op(sig, template=s, noise_cov=np.eye(4))
+        mf_op(sig, template=s, noise_cov=np.eye(4)).value()
 
 
 def test_rejects_cyclic():

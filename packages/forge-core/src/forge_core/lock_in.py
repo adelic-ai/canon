@@ -37,7 +37,7 @@ from forge_core.ops import op
 from forge_core.signal import Signal, SignalKind
 
 
-@op("lock_in")
+@op("lock_in", accepts=(SignalKind.REAL,))
 def lock_in(
     signal: Signal,
     *,
@@ -80,8 +80,10 @@ def lock_in(
         t0=signal.t0,
         meta=signal.meta,
     )
-    # Coherent integration = zero-phase low-pass of the mixed product.
-    demod = butter_filter(
+    # Coherent integration = zero-phase low-pass of the mixed product. Call the
+    # pure butter kernel (.fn), not the op: this is eager intra-op composition,
+    # not a separate lineage node.
+    demod = butter_filter.fn(
         mixed, cutoff=bandwidth, btype="lowpass", order=order, zero_phase=True
     ).samples
 
@@ -90,5 +92,13 @@ def lock_in(
         "bandwidth": float(bandwidth),
         "demod": demod,
         "amplitude": 2.0 * np.abs(demod),
-        "phase": np.angle(demod),
+        # Phase is angular data: a CYCLIC Signal (period 2π), so downstream
+        # circular_mean/variance see correct wrap semantics instead of laundering
+        # angles through linear stats at the ±π branch cut.
+        "phase": Signal(
+            samples=np.angle(demod),
+            fs=signal.fs,
+            kind=SignalKind.CYCLIC,
+            t0=signal.t0,
+        ),
     }

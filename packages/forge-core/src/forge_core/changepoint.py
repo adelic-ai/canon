@@ -69,7 +69,7 @@ def cusum_arl(k: float, h: float, delta: float = 0.0) -> float:
 # ── op ───────────────────────────────────────────────────────────────────────
 
 
-@op("cusum")
+@op("cusum", accepts=(SignalKind.REAL,))
 def cusum(
     signal: Signal,
     *,
