@@ -94,6 +94,15 @@ This is the load-bearing fork and it's a craft/learning judgment, not an enginee
 it decides how much of canon becomes an object built in the material that best expresses it
 versus how much stays in the prototyping material.
 
+But the **core-vs-periphery seam** (see the spine doc, §2 "narrow-waist seam") shrinks this
+fork to a smaller, later, lower-regret decision than it looks: the CID interchange means the
+host language commits *only the core* (the tight folds over the live DAG + carrier). Every
+peripheral joint — custody, numeric proof, provenance export, SHACL, conformal — plugs in by
+CID + standard format regardless, so a Python core can already carry an F\*-verified-C numeric
+joint and a Go custody tap. So "stay Python core + polyglot joints" is not a lesser option but
+the architecture as designed; the host-language pick can be deferred and swapped against the
+V1 prototype, since no peripheral joint imports the core.
+
 ## V1 ↔ V2 relationship
 
 They are not either/or. V1 is the executable spine and ships the bounded/well-formed tiers

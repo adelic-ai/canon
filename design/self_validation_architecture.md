@@ -56,9 +56,15 @@ correctly inherits decades of proofs:
   interpretation. Name the interpreter set as a free-monad/tagless-final fold
   protocol so new folds are visibly additive.
 
-**Borrow, don't hardcode:** node identity is a CID (multihash/multicodec —
-self-describing), not a hardcoded `sha256`, so the hash function is swappable
-without breaking addressing.
+**Borrow, don't hardcode — node identity is a CID.** A **CID (Content IDentifier**,
+from IPLD/IPFS) is not a bare hash but a *self-describing* content address:
+`[version][multicodec: how to interpret the content][multihash: which hash function +
+digest length + the digest bytes]`. "Content-addressed" = the id is derived from the
+content itself, so identical content yields an identical CID and the id *verifies
+integrity* (re-hash and compare). The self-describing part is the point: because the
+CID carries *which* hash function produced it, the algorithm can be migrated (when
+`sha256` weakens) without breaking the addressing scheme. Hardcoding `sha256` bakes the
+algorithm into the protocol forever; a CID does not.
 
 ### The one-hash-three-roles seam (canon-novel)
 
@@ -76,6 +82,50 @@ digest-addressed, custody-tracked — and the root `prov:Entity` of the computat
 is the literal join between *chain of custody of the log into the system* and
 *justification of the result computed from it*. It is canon's to define, and it is
 the keystone of the whole arch.
+
+### Core vs periphery — the narrow-waist seam (what's swappable, what isn't)
+
+The CID is also the **polyglot seam**. Because a CID is derived from data over a
+canonical serialization (not from any language's object identity), *any* implementation
+in *any* language that hashes the same canonical bytes computes the same CID and sees
+the same node — Unison's interop property. A component plugs in iff it (a) consumes a
+node / the DAG by its serialization and (b) emits an artifact *addressed to that CID* in
+a standard format; it never needs to share a language with anything else. This is a
+**narrow-waist** ("thin-waist") architecture — the Internet's IP hourglass, WASM, LSP,
+in-toto attestations all work this way: define *one* stable interchange (here:
+CID-addressed nodes + a handful of standard artifact formats — PROV-O RDF, in-toto/DSSE
+JSON, SHACL, guarantee certificates), and everything above and below it is implemented
+independently and may vary freely. Canon's CID-addressed node *is* its narrow waist; the
+contribution is *which* waist (a content-addressed self-validating computation node) and
+that the same waist serves as identity, provenance, custody, and swap-seam at once.
+
+The boundary between fixed-language and swappable is sharp, and it's drawn by one test:
+
+> **Does the component walk the *live* DAG node-by-node with the carrier, or does it
+> consume-a-node-and-emit-a-standalone-artifact?**
+
+- **Core (one language, moves as a unit):** the tight folds over the live in-memory DAG
+  that need the Belnap carrier — `evaluate`, `confidence` (LLR over the AND/OR DAG),
+  `temporal` recognition, `partiality` lifting, `lineage`. Serializing per node in an
+  inner loop is prohibitive, so they want one runtime. **This is the only part the
+  host-language choice commits.**
+- **Periphery (any language, swappable plug-ins):** components that take a node by CID /
+  the serialized graph and emit a standalone hashed artifact, offline or per-result —
+  custody signing (in-toto/DSSE), the machine-checked numeric proof (Coq/F\*/Gappa *off*
+  the executable path, certificate addressed by the kernel's CID), PROV-O export, SHACL
+  validation, conformal calibration. Each is independently replaceable and independently
+  a different language.
+
+The seam is **clean but not free**: you pay serialization at the boundary, which is
+exactly why the boundary falls at "offline / per-result" rather than "inner-loop fold."
+
+Consequence for the host-language decision (V2): it locks **only the core**. A Python
+core can carry an F\*-verified-C numeric joint and a Go custody tap *today*, because those
+speak wire+hash, not Python. So "Python core + polyglot joints" is the architecture
+working as designed, not a compromise — and the core language can be decided **late** and
+swapped against the prototype as reference, because no peripheral joint imports it. The
+host-language fork therefore governs a smaller, later, lower-regret decision than it first
+appears: what the core is written in, and when.
 
 ## 3. The fold family
 
