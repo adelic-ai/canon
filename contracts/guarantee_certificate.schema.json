@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://canon/contracts/guarantee_certificate.schema.json",
+  "title": "GuaranteeCertificate",
+  "description": "DRAFT 2026-05-30. The per-node guarantee fold's output: what can honestly be claimed about a result, the tier it actually earned, any per-result demotion, and recorded absences. Pinned to the node by CID. Pfa is distributional and NOT provable in any proof assistant; the bounded tier is where the real detection guarantee lives. See ../design/self_validation_architecture.md §4.",
+  "type": "object",
+  "required": ["subject_cid", "tier"],
+  "properties": {
+    "subject_cid": {
+      "type": "string",
+      "description": "CID of the node this certificate certifies (one hash, three roles)."
+    },
+    "tier": {
+      "type": "string",
+      "enum": ["machine_checked", "bounded", "well_formed", "absent"],
+      "description": "The tier the result ACTUALLY earned, computed (not asserted) from what held on its inputs. Ordered strongest-to-weakest; 'absent' = the guarantee joint was not present."
+    },
+    "machine_checked": {
+      "type": "object",
+      "description": "Deterministic skeleton only (round-off bound / algebraic identity / threshold monotonicity) — NOT the Pfa claim. Polyglot joint (Coq+Flocq+Gappa or F*→C), off the executable path.",
+      "required": ["proof_artifact_cid", "checker", "claim"],
+      "properties": {
+        "proof_artifact_cid": {"type": "string"},
+        "checker": {"type": "string", "examples": ["coq+flocq+gappa", "fstar+karamel"]},
+        "claim": {"type": "string", "examples": ["|S_hat - S_exact| <= eps", "goertzel_recurrence == single_bin_dft_magnitude"]}
+      }
+    },
+    "bounded": {
+      "type": "object",
+      "description": "Where the real detection guarantee lives — a PAIR: an analytic conditional bound + a distribution-free empirical bound.",
+      "properties": {
+        "analytic": {
+          "type": "object",
+          "description": "Closed-form CFAR/Neyman-Pearson Pfa, CONDITIONAL on the noise model holding.",
+          "required": ["model", "pfa", "conditional_on"],
+          "properties": {
+            "model": {"type": "string", "examples": ["ca_cfar", "neyman_pearson_gaussian"]},
+            "pfa": {"type": "number"},
+            "conditional_on": {"type": "string", "examples": ["homogeneous reference window; white Gaussian noise"]}
+          }
+        },
+        "empirical": {
+          "type": "object",
+          "description": "Distribution-free, finite-sample, exchangeability-only (conformal). Survives when the noise model does not.",
+          "required": ["method", "alpha", "calibration_corpus_cid"],
+          "properties": {
+            "method": {"type": "string", "enum": ["conformal", "smc_sprt"]},
+            "alpha": {"type": "number", "description": "User-set false-alarm level."},
+            "confidence": {"type": "number"},
+            "calibration_corpus_cid": {"type": "string", "description": "CID of the calibration data — makes the guarantee reproducible/auditable."}
+          }
+        }
+      }
+    },
+    "well_formed": {
+      "type": "object",
+      "description": "The floor every result earns: SHACL + metamorphic property tests + contracts.",
+      "properties": {
+        "shacl_report_cid": {"type": "string"},
+        "metamorphic_tests_passed": {"type": "array", "items": {"type": "string"}, "examples": [["scale_equivariance", "statistic_monotone_in_snr"]]}
+      }
+    },
+    "demotion": {
+      "type": "object",
+      "description": "Per-result honesty: a runtime monitor found the method's preconditions did NOT hold on this input, so the tier was demoted. Recorded in provenance.",
+      "required": ["from_tier", "reason", "monitor_verdict_cid"],
+      "properties": {
+        "from_tier": {"type": "string", "enum": ["machine_checked", "bounded", "well_formed"]},
+        "reason": {"type": "string", "examples": ["CFAR reference-window non-homogeneous (clutter edge)", "feed silent — custody gap"]},
+        "monitor_verdict_cid": {"type": "string"}
+      }
+    },
+    "absence": {
+      "type": "array",
+      "description": "Joints not present for this node — recorded, never silently 'fine'. An absent joint pushes its concern to None in the carrier.",
+      "items": {"type": "string", "examples": ["machine_checked", "custody_signature"]}
+    }
+  }
+}
