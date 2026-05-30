@@ -37,6 +37,11 @@ from forge_core.filters import (
 )
 from forge_core.lock_in import lock_in
 from forge_core.matched_filter import matched_filter
+from forge_core.circular import (
+    circular_mean,
+    circular_variance,
+    resultant_length,
+)
 
 __all__ = [
     "Signal",
@@ -70,4 +75,7 @@ __all__ = [
     "EEG_BANDS",
     "lock_in",
     "matched_filter",
+    "circular_mean",
+    "circular_variance",
+    "resultant_length",
 ]
