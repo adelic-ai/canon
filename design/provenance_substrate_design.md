@@ -4,7 +4,7 @@
 > This document's phased plan (Phases 0–6) was the provenance-only roadmap. Phases 0–4
 > were **built** (circular stats, provenance core, [rdf] extra, forge-core lazy-op seam,
 > semantic-cyber composition-link). The effort was then **reframed to FULL self-validation
-> / kigimi** — provenance is now the *master joint* of a larger architecture (every
+> / kigumi** — provenance is now the *master joint* of a larger architecture (every
 > cross-cutting concern a `≤_k`-monotone fold over one content-addressed DAG; chain of
 > custody; honest guarantee tiers; the `~/canon/contracts/` narrow-waist base). **Phase 5
 > here (semantic-core wiring) is subsumed, not the standalone next step.** Current
