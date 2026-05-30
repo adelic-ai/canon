@@ -127,6 +127,69 @@ swapped against the prototype as reference, because no peripheral joint imports 
 host-language fork therefore governs a smaller, later, lower-regret decision than it first
 appears: what the core is written in, and when.
 
+### Contracts first — the base everything else falls out of
+
+The first build artifact is **not code — it's the contract set**: the CID format, the
+artifact schemas (PROV-O shape, in-toto/DSSE envelope, `GuaranteeCertificate` schema,
+SHACL shapes), and the fold-protocol signatures. These are language-independent and
+outlive every implementation; a wrong implementation is cheap to redo, a wrong contract
+is expensive (everything bolted to it moves). **Pluggability and the swap-seams fall out
+of the contracts** — but the fold *internals* (the confidence math, the temporal
+recognizer, the Belnap algebra) are real work the contract only bounds the *shape* of, not
+the content. Cut the contracts first: the skeleton and the seams come free; the muscle is
+still built.
+
+### Placeholders — reference implementation vs recorded absence
+
+A missing joint is **never a silent blank**; the form of the placeholder depends on the
+joint's kind, and both are honest by construction:
+
+- **Executable joints** (folds, detectors): the Python implementation is the
+  **reference** — the correct-but-slow oracle. A faster or other-language version is
+  validated against it by **diffing CID-addressed outputs** (same input → same output CID
+  ⇒ faithful; translation/differential validation, free from content-addressing). Python
+  holds the place *and* remains the oracle every optimized version is checked against.
+- **Guarantee/artifact joints** (machine-checked proof, custody signature): a missing
+  implementation is a **recorded absence**, not a stub. No proof ⇒ the certificate says
+  `machine_checked: absent` and the result's tier is capped; no custody signer ⇒ custody
+  is `None` (Belnap unknown), propagated honestly. The substrate applies *"no data ≠
+  data-says-fine"* to its own completeness — a missing component cannot read as "fine."
+
+### Tiered, escalating dispatch — material and rigor per subtask
+
+Joints are selected per subtask across **two axes**, dispatched through the CID seam: a
+*material/speed* axis (Python reference → Rust hot path) and a *rigor* axis (well-formed →
+bounded/conformal → machine-checked). The model is **tiered compilation** (a VM interprets
+first, then JIT-compiles the hot paths): run the Python reference by default, **escalate** a
+subtask to a faster material when it is hot, or a more-rigorous one when it is high-stakes.
+The escalation triggers fall out of the design already present: a hot path escalates on the
+speed axis; a Belnap **`Both`** (two detectors confidently disagree) escalates on the rigor
+axis to a verified/deeper joint to resolve the contradiction — so `Both` is both a soundness
+alarm *and* an escalation signal.
+
+### The seam is recursive — nesting and the transparency knob
+
+Content addressing is granularity-agnostic (the Merkle property), so the swap-seam **nests**:
+a joint (e.g. a Rust detector) is one node *from outside* and a sub-DAG of CID-addressed
+nodes *from inside*, whose sub-components are themselves swappable joints — possibly in other
+languages (a Rust detector calling a verified-C accumulation kernel and a Python conformal
+calibration). The **hierarchy of subtasks = the hierarchy of nested seams = the hierarchy of
+material choices**; the tiered dispatch above is this recursion as policy, this recursion is
+that dispatch as structure. Bounded by the same **clean-but-not-free** rule at every level:
+nest a seam where the sub-task is coarse enough to amortize serialization; keep truly tight
+inner loops monolithic in the host.
+
+This exposes one design knob per component: **black-box node vs transparent sub-DAG.**
+- *Black box* — the component is one node; trust/validate its CID-addressed output (diff vs
+  the reference). Internals opaque ⇒ **justification stops at its boundary.**
+- *Transparent sub-DAG* — its internal steps are CID-addressed nodes, so the
+  provenance/guarantee/justification folds reach *inside* it. Full forensic depth, more
+  serialization cost.
+
+The knob is a **forensic-depth-vs-performance** dial: go transparent where correctness is
+load-bearing for a detection (justification must reach in), black-box where performance
+dominates and reference-diff validation suffices.
+
 ## 3. The fold family
 
 Each row is an independent `≤_k`-monotone interpreter over the DAG. "HAVE" = built
