@@ -6,7 +6,10 @@ import json
 from pathlib import Path
 
 import pytest
+from rdflib import RDF
+from rdflib.namespace import PROV
 
+from provenance import evaluate, lineage, to_prov, validate
 from semantic_core.graph import Graph
 from semantic_cyber import attack, d3fend
 from semantic_cyber import sigma as sigma_mod
@@ -573,3 +576,55 @@ def test_real_ukc_through_stage_covers_all_five_tactics():
         "credential-access",
         "lateral-movement",
     }.issubset(tactics_seen)
+
+
+# --- provenance (Phase 4: the composition link the join records) ---
+
+
+def test_detection_coverage_attaches_provenance(
+    d3fend_graph, attack_bundle, sigma_rules
+):
+    report = detection_coverage(d3fend_graph, attack_bundle, sigma_rules, "T1558.003")
+    assert report.provenance is not None
+    # The lazy lineage reproduces the coverage content.
+    rebuilt = evaluate(report.provenance)
+    assert {r.title for r in rebuilt.sigma_rules} == {
+        r.title for r in report.sigma_rules
+    }
+    assert len(rebuilt.defenses) == len(report.defenses)
+
+
+def test_join_links_defenses_and_rules(d3fend_graph, attack_bundle, sigma_rules):
+    """The audit's gap closed: the detection_coverage join used BOTH the
+    defensive-coverage lineage AND every sigma rule, in one Activity — so the
+    defenses and rules are linked in one DAG, not two flat lists."""
+    report = detection_coverage(d3fend_graph, attack_bundle, sigma_rules, "T1558.003")
+    kinds = [n.kind for n in lineage(report.provenance)]
+    assert "sigma_rule" in kinds          # the detection rules are in the lineage
+    assert "d3fend_graph" in kinds        # so is the defensive derivation's source
+    # the join used the defensive-coverage entity + one edge per sigma rule
+    assert len(report.provenance.producer.used) == 1 + len(report.sigma_rules)
+
+
+def test_coverage_provenance_is_conforming_prov(
+    d3fend_graph, attack_bundle, sigma_rules
+):
+    report = detection_coverage(d3fend_graph, attack_bundle, sigma_rules, "T1558.003")
+    g = to_prov(report.provenance)
+    # both the defensive and the detection joins appear as PROV activities
+    assert len(set(g.subjects(RDF.type, PROV.Activity))) >= 2
+    assert validate(report.provenance).conforms
+
+
+def test_defensive_coverage_also_carries_provenance(d3fend_graph, attack_bundle):
+    report = defensive_coverage(d3fend_graph, attack_bundle, "T1558.003")
+    assert report.provenance is not None
+    assert validate(report.provenance).conforms
+
+
+def test_empty_sigma_join_still_links(d3fend_graph, attack_bundle):
+    """With no sigma rules the join still records the defensive lineage."""
+    report = detection_coverage(d3fend_graph, attack_bundle, [], "T1558.003")
+    assert report.provenance is not None
+    assert len(report.provenance.producer.used) == 1  # just the defensive entity
+    assert validate(report.provenance).conforms

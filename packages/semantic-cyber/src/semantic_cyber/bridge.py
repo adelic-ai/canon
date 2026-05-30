@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from provenance import Entity, derive, source
 from semantic_core.graph import Graph
 
 from . import attack, d3fend, sigma, ukc
@@ -42,11 +43,19 @@ class CoverageReport:
     lists detection rules tagged with the technique — populated only when
     the report came from ``detection_coverage``; ``defensive_coverage`` and
     its fan-out variants leave it as the empty tuple.
+
+    ``provenance`` is a lazy ``provenance.Entity`` recording how this coverage
+    was produced. For ``detection_coverage`` the join Activity ``used`` BOTH the
+    defensive-coverage lineage AND each sigma rule, so the composition link —
+    which defenses and which rules together cover this technique — is preserved
+    rather than two flat unlinked lists. ``None`` only on legacy/hand-built
+    reports; the coverage functions always populate it.
     """
 
     technique: Technique
     defenses: tuple[DefenseSummary, ...]
     sigma_rules: tuple[SigmaRule, ...] = field(default=())
+    provenance: Entity | None = field(default=None)
 
 
 def defensive_coverage(
@@ -84,7 +93,24 @@ def defensive_coverage(
         for iri, entry in sorted(by_defense.items())
     )
 
-    return CoverageReport(technique=technique, defenses=defenses)
+    # Lineage: the defensive coverage was derived from the D3FEND graph for this
+    # technique. The Entity is a record — the (expensive) graph derivation ran
+    # eagerly above; evaluating reproduces the coverage content.
+    graph_src = source(d3fend_graph, name="d3fend_graph", kind="d3fend_graph")
+    technique_src = source(
+        attack_id, name=f"attack:{attack_id}", kind="attack_technique", label=attack_id
+    )
+    prov = derive(
+        "defensive_coverage",
+        lambda *_inputs, _t=technique, _d=defenses, **_p: CoverageReport(
+            technique=_t, defenses=_d
+        ),
+        (graph_src, technique_src),
+        {"attack_id": attack_id},
+        kind="coverage",
+        label=f"defensive_coverage({attack_id})",
+    )
+    return CoverageReport(technique=technique, defenses=defenses, provenance=prov)
 
 
 def detection_coverage(
@@ -113,10 +139,30 @@ def detection_coverage(
 
     matching = sigma.rules_for_technique(sigma_rules, attack_id)
     ordered = tuple(sorted(matching, key=lambda r: (r.id or "", r.title)))
+
+    # The join: this coverage was derived from BOTH the defensive-coverage
+    # lineage AND every matching sigma rule. Recording them as a single
+    # Activity's used-edges preserves the composition link the audit flagged as
+    # lost (defenses and rules were two unlinked lists).
+    rule_srcs = tuple(
+        source(r, name=f"sigma:{r.id or r.title}", kind="sigma_rule", label=r.id or r.title)
+        for r in ordered
+    )
+    prov = derive(
+        "detection_coverage",
+        lambda *_inputs, _t=report.technique, _d=report.defenses, _s=ordered, **_p: CoverageReport(
+            technique=_t, defenses=_d, sigma_rules=_s
+        ),
+        (report.provenance, *rule_srcs),
+        {"attack_id": attack_id},
+        kind="coverage",
+        label=f"detection_coverage({attack_id})",
+    )
     return CoverageReport(
         technique=report.technique,
         defenses=report.defenses,
         sigma_rules=ordered,
+        provenance=prov,
     )
 
 

@@ -5,6 +5,7 @@ description = "Cyber domain ontology adapters — D3FEND, ATT&CK, framework brid
 requires-python = ">=3.11"
 dependencies = [
     "semantic-core",
+    "provenance",
     "rdflib>=7.0",
     "pyyaml>=6.0",
 ]
@@ -23,3 +24,4 @@ packages = ["src/semantic_cyber"]
 
 [tool.uv.sources]
 semantic-core = { workspace = true }
+provenance = { workspace = true }
