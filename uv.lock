@@ -9,6 +9,7 @@ resolution-markers = [
 [manifest]
 members = [
     "forge-core",
+    "provenance",
     "semantic-core",
     "semantic-cyber",
 ]
@@ -205,6 +206,24 @@ sdist = { url = "https://files.pythonhosted.org/packages/79/45/b0847d88d6cfeb441
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ee/8c/83087ebc47ab0396ce092363001fa37c17153119ee282700c0713a195853/prettytable-3.17.0-py3-none-any.whl", hash = "sha256:aad69b294ddbe3e1f95ef8886a060ed1666a0b83018bbf56295f6f226c43d287", size = 34433, upload-time = "2025-11-14T17:33:19.093Z" },
 ]
+
+[[package]]
+name = "provenance"
+version = "0.1.0"
+source = { editable = "packages/provenance" }
+
+[package.optional-dependencies]
+rdf = [
+    { name = "pyshacl" },
+    { name = "rdflib" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "pyshacl", marker = "extra == 'rdf'", specifier = ">=0.25" },
+    { name = "rdflib", marker = "extra == 'rdf'", specifier = ">=7" },
+]
+provides-extras = ["rdf"]
 
 [[package]]
 name = "pygments"

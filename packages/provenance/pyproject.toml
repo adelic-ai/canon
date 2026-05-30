@@ -1,0 +1,20 @@
+[project]
+name = "provenance"
+version = "0.1.0"
+requires-python = ">=3.11"
+# Light core: ZERO heavy deps so consumers (forge-core) keep a numpy/scipy-only
+# hot path. RDF/PROV-O + SHACL are an opt-in extra (Phase 2), depending on
+# rdflib/pyshacl DIRECTLY — never on semantic-core — so there is no cycle.
+dependencies = []
+
+[project.optional-dependencies]
+rdf = ["rdflib>=7", "pyshacl>=0.25"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv.sources]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/provenance"]
