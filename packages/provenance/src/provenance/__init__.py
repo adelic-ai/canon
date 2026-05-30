@@ -20,3 +20,25 @@ __all__ = [
     "lineage",
     "explain",
 ]
+
+# The [rdf] extra (PROV-O emission + SHACL validation) is optional: the core
+# stays dependency-free, so `import provenance` must work without rdflib. Expose
+# these only when the extra's deps are present.
+try:  # pragma: no cover - exercised by env with/without [rdf]
+    from provenance.rdf import to_prov
+    from provenance.shacl import (
+        ValidationReport,
+        validate,
+        validate_graph,
+        well_formed_shapes,
+    )
+
+    __all__ += [
+        "to_prov",
+        "validate",
+        "validate_graph",
+        "well_formed_shapes",
+        "ValidationReport",
+    ]
+except ImportError:  # pragma: no cover
+    pass
