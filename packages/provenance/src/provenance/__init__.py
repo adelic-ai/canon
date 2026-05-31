@@ -34,6 +34,7 @@ from provenance.monotone import (
 from provenance.tier import Tier, tier_meet
 from provenance.guarantee import Demotion, GuaranteeCertificate, guarantee
 from provenance.custody import CustodyAttestation, custody, evidence_digest
+from provenance.confidence import NO_EVIDENCE, Confidence, confidence
 
 __all__ = [
     "Entity",
@@ -72,6 +73,10 @@ __all__ = [
     "custody",
     "CustodyAttestation",
     "evidence_digest",
+    # confidence fold — graded belief (Chair–Varshney LLR) + Belnap knowledge axis
+    "confidence",
+    "Confidence",
+    "NO_EVIDENCE",
 ]
 
 # The [rdf] extra (PROV-O emission + SHACL validation) is optional: the core
