@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://canon/contracts/guarantee_certificate.schema.json",
   "title": "GuaranteeCertificate",
-  "description": "DRAFT 2026-05-30. The per-node guarantee fold's output: what can honestly be claimed about a result, the tier it actually earned, any per-result demotion, and recorded absences. Pinned to the node by CID. Pfa is distributional and NOT provable in any proof assistant; the bounded tier is where the real detection guarantee lives. See ../design/self_validation_architecture.md §4.",
+  "description": "PINNED 2026-05-31 (was DRAFT 2026-05-30). The per-node guarantee fold's output: what can honestly be claimed about a result, the tier it actually earned, any per-result demotion, and recorded absences. Pinned to the node by CID. Pfa is distributional and NOT provable in any proof assistant; the bounded tier is where the real detection guarantee lives. See ../design/self_validation_architecture.md §4. PIN: the declared 'tier' REQUIRES its matching evidence object (allOf below) — a tier is earned, never asserted. The demotion-ordering invariant (earned tier is weaker-or-equal than 'demotion.from_tier') is FOLD-enforced, not expressible as a cross-property JSON-Schema constraint.",
   "type": "object",
   "required": ["subject_cid", "tier"],
   "properties": {
@@ -75,5 +75,25 @@
       "description": "Joints not present for this node — recorded, never silently 'fine'. An absent joint pushes its concern to None in the carrier.",
       "items": {"type": "string", "examples": ["machine_checked", "custody_signature"]}
     }
-  }
+  },
+  "allOf": [
+    {
+      "$comment": "tier earned => its evidence object is present. A tier may not be claimed without the evidence that earns it.",
+      "if": {"properties": {"tier": {"const": "machine_checked"}}},
+      "then": {"required": ["machine_checked"]}
+    },
+    {
+      "if": {"properties": {"tier": {"const": "bounded"}}},
+      "then": {"required": ["bounded"]}
+    },
+    {
+      "if": {"properties": {"tier": {"const": "well_formed"}}},
+      "then": {"required": ["well_formed"]}
+    },
+    {
+      "$comment": "tier=absent => the absence list records at least one missing joint (a recorded absence, never a silent blank).",
+      "if": {"properties": {"tier": {"const": "absent"}}},
+      "then": {"required": ["absence"], "properties": {"absence": {"minItems": 1}}}
+    }
+  ]
 }
