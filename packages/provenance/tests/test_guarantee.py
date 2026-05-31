@@ -120,14 +120,16 @@ def test_non_true_verdict_demotes(verdict):
 
 
 def test_true_verdict_keeps_assumption_tier():
+    # Parent must also earn BOUNDED, else weakest-link composition (correctly) caps n at
+    # the parent's tier — that capping is a separate mechanism from monitor demotion.
     a = source(1, name="a")
     n = derive("n", K, (a,))
     certs = guarantee(
         n,
-        claims={a.id: Tier.WELL_FORMED, n.id: Tier.BOUNDED},
-        monitors={n.id: TRUE},
+        claims={a.id: Tier.BOUNDED, n.id: Tier.BOUNDED},
+        monitors={a.id: TRUE, n.id: TRUE},
     )
-    assert certs[n.id].tier is Tier.BOUNDED
+    assert certs[n.id].tier is Tier.BOUNDED  # TRUE verdict + strong parent -> tier stands
     assert certs[n.id].demotion is None
 
 

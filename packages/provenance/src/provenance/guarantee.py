@@ -77,9 +77,8 @@ def _capability(claimed: Tier, verdict: Four) -> tuple[Tier, Demotion | None]:
     """
     if claimed not in ASSUMPTION_BEARING:
         return claimed, None
-    # Value equality, NOT identity: under the workspace's importlib test mode the carrier
-    # singletons can be duplicated across module loads, so `verdict is TRUE` is unreliable
-    # for a value handed in from another module. Four is a frozen value type — compare by ==.
+    # Compare the verdict by value: Four is a frozen value type whose equality is the
+    # (t,f) pair, so == is the correct comparison for a value handed in by a caller.
     if verdict == TRUE:
         return claimed, None
     return FLOOR, Demotion(from_tier=claimed, reason=_demotion_reason(verdict))
