@@ -93,6 +93,30 @@ def test_uniform_strong_chain_holds():
     assert certs[c.id].tier is Tier.BOUNDED
 
 
+def test_unclaimed_source_does_not_cap_downstream():
+    # The source-transparency rule: an *unclaimed* source carries no rigor tier (its trust is
+    # the custody axis), so it must NOT drag a confirmed BOUNDED computation to the floor.
+    # Absence of a tier claim on an input is NONE-like, not FALSE-like.
+    a = source(1, name="a")  # deliberately NOT in claims
+    n = derive("n", K, (a,))
+    certs = guarantee(n, claims={n.id: Tier.BOUNDED}, monitors={n.id: TRUE})
+    assert certs[n.id].tier is Tier.BOUNDED  # earned, not dragged to ABSENT by the source
+    assert certs[a.id].tier is Tier.ABSENT  # the source's own cert stays honest (no tier)
+
+
+def test_claimed_source_still_does_not_cap_downstream():
+    # Even an explicitly LOW-claimed source does not impose a tier ceiling — input rigor is
+    # not the tier axis. (The source's own cert honors its claim; it just does not propagate.)
+    a = source(1, name="a")
+    n = derive("n", K, (a,))
+    certs = guarantee(
+        n,
+        claims={a.id: Tier.WELL_FORMED, n.id: Tier.BOUNDED},
+        monitors={n.id: TRUE},
+    )
+    assert certs[n.id].tier is Tier.BOUNDED  # not capped by the source's WELL_FORMED claim
+
+
 # ── per-result demotion tied to the Belnap verdict ──────────────────────────────────
 def test_assumption_tier_needs_true_verdict_to_stand():
     a = source(1, name="a")

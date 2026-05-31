@@ -8,8 +8,11 @@ the node and its children's certificates (``fold_protocol.md`` locality), and it
 Two honesty mechanisms from §4, both computed (not asserted):
 
 1. **Weakest link.** A node's earned tier is the :func:`~provenance.tier.tier_meet` of its
-   own (post-monitor) capability with every child's earned tier. A machine-checked op fed a
-   merely well-formed input can only honestly earn well-formed downstream.
+   own (post-monitor) capability with every *computed* child's earned tier. A machine-checked
+   op fed a merely well-formed upstream *computation* can only honestly earn well-formed
+   downstream. **Source** inputs are skipped — an input carries no rigor tier to weaken with
+   (its trust is the orthogonal custody axis), so a raw source never drags a result to the
+   floor. Absence of a tier claim on an input is ``NONE``-like, not ``FALSE``-like.
 2. **Per-result demotion, tied to the carrier.** An assumption-bearing tier
    (``BOUNDED``/``MACHINE_CHECKED``) only *stands* if its runtime-monitor verdict is Belnap
    :data:`~provenance.carrier.TRUE` (the precondition was confirmed to hold on *this*
@@ -96,6 +99,15 @@ def guarantee(
     a node absent from ``claims`` earns ``ABSENT`` with the absence recorded. ``monitors``
     maps a node id to the Belnap verdict of whether its precondition held on this input
     (default ``NONE`` — unconfirmed). The root's certificate is ``result[root.id]``.
+
+    Weakest-link composes over the **computed** sub-chain only: a *source* input does not
+    impose a rigor ceiling on its consumers. A source is an input, not a computation — it
+    has no guarantee joint, so the absence of a tier claim on it is ``NONE``-like ("no rigor
+    statement"), not ``FALSE``-like ("asserts the floor"); folding it as the floor would be
+    the same absence-as-negative error the Belnap carrier exists to prevent, on the tier
+    axis. A raw input's trust lives on the *orthogonal custody axis*, not here. (A source's
+    own certificate is still computed normally — ``ABSENT`` when unclaimed — it simply does
+    not enter a consumer's meet.)
     """
     monitors = monitors or {}
     certs: dict[str, GuaranteeCertificate] = {}
@@ -106,11 +118,16 @@ def guarantee(
         verdict = monitors.get(nid, NONE)
 
         capability, demotion = _capability(claimed, verdict)
-        # weakest link: earned = meet of own capability and all children's earned tiers.
-        # Children are the producer Activity's inputs; a source has no producer.
+        # weakest link: earned = meet of own capability and every *computed* child's earned
+        # tier. Source children (producer is None) are skipped — an input carries no rigor
+        # tier to weaken with; its trust is the custody axis. So a machine-checked op fed a
+        # merely well-formed *computation* still earns only well-formed, but the same op fed
+        # a raw source is not dragged to the floor by the source.
         earned = capability
         if node.producer is not None:
             for child in node.producer.used:
+                if child.producer is None:
+                    continue  # source input — does not impose a tier ceiling (see docstring)
                 earned = tier_meet(earned, certs[child.id].tier)
 
         certs[nid] = GuaranteeCertificate(

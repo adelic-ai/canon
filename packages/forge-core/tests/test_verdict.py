@@ -65,24 +65,26 @@ def _detection_dag():
 
 
 def _claims(raw_src, sig, root) -> dict:
-    """Per-node guarantee claims for the whole DAG (the fold meets weakest-link over all of it).
+    """Per-node guarantee claims (the fold meets weakest-link over the *computed* sub-chain).
 
     Claims are what each node's joint *can* provide; the earned tier is the meet down the
-    chain. The honest claims here:
+    computed chain. The honest claims here:
 
     * the detector op carries BOUNDED — CA-CFAR's analytic Pfa, conditional on the
       homogeneous-noise model (the capability).
     * ``ingest_normalize`` is WELL_FORMED — a deterministic decode is structurally valid; we
       have *not* machine-checked ``np.frombuffer``, so claiming more would be over-claiming.
-    * the evidence ``source`` is WELL_FORMED — a raw input is well-formed; its *integrity* is
-      the orthogonal custody axis (exercised separately, TRUE here), not a rigor tier.
+    * the evidence ``source`` is **left unclaimed on purpose** — a raw input carries no rigor
+      tier (its trust is the orthogonal custody axis, exercised separately and TRUE here), so
+      it is tier-transparent and does not enter the meet. Pre-fix it would have dragged the
+      whole chain to ABSENT; it no longer does.
 
-    Consequence (the finding the slice surfaces): weakest-link caps the result at
-    WELL_FORMED — the detector's BOUNDED *capability* cannot be earned on an input that
-    carries no stronger guarantee. See the docket note on source tier-transparency.
+    Consequence (the finding the slice surfaces): the result is capped at WELL_FORMED — not
+    by the source (transparent), but by the *decode*, a real computation on the
+    guarantee-critical chain. To earn BOUNDED end-to-end the ingest path must itself be
+    verified; the detector's BOUNDED capability alone is not enough.
     """
     return {
-        raw_src.id: Tier.WELL_FORMED,
         sig.id: Tier.WELL_FORMED,
         root.id: Tier.BOUNDED,
     }
@@ -158,11 +160,12 @@ def test_keystone_custody_is_true_for_a_signed_live_evidence_source():
     assert verdict.to_contract()["custody"] == "true"
 
 
-def test_result_is_capped_at_well_formed_by_its_weakest_input():
-    """Weakest-link, end-to-end: the detector *claims* BOUNDED but earns WELL_FORMED, because
-    its raw telemetry input carries no guarantee stronger than well-formed. The capability is
-    recorded (``claimed == BOUNDED``); the result honestly does not inherit it. The cap is
-    structural (weakest-link), not a per-result monitor demotion — so ``demotion is None``."""
+def test_result_is_capped_at_well_formed_by_the_decode_not_the_source():
+    """Weakest-link, end-to-end: the detector *claims* BOUNDED but earns WELL_FORMED — capped
+    by the *decode* (``ingest_normalize``, a real computation), not by the raw source (which
+    is tier-transparent). The capability is recorded (``claimed == BOUNDED``); the result
+    honestly does not inherit it. The cap is structural (weakest-link), not a per-result
+    monitor demotion — so ``demotion is None``."""
     verdict, _ = _confirming_verdict(monitor=TRUE)
     assert verdict.guarantee.claimed == Tier.BOUNDED
     assert verdict.guarantee.tier == Tier.WELL_FORMED
@@ -170,10 +173,11 @@ def test_result_is_capped_at_well_formed_by_its_weakest_input():
     assert verdict.to_contract()["guarantee"]["tier"] == "well_formed"
 
 
-def test_root_monitor_cannot_lift_above_the_input_cap():
-    """Even an unconfirmed/violated monitor on the detector leaves the earned tier WELL_FORMED:
-    the input cap dominates. (Per-result *monitor* demotion is exercised directly in the
-    provenance package's guarantee tests, where inputs are claimed strong enough to see it.)"""
+def test_root_monitor_cannot_lift_above_the_decode_cap():
+    """Even a confirmed monitor on the detector leaves the earned tier WELL_FORMED: the decode
+    cap dominates. To reach BOUNDED the ingest path itself must be verified. (Per-result
+    *monitor* demotion is exercised directly in the provenance guarantee tests, where the
+    computed chain is claimed strong enough to see it.)"""
     for monitor in (FALSE, NONE, TRUE):
         verdict, _ = _confirming_verdict(monitor=monitor)
         assert verdict.guarantee.tier == Tier.WELL_FORMED
