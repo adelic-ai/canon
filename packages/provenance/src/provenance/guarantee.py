@@ -99,10 +99,12 @@ def guarantee(
         verdict = monitors.get(nid, NONE)
 
         capability, demotion = _capability(claimed, verdict)
-        # weakest link: earned = meet of own capability and all children's earned tiers
+        # weakest link: earned = meet of own capability and all children's earned tiers.
+        # Children are the producer Activity's inputs; a source has no producer.
         earned = capability
-        for parent in node.used:
-            earned = tier_meet(earned, certs[parent.id].tier)
+        if node.producer is not None:
+            for child in node.producer.used:
+                earned = tier_meet(earned, certs[child.id].tier)
 
         certs[nid] = GuaranteeCertificate(
             subject_cid=nid,
