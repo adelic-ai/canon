@@ -4,6 +4,7 @@ members = ["packages/*"]
 [dependency-groups]
 dev = [
     "pytest>=9.0.3",
+    "jsonschema>=4.0",  # validates emitted DetectionVerdicts against the PINNED contract
 ]
 
 [tool.pytest.ini_options]
