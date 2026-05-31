@@ -33,6 +33,7 @@ from provenance.monotone import (
 )
 from provenance.tier import Tier, tier_meet
 from provenance.guarantee import Demotion, GuaranteeCertificate, guarantee
+from provenance.custody import CustodyAttestation, custody, evidence_digest
 
 __all__ = [
     "Entity",
@@ -67,6 +68,10 @@ __all__ = [
     "guarantee",
     "GuaranteeCertificate",
     "Demotion",
+    # custody fold — were the bytes tampered between entry and evaluation
+    "custody",
+    "CustodyAttestation",
+    "evidence_digest",
 ]
 
 # The [rdf] extra (PROV-O emission + SHACL validation) is optional: the core
