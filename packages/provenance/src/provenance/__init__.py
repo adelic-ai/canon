@@ -35,6 +35,18 @@ from provenance.tier import Tier, tier_meet
 from provenance.guarantee import Demotion, GuaranteeCertificate, guarantee
 from provenance.custody import CustodyAttestation, custody, evidence_digest
 from provenance.confidence import NO_EVIDENCE, Confidence, confidence
+from provenance.temporal import (
+    All,
+    Any,
+    Before,
+    Event,
+    Never,
+    Occurs,
+    Pattern,
+    Trace,
+    Window,
+    recognize,
+)
 
 __all__ = [
     "Entity",
@@ -77,6 +89,17 @@ __all__ = [
     "confidence",
     "Confidence",
     "NO_EVIDENCE",
+    # temporal fold — chronicle recognition (the §6 seam: negation under partial data)
+    "recognize",
+    "Pattern",
+    "Trace",
+    "Event",
+    "Occurs",
+    "Window",
+    "Before",
+    "Any",
+    "All",
+    "Never",
 ]
 
 # The [rdf] extra (PROV-O emission + SHACL validation) is optional: the core
