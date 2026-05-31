@@ -114,6 +114,17 @@ The source-identity route is recorded so a downstream guarantee fold never reads
 by-reference name as tamper-evident — Belnap-honest: a missing integrity claim is `None`,
 not `True`.
 
+This is a seam, not a missing feature: a named source still *gets* integrity — just from
+the **custody fold**, not the CID. Identity is the CID's job; tamper-evidence is custody's,
+and the two meet at a digest. A named source becomes tamper-evident by carrying a separate
+signed attestation that binds name → digest → time (in-toto/DSSE Statement, or a W3C
+Verifiable Credential at entry; see `custody.md`). For a *live/streaming* named source
+there is no single payload to digest, so its integrity is **feed-liveness** — continuity
+attested over time, which the architecture equates with custody (`../design/self_validation_architecture.md`
+§6, "a live, unbroken feed is intact chain-of-custody"). Putting any of this into the CID
+would force hashing the payload (defeating the reason by-reference exists) and re-conflate
+naming with tamper-evidence — the exact heterogeneous-surface collapse the CID undoes.
+
 ## One hash, three roles (the keystone)
 
 A node's CID is simultaneously its **Merkle id** (dedup/structural sharing), its
