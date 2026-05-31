@@ -1,6 +1,8 @@
 # Contract: the fold protocol
 
-**Status:** DRAFT, 2026-05-30. What every interpreter over the DAG must be.
+**Status:** PINNED, 2026-05-31 (was DRAFT 2026-05-30). What every interpreter over the DAG
+must be. Pins: the four requirements (locality, `≤_k`-monotonicity, totality, determinism),
+single-output folds with composition over product, and evaluation-strategy independence.
 
 A **fold** (interpreter) is a `≤_k`-monotone map from a DAG node — given the node and its
 children's *already-folded* results — into a carrier-valued result:
