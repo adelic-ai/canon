@@ -56,11 +56,16 @@ class GuaranteeCertificate:
     absence: tuple[str, ...] = ()
 
 
-_DEMOTION_REASON = {
-    NONE: "assumption monitor absent — no data is not data-says-fine",
-    FALSE: "precondition violated on this input",
-    BOTH: "conflicting monitor verdicts (Both) — soundness alarm",
-}
+def _demotion_reason(verdict: Four) -> str:
+    """Why an assumption tier did not stand, by the (non-TRUE) monitor verdict.
+
+    Compares by value (==), not identity — see the note in :func:`_capability`.
+    """
+    if verdict == FALSE:
+        return "precondition violated on this input"
+    if verdict == BOTH:
+        return "conflicting monitor verdicts (Both) — soundness alarm"
+    return "assumption monitor absent — no data is not data-says-fine"  # NONE / unconfirmed
 
 
 def _capability(claimed: Tier, verdict: Four) -> tuple[Tier, Demotion | None]:
@@ -72,9 +77,12 @@ def _capability(claimed: Tier, verdict: Four) -> tuple[Tier, Demotion | None]:
     """
     if claimed not in ASSUMPTION_BEARING:
         return claimed, None
-    if verdict is TRUE:
+    # Value equality, NOT identity: under the workspace's importlib test mode the carrier
+    # singletons can be duplicated across module loads, so `verdict is TRUE` is unreliable
+    # for a value handed in from another module. Four is a frozen value type — compare by ==.
+    if verdict == TRUE:
         return claimed, None
-    return FLOOR, Demotion(from_tier=claimed, reason=_DEMOTION_REASON[verdict])
+    return FLOOR, Demotion(from_tier=claimed, reason=_demotion_reason(verdict))
 
 
 def guarantee(
