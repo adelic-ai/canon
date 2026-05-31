@@ -32,7 +32,7 @@ from dataclasses import dataclass, field
 
 from provenance.carrier import BOTH, FALSE, NONE, TRUE, Four
 from provenance.entity import Entity
-from provenance.interpret import _post_order
+from provenance.interpret import lineage
 from provenance.tier import ASSUMPTION_BEARING, FLOOR, Tier, tier_meet
 
 
@@ -92,7 +92,7 @@ def guarantee(
     """
     monitors = monitors or {}
     certs: dict[str, GuaranteeCertificate] = {}
-    for node in _post_order(root):
+    for node in lineage(root):  # dependency order: every child precedes its parent
         nid = node.id
         has_claim = nid in claims
         claimed = claims.get(nid, Tier.ABSENT)
