@@ -28,6 +28,37 @@ def _evidence(name, payload):
     return src, att
 
 
+# ── the keystone: an evidence source's CID IS its payload digest (cid.md PIN 4) ──────
+def test_evidence_source_id_is_payload_digest():
+    src = source(b"raw-log-bytes", evidence=True)
+    assert src.is_evidence
+    assert src.id == evidence_digest(b"raw-log-bytes")  # one hash, three roles
+
+
+def test_by_reference_source_is_not_evidence():
+    src = source("x", name="feed")
+    assert not src.is_evidence
+    assert src.id != evidence_digest("x")  # by-reference id carries no integrity claim
+
+
+def test_identical_evidence_dedups_by_content():
+    # Content-addressing: same bytes -> same CID, regardless of any name.
+    assert source(b"abc", evidence=True).id == source(b"abc", evidence=True, name="other").id
+
+
+def test_keystone_custody_verifies_by_cid_equality():
+    # The in-toto product digest the attestation vouches for IS the source's CID.
+    src = source(b"payload", evidence=True)
+    att = CustodyAttestation(product_digest=src.id)  # product digest == CID == digest
+    assert custody(src, attestations={src.id: att})[src.id] is TRUE
+
+
+def test_keystone_custody_detects_tamper_via_cid_mismatch():
+    src = source(b"real-payload", evidence=True)
+    forged = CustodyAttestation(product_digest=evidence_digest(b"forged-payload"))
+    assert custody(src, attestations={src.id: forged})[src.id] is FALSE
+
+
 # ── evidence_digest ─────────────────────────────────────────────────────────────────
 def test_evidence_digest_is_sha256_hex():
     d = evidence_digest("hello")

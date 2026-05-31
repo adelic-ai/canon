@@ -34,12 +34,13 @@ a deferred ``entity.py`` change — flagged here, not faked.
 
 from __future__ import annotations
 
-import hashlib
 from dataclasses import dataclass
 
 from provenance.carrier import FALSE, NONE, TRUE, Four, tmeet
-from provenance.entity import Entity
+from provenance.entity import Entity, evidence_digest  # evidence_digest: the identity↔digest seam
 from provenance.interpret import lineage
+
+__all__ = ["CustodyAttestation", "custody", "evidence_digest"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,31 +50,12 @@ class CustodyAttestation:
     canon does **not** re-mint the in-toto/DSSE format (custody.md: borrowed, not
     redefined); this is just the fields the leaf verdict needs. ``product_digest`` is the
     sha2-256 hex the signed statement vouches for — the keystone digest that must equal the
-    evidence's actual content digest.
+    evidence's actual content digest (which, for an evidence source, *is* its CID).
     """
 
     product_digest: str
     signed: bool = True
     feed_live: bool = True
-
-
-def evidence_digest(payload: bytes | str) -> str:
-    """The sha2-256 hex of evidence bytes — an evidence source's content digest.
-
-    This is the digest that, under the keystone, *is* the source CID and the in-toto
-    product digest (cid.md: an evidence source is content-addressed by its byte digest).
-    Only byte/str evidence is in scope — arrays are inputs, not evidence, and are never
-    hashed for identity (cid.md).
-    """
-    if isinstance(payload, str):
-        b = payload.encode("utf-8")
-    elif isinstance(payload, (bytes, bytearray)):
-        b = bytes(payload)
-    else:
-        raise TypeError(
-            f"evidence_digest needs bytes/str evidence, got {type(payload).__name__}"
-        )
-    return hashlib.sha256(b).hexdigest()
 
 
 def _source_custody(source: Entity, att: CustodyAttestation | None) -> Four:
@@ -84,8 +66,12 @@ def _source_custody(source: Entity, att: CustodyAttestation | None) -> Four:
         return NONE  # silent feed — the §6 temporal-negation signal
     if not att.signed:
         return NONE  # unsigned claim carries no integrity (cid.md PIN 4)
-    # The keystone check: the evidence's actual content digest must match the vouched one.
-    if evidence_digest(source.payload) == att.product_digest:
+    # The keystone check: does the evidence's content digest match the vouched product digest?
+    # For an evidence source the digest IS its CID (source.id), so this is literal CID equality
+    # — one hash, three roles. For a by-reference source there is no CID commitment to the
+    # bytes, so fall back to hashing the payload directly.
+    actual = source.id if source.is_evidence else evidence_digest(source.payload)
+    if actual == att.product_digest:
         return TRUE  # intact, signed, digest-matched chain
     return FALSE  # digest mismatch — tampered between entry and evaluation
 

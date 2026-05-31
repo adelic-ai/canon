@@ -44,6 +44,25 @@ def _hash(*parts: str) -> str:
     return h.hexdigest()[:_ID_LEN]
 
 
+def evidence_digest(payload: bytes | str) -> str:
+    """The **full** sha2-256 hex of evidence bytes — an evidence source's content digest.
+
+    This is the digest that, under the keystone (cid.md PIN 4, custody.md), *is* the source
+    CID and the in-toto product digest: ``source.id == evidence_digest(payload) ==
+    in-toto product digest``. Full-length (not truncated like :func:`_hash`'s recipe ids),
+    because it must equal a real in-toto sha256 product digest. Only byte/str evidence is in
+    scope — arrays are inputs, not evidence, and are never hashed for identity (cid.md)."""
+    if isinstance(payload, str):
+        b = payload.encode("utf-8")
+    elif isinstance(payload, (bytes, bytearray)):
+        b = bytes(payload)
+    else:
+        raise TypeError(
+            f"evidence_digest needs bytes/str evidence, got {type(payload).__name__}"
+        )
+    return hashlib.sha256(b).hexdigest()
+
+
 @dataclass(frozen=True, slots=True, eq=False)
 class Activity:
     """An op firing — the edge / morphism (``prov:Activity``).
@@ -93,14 +112,24 @@ class Entity:
     kind: str | None = None
     label: str | None = None
     source_id: str | None = None
+    evidence_id: str | None = None
 
     @property
     def is_source(self) -> bool:
         return self.producer is None
 
     @property
+    def is_evidence(self) -> bool:
+        """A by-payload-digest (tamper-evident) source — its CID *is* its content digest."""
+        return self.evidence_id is not None
+
+    @property
     def id(self) -> str:
         if self.producer is None:
+            # Evidence source: the CID IS the payload digest (the keystone — cid.md PIN 4).
+            if self.evidence_id is not None:
+                return self.evidence_id
+            # By-reference source: id by name (or anon object identity); carries NO integrity.
             ref = (
                 self.source_id
                 if self.source_id is not None
@@ -128,20 +157,30 @@ def source(
     name: str | None = None,
     kind: str | None = None,
     label: str | None = None,
+    evidence: bool = False,
 ) -> Entity:
     """Wrap a raw input as a source :class:`Entity`.
 
-    Identity is by ``name`` when given — two sources with the same name share an
-    id and dedup — otherwise by the payload's object identity (process-local;
-    anonymous sources backed by distinct objects do not dedup). The payload is
-    never hashed.
+    Two identity routes, the cid.md PIN 4 distinction:
+
+    * **by-reference (default).** Identity is by ``name`` when given — two sources with the
+      same name share an id and dedup — else by the payload's object identity (process-local;
+      anonymous sources backed by distinct objects do not dedup). The payload is never
+      hashed, and the id carries **no integrity guarantee** (a trusted handle, nothing more).
+    * **by-payload-digest (``evidence=True``).** The keystone: the source's ``id`` *is* the
+      sha2-256 digest of its byte/str payload, so ``source.id == evidence_digest(payload) ==
+      the in-toto product digest == the root prov:Entity id`` — one hash, three roles. This
+      is the only **tamper-evident** source identity; the custody fold verifies it by CID
+      equality. Requires byte/str evidence (arrays are inputs, not evidence).
     """
+    evidence_id = evidence_digest(payload) if evidence else None
     return Entity(
         producer=None,
         payload=payload,
         kind=kind,
         label=label or name,
         source_id=name,
+        evidence_id=evidence_id,
     )
 
 
