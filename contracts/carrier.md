@@ -1,6 +1,9 @@
 # Contract: the carrier — Belnap bilattice + the monotonicity invariant
 
-**Status:** DRAFT, 2026-05-30. The value domain every fold computes in.
+**Status:** PINNED, 2026-05-31 (was DRAFT 2026-05-30). The value domain every fold
+computes in. Pins: the four values as a `(told-true, told-false)` pair, the explicit truth
+tables for all operations incl. negation, the `≤_k`-monotonicity invariant, and the
+complete-lattice basis for recursive folds.
 
 Every fold computes in **Belnap's four-valued bilattice** `FOUR`:
 
