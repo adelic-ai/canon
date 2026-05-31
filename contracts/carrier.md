@@ -25,6 +25,65 @@ binding because mixing them is a subtle, real bug:
 - knowledge: `⊗` (consensus / meet) and `⊕` (gullibility / join)
 - truth:     `∧` (min) and `∨` (max), with `¬` swapping True/False and fixing None/Both
 
+## The `(t, f)` model + truth tables (PIN — cross-language ground truth)
+
+The operations are named above; this is the substance that makes them a *contract* a second
+language can reproduce. Each value is a pair `(t, f)` of independent bits — `t` = "told
+true", `f` = "told false". Every table below is derived from this model, so any binding
+that matches the model reproduces the tables exactly (storage as enum vs two packed bits is
+the binding's choice).
+
+```
+None = (0,0)   True = (1,0)   False = (0,1)   Both = (1,1)
+≤_k = componentwise ≤ on (t,f)        ≤_t : t up, f down
+```
+
+**`⊕` knowledge join — accumulate evidence** (`(t,f)` componentwise OR; `None` identity,
+`Both` absorbing). `True ⊕ False = Both`: disagreeing sources make a contradiction, *not*
+an average.
+
+```
+⊕     | None  True  False Both        ⊗     | None  True  False Both
+------+-------------------------      ------+-------------------------
+None  | None  True  False Both        None  | None  None  None  None
+True  | True  True  Both  Both        True  | None  True  None  True
+False | False Both  False Both        False | None  None  False False
+Both  | Both  Both  Both  Both        Both  | None  True  False Both
+```
+
+**`⊗` knowledge meet — consensus** (componentwise AND; `Both` identity, `None` absorbing):
+above right. `True ⊗ False = None` — no agreement, no knowledge.
+
+**`∨` truth join — OR** (`(t1∨t2, f1∧f2)`; ∃-detect) and **`∧` truth meet — AND**
+(`(t1∧t2, f1∨f2)`; ∀-validate):
+
+```
+∨     | None  True  False Both        ∧     | None  True  False Both
+------+-------------------------      ------+-------------------------
+None  | None  True  None  True        None  | None  None  False False
+True  | True  True  True  True        True  | None  True  False Both
+False | None  True  False Both        False | False False False False
+Both  | True  True  Both  Both        Both  | False Both  False Both
+```
+
+**`¬` negation** — swap the pair, `¬(t,f) = (f,t)`: `¬None = None`, `¬Both = Both`,
+`¬True = False`, `¬False = True`. It is **`≤_k`-monotone** (swapping both components
+preserves componentwise `≤`), so it satisfies the universal invariant below; it is
+`≤_t`-*antitone*, as a negation should be. This is the operator temporal-negation and
+∀-validate use — `"C never occurred" = ¬(∃ C)`, which under partial data correctly yields
+`None`, not `True` (`../design/self_validation_architecture.md` §6).
+
+All five operations are `≤_k`-monotone (standard bilattice result; inherited).
+
+## Complete lattice — recursive folds have a least fixpoint (PIN)
+
+The carrier is **finite**, hence a **complete lattice** in `≤_k` (every subset has a join
+and meet, trivially by finiteness). So any `≤_k`-monotone fold has a **least fixpoint** by
+Knaster–Tarski, computable by iterating from `None` (⊥) to convergence — giving recursive /
+self-referential detections a well-defined value instead of diverging (the §5 backstop). A
+recursive fold must be `≤_k`-monotone (it already must, by the invariant), so the lfp always
+exists; no obligation beyond monotonicity.
+
 ## The universal invariant
 
 > **Every fold is `≤_k`-monotone.** Combining evidence may only move *up* the knowledge
