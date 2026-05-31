@@ -31,6 +31,8 @@ from provenance.monotone import (
     is_k_monotone_binary,
     is_k_monotone_unary,
 )
+from provenance.tier import Tier, tier_meet
+from provenance.guarantee import Demotion, GuaranteeCertificate, guarantee
 
 __all__ = [
     "Entity",
@@ -59,6 +61,12 @@ __all__ = [
     "assert_k_monotone",
     "is_k_monotone_unary",
     "is_k_monotone_binary",
+    # guarantee fold — the tier a result earned (honest by category)
+    "Tier",
+    "tier_meet",
+    "guarantee",
+    "GuaranteeCertificate",
+    "Demotion",
 ]
 
 # The [rdf] extra (PROV-O emission + SHACL validation) is optional: the core
