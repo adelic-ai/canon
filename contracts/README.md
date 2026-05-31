@@ -39,6 +39,10 @@ seams are free and the muscle is built behind them.
   the one-hash-three-roles seam (ingest Entity CID = in-toto product digest = root
   `prov:Entity`).
 - `shapes/` — SHACL shapes (well-formedness contracts), as they are authored.
+- `detection_verdict.schema.json` — **the canonical detection-battery standard**: the unit
+  every detector emits, tying the five folds (decision/confidence/W-grounding/guarantee/
+  custody) to one content-addressed provenance node. The standard is the *schema*, not a
+  fixed list of detectors.
 
 ## Status discipline
 

@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://canon/contracts/detection_verdict.schema.json",
+  "title": "DetectionVerdict",
+  "description": "PINNED 2026-05-31. THE canonical detection-battery standard: the unit every detector emits. It is a schema, NOT a fixed list of detectors (web/index.html). One DetectionVerdict ties together the five folds of the provenance substrate over a single content-addressed node: decision (carrier Four), confidence (score), the empirical W-grounding, the guarantee tier earned on THIS input, the custody/feed-liveness verdict, and the provenance node that justifies all of it on demand. A detector conforms to canon iff it emits this. See ../design/self_validation_architecture.md and carrier.md / guarantee_certificate.schema.json / custody.md.",
+  "type": "object",
+  "$defs": {
+    "belnap": {
+      "type": "string",
+      "enum": ["none", "true", "false", "both"],
+      "description": "A carrier.md Belnap Four value as a string. none=(0,0) no info; true=(1,0); false=(0,1); both=(1,1) contradiction. NOT a bare bool — an unanswered question is 'none', never 'false' (absence of evidence != evidence of absence)."
+    },
+    "cid": {
+      "type": "string",
+      "minLength": 1,
+      "description": "A content address per cid.md (a node's recipe CID = its prov:Entity id). Justification is reachable by walking the provenance DAG from this id."
+    },
+    "w_record": {
+      "type": "object",
+      "description": "The five W's — the empirical grounding that turns a semantic technique label into checkable telemetry facts. Each W is itself a Belnap-typed claim with its own provenance node (recursively justified); an unanswered W is 'none', never 'false'.",
+      "properties": {
+        "who": {"$ref": "#/$defs/belnap", "description": "principal/account resolved? (none = unattributed)"},
+        "what": {"$ref": "#/$defs/belnap", "description": "the technique's artifact present?"},
+        "when": {"$ref": "#/$defs/belnap", "description": "temporal window satisfied? (the temporal fold's verdict)"},
+        "where": {"$ref": "#/$defs/belnap", "description": "host/segment located?"},
+        "how": {"$ref": "#/$defs/belnap", "description": "mechanism/procedure matched?"},
+        "score": {"type": "number", "minimum": 0, "maximum": 1, "description": "aggregate W-confidence in [0,1]"},
+        "provenance": {"$ref": "#/$defs/cid", "description": "CID of this W-record's own DAG node"}
+      },
+      "required": ["who", "what", "when", "where", "how", "score", "provenance"]
+    }
+  },
+  "properties": {
+    "technique": {
+      "type": "string",
+      "minLength": 1,
+      "description": "ATT&CK id (e.g. T1558.003) — the semantic label, itself a validatable hypothesis, never the bedrock."
+    },
+    "score": {
+      "type": "number",
+      "description": "The calibrated detector statistic (the confidence fold's graded axis, e.g. a fused log-odds or its probability). Orthogonal to 'decision' — a score near equipoise with decision='both' is a contradiction, not genuine 0.5 (carrier.md two-axes rule)."
+    },
+    "decision": {
+      "$ref": "#/$defs/belnap",
+      "description": "The detect/validate projection of the temporal/confidence folds. 'both' = an exists-detect path and a forall-validate path disagreed (the soundness alarm)."
+    },
+    "w_record": {
+      "$ref": "#/$defs/w_record"
+    },
+    "guarantee": {
+      "type": "object",
+      "required": ["subject_cid", "tier"],
+      "description": "The GuaranteeCertificate (guarantee_certificate.schema.json) — the tier this result EARNED on this input, demotable per result. Referenced by shape here; validated in full by that schema."
+    },
+    "custody": {
+      "$ref": "#/$defs/belnap",
+      "description": "The custody fold's verdict at ingest: true=signed+live+digest-matched, false=tampered, none=silent/unsigned feed. Feed-liveness IS custody (architecture §6); the signal the temporal fold's negation depends on."
+    },
+    "provenance": {
+      "$ref": "#/$defs/cid",
+      "description": "CID of the lazy provenance DAG node this verdict is about — full justification on demand. The one object all the other folds are interpretations of (justification IS the result, not a side-log)."
+    }
+  },
+  "required": ["technique", "score", "decision", "w_record", "guarantee", "custody", "provenance"]
+}
