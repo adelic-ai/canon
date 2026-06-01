@@ -37,6 +37,7 @@ from forge_core.filters import (
 )
 from forge_core.lock_in import lock_in
 from forge_core.matched_filter import matched_filter
+from forge_core.information import shannon_entropy, windowed_entropy
 from forge_core.ingest import (
     DECODE_TIER_CEILING,
     decode_float64_stream,
@@ -86,6 +87,8 @@ __all__ = [
     "EEG_BANDS",
     "lock_in",
     "matched_filter",
+    "shannon_entropy",
+    "windowed_entropy",
     "validate_float64_stream",
     "decode_float64_stream",
     "decode_guarantee_posture",

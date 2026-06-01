@@ -21,6 +21,7 @@ import numpy as np
 import pytest
 
 from forge_core.detection import ca_cfar
+from forge_core.information import windowed_entropy
 from forge_core.ingest import (
     decode_float64_stream,
     decode_guarantee_posture,
@@ -406,3 +407,85 @@ def test_valid_source_custody_and_trustworthiness_agree_validity_vindicates_noth
     assert v.custody == TRUE
     assert v.validity.verdict == TRUE and v.validity.deviation == ()
     assert v.trustworthiness == TRUE  # equals custody — valid content adds nothing
+
+
+# ── second producer: entropy × CFAR (a different FEATURE, the same test) ──────
+#
+# Everything above folds ONE cell: count × CFAR. This is the second cell — it swaps the
+# *feature* axis (count → windowed Shannon entropy) while keeping the *test* (ca_cfar). Two
+# things it pins down, the reason a careful n=2 beats hand-wiring the whole battery:
+#   1. the producer pattern generalizes — a structurally different detector emits the SAME
+#      canonical DetectionVerdict, validated against the same PINNED schema;
+#   2. what the wiring depends on: the verdict keys on the TEST (CFAR supplies Pfa + decision),
+#      not the feature. The feature only supplies the statistic Signal and, like the ingest
+#      decode, is an unverified computation that caps the chain at well_formed.
+# Finding surfaced while wiring it: CA-CFAR's square-law `alpha` is calibrated for large-
+# dynamic-range power statistics; entropy is bounded by log2(k), so the closed-form Pfa is
+# mismatched (a bounded statistic wants its own threshold calibration — a real TODO, not a bug
+# here). Tuned params below give a clean single fire; the calibration question is logged, not
+# papered over.
+
+
+def _entropy_cfar_dag():
+    """raw category-code stream (evidence) → decode → windowed_entropy → ca_cfar.
+
+    A host that normally talks to ~1 destination (low entropy floor) then enumerates 16 distinct
+    destinations in one window — a fan-out spike (Account/Network Discovery). Non-overlapping
+    windows (``step=window``) so a brief enumeration is an isolated spike, not a triangular ramp
+    that would contaminate CFAR's own reference cells."""
+    rng = np.random.default_rng(7)
+    W = 16
+
+    def baseline(n):
+        x = np.zeros(n)
+        flip = rng.random(n) < 0.05  # rarely a second destination
+        x[flip] = 1.0
+        return x.astype(np.float64)
+
+    codes = np.concatenate([baseline(240), np.arange(W, dtype=np.float64), baseline(240)])
+    raw = codes.tobytes()
+    raw_src = source(raw, evidence=True)
+    sig = decode_float64_stream(raw_src, fs=1.0, min_samples=21)
+    feat = windowed_entropy(sig, window=W, step=W)
+    root = ca_cfar(feat, guard=2, train=8, pfa=1e-2)
+    return raw, raw_src, sig, feat, root
+
+
+def _entropy_verdict():
+    raw, raw_src, sig, feat, root = _entropy_cfar_dag()
+    pfa = root.value()["pfa"]
+    decode_claims, _ = decode_guarantee_posture(sig)
+    return root, assemble_verdict(
+        root,
+        technique="T1087",  # Account Discovery — enumeration / fan-out
+        confidence_evidence={root.id: Confidence.from_detector(True, pd=_PD, pfa=pfa)},
+        # decode (ceiling MACHINE_CHECKED, demotes) + entropy feature (WELL_FORMED) + detector (BOUNDED)
+        claims={**decode_claims, feat.id: Tier.WELL_FORMED, root.id: Tier.BOUNDED},
+        monitors={root.id: TRUE},
+        attestations={raw_src.id: _live_attestation(raw)},
+    )
+
+
+def test_entropy_cfar_fires_once_on_the_fanout_spike():
+    root, _ = _entropy_verdict()
+    assert root.value()["indices"].tolist() == [15], "the fan-out window is the single detection"
+
+
+def test_entropy_cfar_verdict_conforms_to_the_pinned_schema():
+    """The second producer emits the canonical standard: a structurally different detector
+    (entropy feature, not count) projects into the same detection_verdict.schema.json."""
+    _, verdict = _entropy_verdict()
+    jsonschema.validate(verdict.to_contract(), json.loads(_SCHEMA_PATH.read_text()))
+
+
+def test_entropy_producer_wiring_matches_the_count_producer():
+    """The thesis the n=2 confirms: the verdict wiring depends on the TEST, not the feature.
+    Same CFAR test ⇒ same custody (keystone TRUE), same guarantee posture (BOUNDED *claimed*,
+    WELL_FORMED *earned* — capped by the computed chain, here the entropy feature and the decode,
+    both unverified computations), same decision projection (detect fired, no contradiction)."""
+    _, verdict = _entropy_verdict()
+    assert verdict.custody == TRUE                     # keystone holds — signed, live evidence
+    assert verdict.guarantee.claimed == Tier.BOUNDED   # the detector's capability, recorded
+    assert verdict.guarantee.tier == Tier.WELL_FORMED  # earned: capped by the unverified feature + decode
+    assert verdict.decision == TRUE                    # detect fired; no temporal contradiction
+    assert verdict.score > 0.0
