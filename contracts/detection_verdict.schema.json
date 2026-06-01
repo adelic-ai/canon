@@ -69,6 +69,17 @@
       "$ref": "#/$defs/belnap",
       "description": "DERIVED VIEW, not a primitive fold: kjoin(custody, validity-as-integrity-evidence) — the 'is the chain sound' reading. both = faithfully delivered defect (intact digest + malformed content) → corruption upstream of custody's reach (not proven tamper, not clean). A valid payload vindicates nothing (contributes none); only malformed contests. A consumer may compute other trust views from the primitive dimensions — this is the default one, and it deliberately does NOT fold in guarantee (rigor) or confidence (belief)."
     },
+    "custody_localization": {
+      "type": "object",
+      "description": "OPTIONAL explanatory structure (not a scalar, not required) — the result of walking the multi-hop custody chain backward from the held bytes. Populate when actionable, especially trustworthiness in {false, both}: it answers 'where do I look'. It is a summary of the custody chain that lives in provenance (reachable via the 'provenance' CID), not an independent measurement — distinct from custody (primitive scalar) and trustworthiness (derived scalar view).",
+      "properties": {
+        "verdict": {"$ref": "#/$defs/belnap", "description": "chain integrity: true intact / false proven in-transit tamper (localized at seam_break) / none unsigned-or-empty. Equals the custody scalar when this source is the binding one."},
+        "suspect": {"type": "array", "items": {"type": "string"}, "description": "agents where content could have entered without a detectable anomaly: {origin} ∪ {transform hops} ∪ {anomalous hops}. Start scrutiny here."},
+        "exonerated": {"type": "array", "items": {"type": "string"}, "description": "signed, content-preserving relay agents proven clean by digest-matching. Empty on a non-intact chain."},
+        "seam_break": {"type": "string", "description": "where digest-matching failed, when verdict=false; absent otherwise."}
+      },
+      "required": ["verdict", "suspect", "exonerated"]
+    },
     "provenance": {
       "$ref": "#/$defs/cid",
       "description": "CID of the lazy provenance DAG node this verdict is about — full justification on demand. The one object all the other folds are interpretations of (justification IS the result, not a side-log)."

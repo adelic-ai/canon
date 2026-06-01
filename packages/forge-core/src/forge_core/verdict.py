@@ -47,9 +47,11 @@ from provenance import (
     UNCHECKED,
     Confidence,
     CustodyAttestation,
+    CustodyStep,
     Entity,
     Four,
     GuaranteeCertificate,
+    Localization,
     Tier,
     Validity,
     confidence,
@@ -108,11 +110,13 @@ class DetectionVerdict:
     validity: Validity  # PRIMITIVE: source-payload well-formedness + the deviation
     trustworthiness: Four  # DERIVED VIEW: kjoin(custody, validity) — "is the chain sound"
     provenance: str
+    # OPTIONAL explanatory structure — the custody-chain walk; "where do I look", not a scalar.
+    custody_localization: Localization | None = None
 
     def to_contract(self) -> dict:
         """Project into ``detection_verdict.schema.json`` JSON. Validated against the PINNED
         schema in the tests."""
-        return {
+        out = {
             "technique": self.technique,
             "score": self.score,
             "decision": _BELNAP[self.decision],
@@ -137,6 +141,15 @@ class DetectionVerdict:
             "trustworthiness": _BELNAP[self.trustworthiness],
             "provenance": self.provenance,
         }
+        if self.custody_localization is not None:  # optional explanatory surface
+            loc = self.custody_localization
+            out["custody_localization"] = {
+                "verdict": _BELNAP[loc.verdict],
+                "suspect": list(loc.suspect),
+                "exonerated": list(loc.exonerated),
+                **({"seam_break": loc.seam_break} if loc.seam_break is not None else {}),
+            }
+        return out
 
 
 def assemble_verdict(
@@ -147,6 +160,8 @@ def assemble_verdict(
     claims: dict[str, Tier],
     monitors: dict[str, Four] | None = None,
     attestations: dict[str, CustodyAttestation] | None = None,
+    chains: dict[str, tuple[CustodyStep, ...]] | None = None,
+    localization: Localization | None = None,
     validity: Validity = UNCHECKED,
     when: Four = NONE,
     what: Four | None = None,
@@ -161,6 +176,11 @@ def assemble_verdict(
 
     * ``confidence_evidence`` / ``claims`` / ``monitors`` / ``attestations`` are the
       per-fold leaf inputs (see each fold's docstring), keyed by ``Entity.id``.
+    * ``chains`` maps a source id to a multi-hop ``CustodyStep`` chain (precedence over its
+      attestation); ``localization`` is the optional explanatory ``Localization`` surface
+      (``localize(chain, held)``) the caller emits — "where to look", populated when useful
+      (typically ``trustworthiness`` in {``False``, ``Both``}). It is not a scalar and is not
+      required; it summarizes the chain that lives in provenance.
     * ``validity`` is the source-payload well-formedness verdict. It is knowledge-joined into
       the custody field via :func:`~provenance.trustworthiness`, so intact digest-custody plus
       a *malformed* payload yields ``BOTH`` (the soundness alarm). Default ``UNCHECKED`` makes
@@ -181,7 +201,8 @@ def assemble_verdict(
     surfaces as ``BOTH`` — the soundness alarm.
     """
     conf = confidence(root, evidence=confidence_evidence)[root.id]
-    digest_custody = custody(root, attestations=attestations)[root.id]
+    # `chains` (multi-hop custody) takes precedence per source; the scalar still folds by tmeet.
+    digest_custody = custody(root, attestations=attestations, chains=chains)[root.id]
     cert = guarantee(root, claims=claims, monitors=monitors)[root.id]
 
     detect = conf.belnap  # ∃-detect: did the detector's evidence say fired?
@@ -208,4 +229,5 @@ def assemble_verdict(
         validity=validity,
         trustworthiness=trust,
         provenance=root.id,
+        custody_localization=localization,  # optional explanatory surface (where to look)
     )

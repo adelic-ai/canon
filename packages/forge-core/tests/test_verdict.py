@@ -31,6 +31,7 @@ from provenance import (
     VALID,
     Confidence,
     CustodyAttestation,
+    CustodyStep,
     Event,
     Tier,
     Trace,
@@ -39,6 +40,7 @@ from provenance import (
     derive,
     evidence_digest,
     kjoin,
+    localize,
     malformed,
     recognize,
     source,
@@ -319,6 +321,48 @@ def test_trustworthiness_is_reproducible_from_emitted_primitives():
     for v in verdicts:
         c = v.to_contract()
         assert _STR_TO_FOUR[c["trustworthiness"]] == _reproduce_trust(c)
+
+
+def test_custody_localization_surface_is_present_and_reproducible_when_supplied():
+    """The optional explanatory surface: a chained evidence source emits custody_localization
+    (verdict/suspect/exonerated), the custody scalar equals the localization verdict (the chain
+    is the binding source), and a transform hop stays suspect while relays are exonerated."""
+    raw, raw_src, sig, root = _detection_dag()
+    _fired_index(root)
+    pfa = root.value()["pfa"]
+    D = raw_src.id  # evidence source CID == the chain's terminal product (keystone)
+    chain = (
+        CustodyStep("source-host", materials=(), product=D, signed=True),
+        CustodyStep("normalizer", materials=(D,), product=D, signed=True, transform=True),
+        CustodyStep("forwarder", materials=(D,), product=D, signed=True),
+    )
+    loc = localize(chain, held_digest=D)
+    verdict = assemble_verdict(
+        root,
+        technique="T1071.001",
+        confidence_evidence={root.id: Confidence.from_detector(True, pd=_PD, pfa=pfa)},
+        claims=_claims(raw_src, sig, root),
+        monitors={root.id: TRUE},
+        chains={raw_src.id: chain},
+        localization=loc,
+    )
+    assert verdict.custody == TRUE  # the chain is intact → the digest scalar is TRUE
+    c = verdict.to_contract()
+    cl = c["custody_localization"]
+    assert _STR_TO_FOUR[cl["verdict"]] == verdict.custody  # surface verdict == the scalar
+    assert "normalizer" in cl["suspect"] and "source-host" in cl["suspect"]
+    assert cl["exonerated"] == ["forwarder"]
+    assert "seam_break" not in cl  # intact chain → no seam break
+    jsonschema.validate(c, json.loads(_SCHEMA_PATH.read_text()))
+
+
+def test_custody_localization_is_optional_absent_when_not_supplied():
+    """Optional, not required: a verdict without a localization omits the key and still
+    conforms to the PINNED schema."""
+    verdict, _ = _confirming_verdict()  # no chain / localization
+    c = verdict.to_contract()
+    assert "custody_localization" not in c
+    jsonschema.validate(c, json.loads(_SCHEMA_PATH.read_text()))
 
 
 def test_naive_kjoin_would_let_valid_content_certify_so_the_map_is_the_law():
