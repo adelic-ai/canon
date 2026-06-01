@@ -203,11 +203,28 @@ Each row is an independent `≤_k`-monotone interpreter over the DAG. "HAVE" = b
 - **custody** — in-toto Statement + DSSE envelope at the ingest boundary; each
   ingest/normalize hop is an in-toto *step* (`materials`→`products`); evaluation is
   the terminal step whose `subject` digest must equal the ingest `product` digest.
-  NEW. *Borrow: in-toto/DSSE for the digest-custody chain; CASE/UCO `ProvenanceRecord`
-  + custody-action terms as **vocabulary only** (speak the forensic register, don't
-  immigrate the forensic world-model); W3C Verifiable Credentials for signed
-  who/what-touched-it claims at entry.* Keep in-toto at the boundary (it treats steps
-  as black boxes); keep PROV inside the computation.
+  HAVE. A **primitive**, and a narrow one: it answers *integrity in transit only*
+  ("were the bytes altered between signing and evaluation") and **never inspects
+  content** — a signed, digest-matched feed can deliver bunk and custody is still
+  `True`. So custody is not "trust"; it composes with **validity** (below) into the
+  derived **trustworthiness** view. *Borrow: in-toto/DSSE for the digest-custody chain;
+  CASE/UCO `ProvenanceRecord` + custody-action terms as **vocabulary only** (speak the
+  forensic register, don't immigrate the forensic world-model); W3C Verifiable
+  Credentials for signed who/what-touched-it claims at entry.* Keep in-toto at the
+  boundary (it treats steps as black boxes); keep PROV inside the computation.
+- **validity** — source-payload well-formedness: does the *content* conform to its
+  declared schema/kind? HAVE. Carrier-valued, and it **carries the deviation** (how it
+  is malformed), because the deviation is a *detection feature* — the same way a `None`
+  carries which input was missing. Distinct from the SHACL well-formedness fold below
+  (that validates the *provenance graph structure*; validity validates the *input
+  bytes*) and from custody (integrity ≠ validity). **A malformed source is never
+  silently dropped and never `what = False`**: dropping it collapses "couldn't parse"
+  into "didn't happen" (the `None`→`False` error, and a parser-evasion vector). It has
+  three indistinguishable causes — innocent (misconfig/truncation), chain corruption,
+  and *the anomaly itself* (an exploit malforming its own telemetry) — so the
+  corruption-vs-attack call is left to correlation (the temporal fold), held as `Both`
+  / escalated until evidence breaks the tie. *Mechanism: schema/kind predicate per
+  source; the route-don't-discard discipline is canon's.*
 - **well-formedness** — `validate` → SHACL over the materialized graph. HAVE.
   *Mechanism borrowed (pySHACL); the validator-per-derivation discipline is canon's.*
 - **guarantee** — the fourth fold (§4): a content-addressed `GuaranteeCertificate`
@@ -226,6 +243,39 @@ Each row is an independent `≤_k`-monotone interpreter over the DAG. "HAVE" = b
   surface; event-time + watermarks are mandatory.* The detect/validate duality
   (∃-path detect vs ∀-path validate over one pattern-DAG) is canon's.
 - **cost** — resource fold (future; the design-doc Phase 6 line). Same shape.
+
+**Folds vs. derived views.** The rows above are *primitive* folds — objective,
+`≤_k`-monotone readings of the DAG. **trustworthiness** is *not* a fold: it is a
+**required derived view**, `kjoin(custody, validity-as-integrity-evidence)` — the "is
+the chain sound" reading. Intact digest + malformed content → `Both` (the soundness
+alarm: faithfully delivered yet bunk → corruption upstream of where custody can see;
+*not* proven tamper, *not* clean).
+
+The validity→integrity-evidence map is **asymmetric** — a payload can *contest* the
+chain but never *certify* it (valid-but-tampered is real):
+
+```
+  validity verdict     integrity evidence (fed to kjoin)
+  ────────────────     ────────────────────────────────
+  True   (valid)   →   None    (vindicates nothing)
+  False  (malformed) → False   (contests)
+  None   (unchecked) → None    (no information)
+  Both             →   False   (contradictory validity still contests)
+```
+
+So `kjoin(custody, None) = custody` (valid/unchecked never moves it) while
+`kjoin(True, False) = Both`. The naive `kjoin(custody, validity.verdict)` is **wrong** —
+it would let a valid payload certify a silent chain (`None`→`True`); the map is the law.
+
+Trust is deliberately **orthogonal to guarantee (rigor) and confidence (belief)** — they
+are *not* inputs to it, so "trust" never becomes an overloaded scalar. The governing
+guardrail that keeps a hardcoded default view from being lock-in:
+
+> **Every derived field must be reproducible from the emitted primitive fields.**
+
+So a verdict emits custody and validity *separately* (and the validity deviation), and a
+consumer that distrusts the default trustworthiness recomputes its own from the
+primitives. (CI-checked in `packages/forge-core/tests/test_verdict.py`.)
 
 ## 4. Guarantee tiers — honest by category
 
@@ -260,6 +310,16 @@ assumptions violated ⇒ machine-checked-analytic → conformal-only → well-fo
 The tier a result earns is **computed, not asserted**. No prior system couples
 runtime assumption-checking → tier selection → PROV record. This is the mechanism
 that makes "honest per result" real.
+
+**Source tier-transparency.** Weakest-link composes over the **computed** sub-chain
+only: a *source* input carries no rigor tier — its trust is the orthogonal custody and
+validity axes, not this one — so an unclaimed source earns the meet-identity and never
+drags a result to the floor. The absence of a tier claim on an input is `None`-like, not
+`False`-like: the same absence-as-negative error the carrier prevents (§5), here on the
+tier axis. Consequence found while wiring the first detector: a detection earns
+`bounded` only if its *ingest/normalize path is itself ≥ bounded* — the decode sits on
+the guarantee-critical chain, it is not free. CA-CFAR's `bounded` capability alone is
+capped to `well-formed` by an unverified `np.frombuffer` decode upstream of it.
 
 ## 5. The carrier — Belnap bilattice, `≤_k`-monotone
 
