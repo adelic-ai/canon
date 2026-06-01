@@ -264,13 +264,24 @@ def _malformed_source_verdict(*, what):
 
 
 def test_malformed_with_intact_custody_makes_trustworthiness_both():
-    """The headline: faithfully delivered (digest matched) yet bunk → the custody field is BOTH,
-    the soundness alarm — corruption is upstream of where digest-custody can see. Not FALSE
-    (no tamper proven), not TRUE (content is bunk)."""
+    """The headline: faithfully delivered (digest matched) yet bunk → trustworthiness BOTH, the
+    soundness alarm — corruption upstream of where digest-custody can see. custody itself stays
+    TRUE: the digest IS intact. The two are separate dimensions now, not collapsed — BOTH lives
+    on the derived view, not in the custody slot."""
     verdict = _malformed_source_verdict(what=TRUE)
-    assert verdict.custody == BOTH
-    assert verdict.to_contract()["custody"] == "both"
-    jsonschema.validate(verdict.to_contract(), json.loads(_SCHEMA_PATH.read_text()))
+    assert verdict.custody == TRUE  # primitive: the digest is genuinely intact
+    assert verdict.validity.verdict == FALSE  # primitive: the content is bunk
+    assert verdict.trustworthiness == BOTH  # derived view: the contradiction
+    c = verdict.to_contract()
+    assert c["custody"] == "true" and c["trustworthiness"] == "both"
+    jsonschema.validate(c, json.loads(_SCHEMA_PATH.read_text()))
+
+
+def test_deviation_is_surfaced_in_the_contract_not_dropped():
+    """The information-loss fix: the validity deviation (the detection feature) reaches the
+    emitted contract instead of being discarded when the synthesis was written into custody."""
+    dev = _malformed_source_verdict(what=TRUE).to_contract()["validity"]["deviation"]
+    assert dev and "not a multiple of 8" in dev[0]
 
 
 def test_malformation_as_signature_sets_what_true_not_false():
@@ -290,14 +301,12 @@ def test_malformation_blinding_a_needed_field_sets_what_none_never_false():
     assert verdict.w_record.what != FALSE
 
 
-def test_valid_source_leaves_custody_as_the_bare_digest_verdict():
-    """Backward-compat / asymmetry: a valid payload vindicates nothing — custody stays exactly
-    the digest verdict (TRUE here), never lifted by validity."""
-    verdict, _ = _confirming_verdict()  # defaults to validity=UNCHECKED
-    assert verdict.custody == TRUE
-    # and an explicit VALID is identical (clean content cannot raise custody on its own)
+def test_valid_source_custody_and_trustworthiness_agree_validity_vindicates_nothing():
+    """A valid payload: custody (digest) and trustworthiness agree, both TRUE — and the deviation
+    is empty. Validity can contest but never certify, so it never lifts trustworthiness above the
+    digest verdict."""
     raw, raw_src, sig, root = _detection_dag()
-    idx = _fired_index(root)
+    _fired_index(root)
     pfa = root.value()["pfa"]
     v = assemble_verdict(
         root,
@@ -309,3 +318,5 @@ def test_valid_source_leaves_custody_as_the_bare_digest_verdict():
         validity=VALID,
     )
     assert v.custody == TRUE
+    assert v.validity.verdict == TRUE and v.validity.deviation == ()
+    assert v.trustworthiness == TRUE  # equals custody — valid content adds nothing

@@ -54,12 +54,25 @@
     },
     "custody": {
       "$ref": "#/$defs/belnap",
-      "description": "The custody fold's verdict at ingest: true=signed+live+digest-matched, false=tampered, none=silent/unsigned feed. Feed-liveness IS custody (architecture §6); the signal the temporal fold's negation depends on."
+      "description": "PRIMITIVE dimension — the custody fold's DIGEST verdict at ingest, integrity in transit ONLY: true=signed+live+digest-matched, false=tampered, none=silent/unsigned feed. It never inspects content (a signed feed can deliver bunk → custody true). Feed-liveness IS custody (architecture §6). Compose with 'validity' into 'trustworthiness'; do not read this alone as 'trust'."
+    },
+    "validity": {
+      "type": "object",
+      "description": "PRIMITIVE dimension — source-payload well-formedness (does the content conform to its declared schema/kind), distinct from custody (integrity) and guarantee (computation rigor). A malformed source is NOT dropped and NOT 'what=false': the deviation is a detection feature. The corruption-vs-attack reading is left to correlation.",
+      "properties": {
+        "verdict": {"$ref": "#/$defs/belnap", "description": "true=conforms, false=malformed, none=unchecked (no validator ran — absence of a check is not a clean bill of health)."},
+        "deviation": {"type": "array", "items": {"type": "string"}, "description": "HOW it is malformed (which constraint failed) — the feature a detector reads; empty when valid/unchecked. 'NONE carries what was missing', applied to validity."}
+      },
+      "required": ["verdict", "deviation"]
+    },
+    "trustworthiness": {
+      "$ref": "#/$defs/belnap",
+      "description": "DERIVED VIEW, not a primitive fold: kjoin(custody, validity-as-integrity-evidence) — the 'is the chain sound' reading. both = faithfully delivered defect (intact digest + malformed content) → corruption upstream of custody's reach (not proven tamper, not clean). A valid payload vindicates nothing (contributes none); only malformed contests. A consumer may compute other trust views from the primitive dimensions — this is the default one, and it deliberately does NOT fold in guarantee (rigor) or confidence (belief)."
     },
     "provenance": {
       "$ref": "#/$defs/cid",
       "description": "CID of the lazy provenance DAG node this verdict is about — full justification on demand. The one object all the other folds are interpretations of (justification IS the result, not a side-log)."
     }
   },
-  "required": ["technique", "score", "decision", "w_record", "guarantee", "custody", "provenance"]
+  "required": ["technique", "score", "decision", "w_record", "guarantee", "custody", "validity", "trustworthiness", "provenance"]
 }

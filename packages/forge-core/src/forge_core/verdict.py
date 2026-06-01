@@ -91,14 +91,22 @@ class WRecord:
 @dataclass(frozen=True, slots=True)
 class DetectionVerdict:
     """The canonical detection unit. ``provenance`` is the root node's CID — the one object
-    all the folds are interpretations of; full justification is reachable by walking it."""
+    all the folds are interpretations of; full justification is reachable by walking it.
+
+    ``custody`` and ``validity`` are kept as **separate primitive dimensions** (integrity in
+    transit; content well-formedness). ``trustworthiness`` is the **derived view** that
+    ``kjoin``s them — not a primitive, and deliberately not folding in guarantee or confidence.
+    Keeping the primitives separate (and carrying the validity *deviation*) preserves the
+    information a single collapsed 'trust' bit would lose."""
 
     technique: str
     score: float
     decision: Four
     w_record: WRecord
     guarantee: GuaranteeCertificate
-    custody: Four
+    custody: Four  # PRIMITIVE: the digest verdict (integrity in transit) — never reads content
+    validity: Validity  # PRIMITIVE: source-payload well-formedness + the deviation
+    trustworthiness: Four  # DERIVED VIEW: kjoin(custody, validity) — "is the chain sound"
     provenance: str
 
     def to_contract(self) -> dict:
@@ -122,6 +130,11 @@ class DetectionVerdict:
                 "tier": self.guarantee.tier.label,
             },
             "custody": _BELNAP[self.custody],
+            "validity": {
+                "verdict": _BELNAP[self.validity.verdict],
+                "deviation": list(self.validity.deviation),  # the feature — no longer dropped
+            },
+            "trustworthiness": _BELNAP[self.trustworthiness],
             "provenance": self.provenance,
         }
 
@@ -174,7 +187,8 @@ def assemble_verdict(
     detect = conf.belnap  # ∃-detect: did the detector's evidence say fired?
     decision = kjoin(detect, when)  # fuse with the ∀-validate temporal verdict
     score = conf.probability if conf.probability is not None else 0.0
-    trust = trustworthiness(digest_custody, validity)  # digest ⊕ validity soundness signal
+    # custody (digest) and validity stay separate primitives; trustworthiness is the derived view.
+    trust = trustworthiness(digest_custody, validity)
 
     w = WRecord(
         who=who,
@@ -190,6 +204,8 @@ def assemble_verdict(
         decision=decision,
         w_record=w,
         guarantee=cert,
-        custody=trust,
+        custody=digest_custody,  # the bare digest verdict — primitive, not the synthesis
+        validity=validity,
+        trustworthiness=trust,
         provenance=root.id,
     )
