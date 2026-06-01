@@ -35,6 +35,13 @@ from provenance.tier import Tier, tier_meet
 from provenance.guarantee import Demotion, GuaranteeCertificate, guarantee
 from provenance.custody import CustodyAttestation, custody, evidence_digest
 from provenance.confidence import NO_EVIDENCE, Confidence, confidence
+from provenance.validity import (
+    UNCHECKED,
+    VALID,
+    Validity,
+    malformed,
+    trustworthiness,
+)
 from provenance.temporal import (
     All,
     Any,
@@ -89,6 +96,12 @@ __all__ = [
     "confidence",
     "Confidence",
     "NO_EVIDENCE",
+    # validity fold — source-payload well-formedness + the two couplings (trust + detection)
+    "Validity",
+    "VALID",
+    "UNCHECKED",
+    "malformed",
+    "trustworthiness",
     # temporal fold — chronicle recognition (the §6 seam: negation under partial data)
     "recognize",
     "Pattern",

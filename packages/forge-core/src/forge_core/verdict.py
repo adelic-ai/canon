@@ -11,8 +11,11 @@ The five folds, at ``root.id``:
 
 * **confidence** (``provenance.confidence``) → the graded ``score`` (probability) *and* the
   Belnap knowledge axis that seeds the detect projection.
-* **custody** (``provenance.custody``) → the ingest verdict; ``TRUE`` only when the keystone
-  CID-equality holds on a signed, live evidence source.
+* **custody** (``provenance.custody`` + ``provenance.trustworthiness``) → the ingest
+  *trustworthiness*: the digest-custody verdict (``TRUE`` only when keystone CID-equality holds
+  on a signed, live source) knowledge-joined with the source's payload **validity**. Intact
+  digest + malformed content → ``BOTH`` (the soundness alarm: faithfully delivered yet bunk).
+  With no validity check the coupling is a no-op, so custody is the bare digest verdict.
 * **guarantee** (``provenance.guarantee``) → the tier this result *earned* on this input,
   demoted per-result when its runtime monitor did not confirm the precondition.
 * **temporal** (``provenance.recognize``) → the ``when`` W and the ∀-validate half of the
@@ -41,16 +44,19 @@ from provenance import (
     FALSE,
     NONE,
     TRUE,
+    UNCHECKED,
     Confidence,
     CustodyAttestation,
     Entity,
     Four,
     GuaranteeCertificate,
     Tier,
+    Validity,
     confidence,
     custody,
     guarantee,
     kjoin,
+    trustworthiness,
 )
 
 # The carrier.md Belnap value → the schema's `belnap` enum string. Explicit (not
@@ -128,20 +134,32 @@ def assemble_verdict(
     claims: dict[str, Tier],
     monitors: dict[str, Four] | None = None,
     attestations: dict[str, CustodyAttestation] | None = None,
+    validity: Validity = UNCHECKED,
     when: Four = NONE,
+    what: Four | None = None,
     who: Four = NONE,
     where: Four = NONE,
     how: Four = NONE,
 ) -> DetectionVerdict:
-    """Assemble a :class:`DetectionVerdict` by folding the five concerns over ``root``'s DAG.
+    """Assemble a :class:`DetectionVerdict` by folding the concerns over ``root``'s DAG.
 
     Every fold reads the *same* content-addressed structure rooted at ``root``; the verdict
     is their projection at ``root.id``.
 
     * ``confidence_evidence`` / ``claims`` / ``monitors`` / ``attestations`` are the
       per-fold leaf inputs (see each fold's docstring), keyed by ``Entity.id``.
+    * ``validity`` is the source-payload well-formedness verdict. It is knowledge-joined into
+      the custody field via :func:`~provenance.trustworthiness`, so intact digest-custody plus
+      a *malformed* payload yields ``BOTH`` (the soundness alarm). Default ``UNCHECKED`` makes
+      the coupling a no-op (custody = the bare digest verdict).
     * ``when`` is the temporal fold's verdict (``recognize(pattern, trace)``), passed in
       because temporal state lives beside the DAG, not in it.
+    * ``what`` overrides the "artifact present?" W. Default (``None``) → the ∃-detect verdict.
+      A caller routes a malformed source's *deviation* here as a feature: ``TRUE`` when the
+      deviation matches the technique's signature (the malformation **is** the artifact),
+      ``NONE`` when a needed field is unparseable (can't tell). **Never** a blanket ``FALSE`` —
+      a malformed source is not silently dropped (that is the parser-evasion / absence-as-
+      negative trap), and "couldn't validate" is ``NONE``, not "didn't happen".
     * ``who`` / ``where`` / ``how`` are the remaining W's, defaulting to ``NONE`` — an
       ungrounded W is honestly unknown, never a false negative.
 
@@ -150,16 +168,17 @@ def assemble_verdict(
     surfaces as ``BOTH`` — the soundness alarm.
     """
     conf = confidence(root, evidence=confidence_evidence)[root.id]
-    cust = custody(root, attestations=attestations)[root.id]
+    digest_custody = custody(root, attestations=attestations)[root.id]
     cert = guarantee(root, claims=claims, monitors=monitors)[root.id]
 
     detect = conf.belnap  # ∃-detect: did the detector's evidence say fired?
     decision = kjoin(detect, when)  # fuse with the ∀-validate temporal verdict
     score = conf.probability if conf.probability is not None else 0.0
+    trust = trustworthiness(digest_custody, validity)  # digest ⊕ validity soundness signal
 
     w = WRecord(
         who=who,
-        what=detect,  # the technique's artifact present? = the detector fired
+        what=detect if what is None else what,  # malformed-source deviation routes here as a feature
         when=when,
         where=where,
         how=how,
@@ -171,6 +190,6 @@ def assemble_verdict(
         decision=decision,
         w_record=w,
         guarantee=cert,
-        custody=cust,
+        custody=trust,
         provenance=root.id,
     )

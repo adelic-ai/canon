@@ -28,14 +28,17 @@ from provenance import (
     FALSE,
     NONE,
     TRUE,
+    VALID,
     Confidence,
     CustodyAttestation,
     Event,
     Tier,
     Trace,
+    Validity,
     Window,
     derive,
     evidence_digest,
+    malformed,
     recognize,
     source,
 )
@@ -216,3 +219,93 @@ def test_w_record_score_is_the_fraction_of_grounded_ws():
     verdict, _ = _confirming_verdict(when=TRUE)
     # what=TRUE, when=TRUE, who/where/how default NONE ⇒ 2/5 grounded.
     assert verdict.w_record.score == pytest.approx(2 / 5)
+
+
+# ── malformed source: validity forks into both lenses, never a discard ────────────────
+#
+# Declared ingest schema: evidence is a float64 stream — its byte length is a multiple of 8
+# and holds >= 21 samples (CA-CFAR's minimum window). A 12-byte payload violates it: either an
+# innocent truncated write, OR an exploit that mangled the telemetry mid-record. The validity
+# check cannot tell which — and crucially must NOT drop it.
+
+
+def _check_float64_stream(payload: bytes) -> Validity:
+    if len(payload) % 8 != 0:
+        return malformed(f"byte length {len(payload)} not a multiple of 8 — truncated float64 stream")
+    if len(payload) // 8 < 21:
+        return malformed(f"{len(payload) // 8} samples < 21 — below CA-CFAR's minimum window")
+    return VALID
+
+
+def _malformed_source_verdict(*, what):
+    """A bunk payload delivered through an INTACT, signed, live custody chain. The detector node
+    keys on the schema violation; `what` is the deviation routed as a feature by the caller."""
+    bad = b"\x00" * 12  # 12 bytes: not a multiple of 8 → not a valid float64 stream
+    bad_src = source(bad, evidence=True)  # keystone: id == evidence_digest(bad)
+    flag = derive("schema_violation_detect", lambda _p: None, (bad_src,))  # structural; never evaluated
+
+    v = _check_float64_stream(bad)
+    assert v.verdict == FALSE and v.deviation  # malformed, and it carries the deviation
+
+    # The digest chain is INTACT — the bunk was faithfully delivered (this is the hard case).
+    att = CustodyAttestation(product_digest=evidence_digest(bad), signed=True, feed_live=True)
+
+    return assemble_verdict(
+        flag,
+        technique="T1071.001",
+        # the schema-violation detector fired on the deviation itself
+        confidence_evidence={flag.id: Confidence.from_detector(True, pd=_PD, pfa=1e-3)},
+        claims={flag.id: Tier.WELL_FORMED},
+        monitors={flag.id: TRUE},
+        attestations={bad_src.id: att},
+        validity=v,
+        what=what,
+    )
+
+
+def test_malformed_with_intact_custody_makes_trustworthiness_both():
+    """The headline: faithfully delivered (digest matched) yet bunk → the custody field is BOTH,
+    the soundness alarm — corruption is upstream of where digest-custody can see. Not FALSE
+    (no tamper proven), not TRUE (content is bunk)."""
+    verdict = _malformed_source_verdict(what=TRUE)
+    assert verdict.custody == BOTH
+    assert verdict.to_contract()["custody"] == "both"
+    jsonschema.validate(verdict.to_contract(), json.loads(_SCHEMA_PATH.read_text()))
+
+
+def test_malformation_as_signature_sets_what_true_not_false():
+    """When the deviation matches the technique (the malformation IS the artifact — e.g. a
+    protocol violation from an exploit), `what` is TRUE. A malformed source is a detection,
+    not a discard."""
+    verdict = _malformed_source_verdict(what=TRUE)
+    assert verdict.w_record.what == TRUE
+
+
+def test_malformation_blinding_a_needed_field_sets_what_none_never_false():
+    """When the malformation makes a field the detector needed unparseable, `what` is NONE
+    (can't tell) — never FALSE. 'Couldn't validate' is absence of evidence, not 'didn't
+    happen'; collapsing it to FALSE is the parser-evasion trap."""
+    verdict = _malformed_source_verdict(what=NONE)
+    assert verdict.w_record.what == NONE
+    assert verdict.w_record.what != FALSE
+
+
+def test_valid_source_leaves_custody_as_the_bare_digest_verdict():
+    """Backward-compat / asymmetry: a valid payload vindicates nothing — custody stays exactly
+    the digest verdict (TRUE here), never lifted by validity."""
+    verdict, _ = _confirming_verdict()  # defaults to validity=UNCHECKED
+    assert verdict.custody == TRUE
+    # and an explicit VALID is identical (clean content cannot raise custody on its own)
+    raw, raw_src, sig, root = _detection_dag()
+    idx = _fired_index(root)
+    pfa = root.value()["pfa"]
+    v = assemble_verdict(
+        root,
+        technique="T1071.001",
+        confidence_evidence={root.id: Confidence.from_detector(True, pd=_PD, pfa=pfa)},
+        claims=_claims(raw_src, sig, root),
+        monitors={root.id: TRUE},
+        attestations={raw_src.id: _live_attestation(raw)},
+        validity=VALID,
+    )
+    assert v.custody == TRUE
