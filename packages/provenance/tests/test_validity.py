@@ -79,10 +79,13 @@ def test_valid_content_cannot_vindicate_custody():
 
 
 @pytest.mark.parametrize("custody", [NONE, TRUE, FALSE, BOTH])
-def test_trustworthiness_monotone_in_custody(custody):
-    # Worsening validity (valid -> malformed) only ever lowers-or-holds trust knowledge-wise:
-    # the malformed result knows at least as much (kjoin only adds bits).
+def test_trustworthiness_k_monotone_in_validity(custody):
+    # A malformed payload only ever ADDS knowledge over a valid one: it contributes a
+    # told-false bit (never a told-true one), and kjoin only sets bits. So in the KNOWLEDGE
+    # order bunk >=_k clean — never less. (This is the ≤_k-monotonicity in the validity
+    # argument; whether that added knowledge reads as "less trustworthy" is the orthogonal
+    # truth order, deliberately not asserted here.)
     clean = trustworthiness(custody, VALID)
     bunk = trustworthiness(custody, malformed("x"))
     from provenance import leq_k
-    assert leq_k(clean, bunk)  # bunk is ≥_k clean (more is told)
+    assert leq_k(clean, bunk)  # bunk knows at least as much (more is told)
