@@ -39,9 +39,12 @@ from forge_core.lock_in import lock_in
 from forge_core.matched_filter import matched_filter
 from forge_core.information import (
     kl_divergence,
+    mi_shuffle_null,
+    mutual_information,
     shannon_entropy,
     windowed_entropy,
     windowed_kl,
+    windowed_mi,
 )
 from forge_core.conformal import (
     conformal_detect,
@@ -102,6 +105,9 @@ __all__ = [
     "windowed_entropy",
     "kl_divergence",
     "windowed_kl",
+    "mutual_information",
+    "windowed_mi",
+    "mi_shuffle_null",
     "conformal_detect",
     "conformal_pvalues",
     "conformal_far_bound",

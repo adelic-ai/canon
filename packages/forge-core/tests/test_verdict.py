@@ -22,7 +22,12 @@ import pytest
 
 from forge_core.conformal import conformal_detect, conformal_guarantee_posture
 from forge_core.detection import ca_cfar
-from forge_core.information import windowed_entropy, windowed_kl
+from forge_core.information import (
+    mi_shuffle_null,
+    windowed_entropy,
+    windowed_kl,
+    windowed_mi,
+)
 from forge_core.ingest import (
     decode_float64_stream,
     decode_guarantee_posture,
@@ -632,4 +637,62 @@ def test_kl_conformal_is_a_fourth_producer_and_conforms():
     jsonschema.validate(verdict.to_contract(), json.loads(_SCHEMA_PATH.read_text()))
     assert verdict.guarantee.claimed == Tier.BOUNDED and verdict.guarantee.demotion is None
     assert verdict.guarantee.tier == Tier.WELL_FORMED  # capped by the unverified KL feature + decode
+    assert verdict.decision == TRUE and verdict.score > 0.0
+
+
+# ── fifth producer: MI × conformal (a RELATIONAL feature + the permutation null) ──
+#
+# entropy and KL are univariate (one stream's spread / drift). MI is the first *relational*
+# feature — dependence between *two* streams — so it's the coordination cell (lateral movement,
+# synchronized C2). Two things distinguish it:
+#   1. it's bivariate: windowed_mi takes a second stream as a `used` edge. forge-core stays
+#      agnostic — *which* pairs to compute is a knowledge-layer (D3FEND/ATT&CK/OCSF) scoping
+#      decision, not the primitive's.
+#   2. MI's plug-in estimate is upward-biased, so it is NOT thresholded on its raw value;
+#      detection is against a PERMUTATION NULL (mi_shuffle_null) that carries the same bias and
+#      cancels it. The shuffle null is exchangeable *by construction*, so conformal's
+#      exchangeability precondition stands on firmer ground here than for a collected calibration.
+
+
+def _mi_conformal_verdict():
+    rng = np.random.default_rng(3)
+    W, N = 16, 240 + 16 + 240
+    x = rng.integers(0, 4, size=N).astype(np.float64)
+    y = rng.integers(0, 4, size=N).astype(np.float64)  # independent of x...
+    y[240 : 240 + W] = x[240 : 240 + W]  # ...except one window where Y tracks X (coordination)
+
+    raw = x.tobytes()
+    raw_src = source(raw, evidence=True)
+    sig_x = decode_float64_stream(raw_src, fs=1.0, min_samples=21)
+    feat = windowed_mi(
+        sig_x, other=Signal(y, fs=1.0, kind=SignalKind.REAL), window=W, step=W
+    )
+    # the conformal calibration is the permutation null (MI under independence), not a stream.
+    null = mi_shuffle_null(x, y, window=W, step=W, n_perm=200, seed=7)
+    root = conformal_detect(feat, calibration=null, alpha=0.005, tail="upper")
+    r = root.value()
+
+    decode_claims, _ = decode_guarantee_posture(sig_x)
+    conf_claims, conf_monitors = conformal_guarantee_posture(root, exchangeability=TRUE)
+    verdict = assemble_verdict(
+        root,
+        technique="T1021",  # Remote Services — lateral movement / coordination
+        confidence_evidence={root.id: Confidence.from_detector(True, pd=_PD, pfa=r["far_bound"])},
+        claims={**decode_claims, feat.id: Tier.WELL_FORMED, **conf_claims},
+        monitors=conf_monitors,
+        attestations={raw_src.id: _live_attestation(raw)},
+    )
+    return r, verdict
+
+
+def test_mi_conformal_is_a_fifth_producer_and_conforms():
+    """The relational feature: MI between two streams, detected against its permutation null,
+    emits the same canonical verdict. The coordinated window fires; the verdict validates against
+    the PINNED schema with a standing BOUNDED claim (permutation null ⇒ exchangeable by
+    construction)."""
+    r, verdict = _mi_conformal_verdict()
+    assert r["indices"].tolist() == [15]  # the coordinated window is the single detection
+    jsonschema.validate(verdict.to_contract(), json.loads(_SCHEMA_PATH.read_text()))
+    assert verdict.guarantee.claimed == Tier.BOUNDED and verdict.guarantee.demotion is None
+    assert verdict.guarantee.tier == Tier.WELL_FORMED  # capped by the unverified MI feature + decode
     assert verdict.decision == TRUE and verdict.score > 0.0

@@ -13,9 +13,12 @@ import pytest
 
 from forge_core.information import (
     kl_divergence,
+    mi_shuffle_null,
+    mutual_information,
     shannon_entropy,
     windowed_entropy,
     windowed_kl,
+    windowed_mi,
 )
 from forge_core.signal import Signal, SignalKind
 from provenance import Entity
@@ -157,3 +160,74 @@ def test_windowed_kl_calibration_is_a_used_edge():
     det = windowed_kl(_codes_signal([0, 1, 2, 3]), baseline=np.ones(4), window=4)
     assert isinstance(det, Entity)
     assert len(lineage(det)) >= 3  # the kl node + the code source + the baseline source
+
+
+# ── mutual_information: port fidelity ─────────────────────────────────────────
+
+
+def test_independent_streams_have_low_mi():
+    # X and Y deterministically independent (a full factorial grid) → I(X;Y) = 0 exactly.
+    x = np.array([0, 0, 1, 1])
+    y = np.array([0, 1, 0, 1])
+    assert mutual_information(x, y) == pytest.approx(0.0)
+
+
+def test_identical_streams_have_mi_equal_to_entropy():
+    # Y = X → I(X;Y) = H(X). Four uniform symbols → 2 bits.
+    x = np.array([0, 1, 2, 3])
+    assert mutual_information(x, x) == pytest.approx(2.0)
+
+
+def test_mi_is_symmetric_and_nonnegative():
+    x = np.array([0, 1, 0, 1, 2, 2])
+    y = np.array([1, 1, 0, 0, 2, 1])
+    assert mutual_information(x, y) == pytest.approx(mutual_information(y, x))
+    assert mutual_information(x, y) >= 0.0
+
+
+def test_mi_requires_aligned_lengths():
+    with pytest.raises(ValueError, match="aligned"):
+        mutual_information(np.array([0, 1, 2]), np.array([0, 1]))
+
+
+# ── windowed_mi op + the permutation null ─────────────────────────────────────
+
+
+def test_windowed_mi_spikes_where_streams_coordinate():
+    rng = np.random.default_rng(3)
+    W = 16
+    x = rng.integers(0, 4, size=240).astype(np.float64)
+    y = rng.integers(0, 4, size=240).astype(np.float64)  # independent of x...
+    y[80:96] = x[80:96]  # ...except one window where Y copies X (perfect coordination)
+    mi = windowed_mi(_codes_signal(x), other=_codes_signal(y), window=W, step=W).value().samples
+    coord_window = 80 // W  # = 5
+    assert mi.argmax() == coord_window
+    assert mi[coord_window] > 2 * np.median(mi)  # the coordinated window stands well above the floor
+
+
+def test_windowed_mi_other_is_a_used_edge():
+    from provenance import lineage
+
+    det = windowed_mi(_codes_signal([0, 1, 2, 3]), other=np.array([0.0, 1, 0, 1]), window=2)
+    assert isinstance(det, Entity)
+    assert len(lineage(det)) >= 3  # mi node + stream-X source + stream-Y source
+
+
+def test_shuffle_null_brackets_independence_and_observed_coordination_exceeds_it():
+    rng = np.random.default_rng(3)
+    W = 16
+    x = rng.integers(0, 4, size=240).astype(np.float64)
+    y = rng.integers(0, 4, size=240).astype(np.float64)
+    y[80:96] = x[80:96]  # one coordinated window
+    null = mi_shuffle_null(x, y, window=W, step=W, n_perm=50, seed=1)
+    observed = windowed_mi(_codes_signal(x), other=_codes_signal(y), window=W, step=W).value().samples
+    coord = observed[80 // W]
+    # the coordinated window's MI exceeds (almost) all of the permutation null — a clear detection;
+    # an independent window sits inside the null's bulk.
+    assert coord > np.quantile(null, 0.99)
+    assert observed[0] < np.quantile(null, 0.99)
+
+
+def test_shuffle_null_requires_a_seed():
+    with pytest.raises(TypeError):
+        mi_shuffle_null(np.zeros(20), np.zeros(20), window=4)  # seed is keyword-only, required
