@@ -38,10 +38,14 @@ from provenance import (
     Window,
     derive,
     evidence_digest,
+    kjoin,
     malformed,
     recognize,
     source,
 )
+from provenance.validity import _as_integrity_evidence
+
+_STR_TO_FOUR = {"none": NONE, "true": TRUE, "false": FALSE, "both": BOTH}
 
 _SCHEMA_PATH = (
     Path(__file__).parents[3] / "contracts" / "detection_verdict.schema.json"
@@ -282,6 +286,50 @@ def test_deviation_is_surfaced_in_the_contract_not_dropped():
     emitted contract instead of being discarded when the synthesis was written into custody."""
     dev = _malformed_source_verdict(what=TRUE).to_contract()["validity"]["deviation"]
     assert dev and "not a multiple of 8" in dev[0]
+
+
+def _reproduce_trust(contract: dict):
+    """Recompute the derived trustworthiness view from ONLY the emitted primitive fields,
+    via the actual integrity-evidence map (TRUE->NONE: valid certifies nothing)."""
+    custody = _STR_TO_FOUR[contract["custody"]]
+    validity_verdict = _STR_TO_FOUR[contract["validity"]["verdict"]]
+    return kjoin(custody, _as_integrity_evidence(validity_verdict))
+
+
+def test_trustworthiness_is_reproducible_from_emitted_primitives():
+    """The guardrail (makes a hardcoded default view safe, not lock-in): every derived field
+    must be reproducible from the emitted primitives. We check it across the spectrum, so a
+    consumer that distrusts the default can always recompute its own from custody + validity."""
+    raw, raw_src, sig, root = _detection_dag()
+    _fired_index(root)
+    pfa = root.value()["pfa"]
+    base = dict(
+        technique="T1071.001",
+        confidence_evidence={root.id: Confidence.from_detector(True, pd=_PD, pfa=pfa)},
+        claims=_claims(raw_src, sig, root),
+        monitors={root.id: TRUE},
+    )
+    verdicts = [
+        # intact custody + valid -> TRUE ; intact + malformed -> BOTH ; tampered -> FALSE ; silent -> NONE
+        assemble_verdict(root, attestations={raw_src.id: _live_attestation(raw)}, validity=VALID, **base),
+        _malformed_source_verdict(what=TRUE),
+        assemble_verdict(root, attestations={raw_src.id: CustodyAttestation("00" * 32, signed=True, feed_live=True)}, **base),
+        assemble_verdict(root, attestations={raw_src.id: CustodyAttestation(evidence_digest(b""), signed=True, feed_live=False)}, **base),
+    ]
+    for v in verdicts:
+        c = v.to_contract()
+        assert _STR_TO_FOUR[c["trustworthiness"]] == _reproduce_trust(c)
+
+
+def test_naive_kjoin_would_let_valid_content_certify_so_the_map_is_the_law():
+    """Pins WHY the evidence map exists: the shorthand kjoin(custody, validity.verdict) lets a
+    valid payload certify a silent chain (NONE -> TRUE) — the vindication we forbid. The real
+    map (TRUE->NONE) does not. Reproduction must use the map, not the shorthand."""
+    silent_custody, valid_verdict = NONE, TRUE
+    naive = kjoin(silent_custody, valid_verdict)  # ChatGPT's shorthand
+    real = kjoin(silent_custody, _as_integrity_evidence(valid_verdict))  # the implementation
+    assert naive == TRUE  # wrong: valid content "certified" a chain with no integrity signal
+    assert real == NONE  # right: valid vindicates nothing
 
 
 def test_malformation_as_signature_sets_what_true_not_false():
