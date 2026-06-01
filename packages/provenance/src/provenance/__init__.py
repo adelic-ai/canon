@@ -33,7 +33,14 @@ from provenance.monotone import (
 )
 from provenance.tier import Tier, tier_meet
 from provenance.guarantee import Demotion, GuaranteeCertificate, guarantee
-from provenance.custody import CustodyAttestation, custody, evidence_digest
+from provenance.custody import (
+    CustodyAttestation,
+    CustodyStep,
+    Localization,
+    custody,
+    evidence_digest,
+    localize,
+)
 from provenance.confidence import NO_EVIDENCE, Confidence, confidence
 from provenance.validity import (
     UNCHECKED,
@@ -92,6 +99,10 @@ __all__ = [
     "custody",
     "CustodyAttestation",
     "evidence_digest",
+    # custody localization — the backward exoneration walk over a multi-hop chain
+    "CustodyStep",
+    "Localization",
+    "localize",
     # confidence fold — graded belief (Chair–Varshney LLR) + Belnap knowledge axis
     "confidence",
     "Confidence",

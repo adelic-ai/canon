@@ -40,7 +40,14 @@ from provenance.carrier import FALSE, NONE, TRUE, Four, tmeet
 from provenance.entity import Entity, evidence_digest  # evidence_digest: the identity↔digest seam
 from provenance.interpret import lineage
 
-__all__ = ["CustodyAttestation", "custody", "evidence_digest"]
+__all__ = [
+    "CustodyAttestation",
+    "custody",
+    "evidence_digest",
+    "CustodyStep",
+    "Localization",
+    "localize",
+]
 
 
 @dataclass(frozen=True, slots=True)
@@ -101,3 +108,116 @@ def custody(
                 v = tmeet(v, verdicts[child.id])
             verdicts[nid] = v
     return verdicts
+
+
+# ── multi-hop custody chain + localization ───────────────────────────────────────────────
+#
+# The single :class:`CustodyAttestation` above answers a binary "did the held bytes match the
+# one vouched digest". But custody.md's pinned shape is a *chain* — each ingest/normalize/
+# transform hop is its own in-toto step (`materials` → `product`), and custody is
+# reconstructed by **digest-matching** across hops (a downstream material = an upstream
+# product), not explicit pointers. A digest-consistent chain does more than say "intact": it
+# lets you *localize*. Walking it backward from the bytes canon holds **exonerates** the
+# pure-relay hops (a relay that corrupted-then-signed is visible — either product != material
+# on a declared pass-through, or a seam mismatch with its neighbour), leaving the suspect set
+# = {origin} ∪ {declared-transform hops}: the only places content can be introduced without a
+# detectable anomaly (the origin is pre-attestation; a transform legitimately changes content,
+# so corruption hides inside it). This is the actionable half of a trustworthiness ``Both``
+# (architecture spine §6 + the validity fold): "contested chain — start at the last hop, walk
+# back, scrutinize these." Assumes each hop signs with its own key and cannot forge another's.
+
+
+@dataclass(frozen=True, slots=True)
+class CustodyStep:
+    """One in-toto step in the chain: ``materials`` (input digests) → ``product`` (output
+    digest), signed by ``agent``.
+
+    ``transform=False`` is a declared **pass-through**: ``product`` must equal its single
+    material, so any change is a visible anomaly. ``transform=True`` legitimately changes
+    content (``product != materials`` is expected) — which is exactly where corruption can
+    hide under cover of a sanctioned transform, so a transform hop can never be exonerated by
+    digest alone."""
+
+    agent: str
+    materials: tuple[str, ...]
+    product: str
+    signed: bool = True
+    transform: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class Localization:
+    """The result of walking a custody chain backward from the held bytes.
+
+    ``verdict`` is the chain-integrity Belnap value (``TRUE`` consistent+signed+anchored;
+    ``FALSE`` a proven in-transit tamper, localized at ``seam_break``; ``NONE`` unsigned/
+    unverifiable). ``exonerated`` are the pure-relay agents proven clean; ``suspect`` is where
+    content could have been introduced — ``{origin} ∪ {transform hops}`` plus any anomalous
+    hop. ``suspect`` is populated even when ``verdict`` is ``TRUE`` (the validity-``Both`` case:
+    the chain relayed faithfully, but *something* upstream emitted the bunk)."""
+
+    verdict: Four
+    exonerated: tuple[str, ...]
+    suspect: tuple[str, ...]
+    seam_break: str | None = None
+
+
+def localize(chain: tuple[CustodyStep, ...], held_digest: str) -> Localization:
+    """Walk ``chain`` (ordered origin → … → ingest) backward from ``held_digest``.
+
+    The anchor is the bytes canon actually holds: the last step's ``product`` must equal
+    ``held_digest``. Then each step's ``materials`` must contain the previous step's
+    ``product`` (the digest-matched seam); a declared pass-through must preserve its material.
+    A break in either is a proven in-transit tamper (``FALSE``), localized at that hop. With no
+    break, the chain is ``TRUE`` if every step is signed, else ``NONE`` (unverifiable). The
+    suspect set is ``{origin} ∪ {transform hops}`` regardless — the residue digest-custody
+    cannot clear."""
+    if not chain:
+        return Localization(NONE, (), (), seam_break=None)
+
+    # The first hop is the origin: it emits the initial content (pre-attestation), so it is
+    # permanently suspect and never relay-evaluated — digest-custody can never vouch for what
+    # predates the chain (that residue is the validity axis' job, not custody's).
+    suspect: list[str] = [chain[0].agent]
+    exonerated: list[str] = []
+    seam_break: str | None = None
+
+    # Anchor: the held bytes must be the last step's product.
+    if chain[-1].product != held_digest:
+        seam_break = f"evaluation: held bytes do not match {chain[-1].agent}'s product"
+
+    for i in range(1, len(chain)):
+        step, prev = chain[i], chain[i - 1]
+        if step.transform:
+            if step.agent not in suspect:
+                suspect.append(step.agent)  # legitimate transform — corruption can hide here
+        else:
+            # Declared pass-through: product must equal its single material, or it altered
+            # content it should have relayed — a visible anomaly.
+            if len(step.materials) != 1 or step.materials[0] != step.product:
+                seam_break = seam_break or f"{step.agent}: pass-through altered content"
+                if step.agent not in suspect:
+                    suspect.append(step.agent)
+            elif step.signed:
+                exonerated.append(step.agent)  # signed, content-preserving relay — clean
+        # Seam to the previous hop: this step must consume the previous product.
+        if prev.product not in step.materials:
+            seam_break = seam_break or (
+                f"{step.agent} does not consume {prev.agent}'s product (seam mismatch)"
+            )
+
+    if seam_break is not None:
+        verdict = FALSE  # proven in-transit tamper, localized
+        exonerated = []  # a broken chain exonerates no one
+    elif all(s.signed for s in chain):
+        verdict = TRUE
+    else:
+        verdict = NONE  # an unsigned hop — chain unverifiable, never asserted-clean
+        exonerated = []
+
+    return Localization(
+        verdict=verdict,
+        exonerated=tuple(exonerated),
+        suspect=tuple(suspect),
+        seam_break=seam_break,
+    )
