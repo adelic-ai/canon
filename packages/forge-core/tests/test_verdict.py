@@ -20,6 +20,7 @@ import jsonschema
 import numpy as np
 import pytest
 
+from forge_core.conformal import conformal_detect, conformal_guarantee_posture
 from forge_core.detection import ca_cfar
 from forge_core.information import windowed_entropy
 from forge_core.ingest import (
@@ -27,6 +28,7 @@ from forge_core.ingest import (
     decode_guarantee_posture,
     validate_float64_stream,
 )
+from forge_core.signal import Signal, SignalKind
 from forge_core.verdict import assemble_verdict
 from provenance import (
     BOTH,
@@ -489,3 +491,82 @@ def test_entropy_producer_wiring_matches_the_count_producer():
     assert verdict.guarantee.tier == Tier.WELL_FORMED  # earned: capped by the unverified feature + decode
     assert verdict.decision == TRUE                    # detect fired; no temporal contradiction
     assert verdict.score > 0.0
+
+
+# ── third producer: entropy × CONFORMAL (a different TEST — distribution-free FP control) ──
+#
+# entropy × CFAR (above) exposed that CA-CFAR's square-law alpha is mismatched to a *bounded*
+# statistic. Conformal is the fix the battery design names: a distribution-free, finite-sample
+# false-alarm bound, correct for ANY statistic (no noise model). This producer swaps the TEST
+# axis (CFAR → conformal). It shows two things:
+#   1. the verdict wiring STILL generalizes — conformal supplies a `far_bound` (a Pfa-analog) and
+#      a detection decision, exactly what the confidence leaf + decision projection consume, so
+#      assemble_verdict is unchanged. (Last turn's finding: the wiring keys on the test supplying
+#      Pfa + decision; conformal supplies both, so it slots straight in.)
+#   2. the bounded claim is now HONEST for entropy — conformal's bound has no model to mismatch;
+#      its assumption is exchangeability (confirmed here via the monitor, as CFAR confirms its
+#      homogeneous-window monitor). End-to-end the detection is still well_formed-capped by the
+#      unverified feature + decode; what conformal fixes is the *validity* of the test's bound,
+#      not the end-to-end tier.
+
+
+def _entropy_conformal_verdict():
+    rng = np.random.default_rng(11)
+    W = 16
+
+    def baseline(n):
+        x = np.zeros(n)
+        flip = rng.random(n) < 0.05
+        x[flip] = 1.0
+        return x.astype(np.float64)
+
+    # calibration: entropy of a long purely-normal stream — the known-normal reference scores.
+    cal = (
+        windowed_entropy(
+            Signal(baseline(W * 200), fs=1.0, kind=SignalKind.REAL), window=W, step=W
+        )
+        .value()
+        .samples
+    )
+    # test: a fan-out spike embedded in baseline.
+    test_codes = np.concatenate([baseline(240), np.arange(W, dtype=np.float64), baseline(240)])
+    raw = test_codes.tobytes()
+    raw_src = source(raw, evidence=True)
+    sig = decode_float64_stream(raw_src, fs=1.0, min_samples=21)
+    feat = windowed_entropy(sig, window=W, step=W)
+    root = conformal_detect(feat, calibration=cal, alpha=0.02, tail="upper")
+    r = root.value()
+
+    decode_claims, _ = decode_guarantee_posture(sig)
+    conf_claims, conf_monitors = conformal_guarantee_posture(root, exchangeability=TRUE)
+    verdict = assemble_verdict(
+        root,
+        technique="T1087",  # Account Discovery — enumeration / fan-out
+        confidence_evidence={root.id: Confidence.from_detector(True, pd=_PD, pfa=r["far_bound"])},
+        # decode (demotes) + entropy feature (WELL_FORMED) + conformal detector (BOUNDED, stands)
+        claims={**decode_claims, feat.id: Tier.WELL_FORMED, **conf_claims},
+        monitors=conf_monitors,
+        attestations={raw_src.id: _live_attestation(raw)},
+    )
+    return root, r, verdict
+
+
+def test_entropy_conformal_fires_on_the_spike_with_a_distribution_free_bound():
+    _, r, _ = _entropy_conformal_verdict()
+    assert r["indices"].tolist() == [15]
+    assert 0.0 < r["far_bound"] <= r["alpha"]  # the realized finite-sample FAR guarantee
+
+
+def test_entropy_conformal_verdict_conforms_and_claims_bounded_validly():
+    """The third producer: a different TEST (conformal) projects into the same PINNED schema, and
+    its bounded claim STANDS (exchangeability confirmed → not demoted) — distribution-free, no
+    model to mismatch, unlike CA-CFAR's alpha on a bounded statistic. The detector node claims
+    BOUNDED; the end-to-end tier is still WELL_FORMED, capped by the unverified entropy feature +
+    decode (a valid-bounded *test* does not un-cap the chain — only verifying the feature/decode
+    would)."""
+    _, _, verdict = _entropy_conformal_verdict()
+    jsonschema.validate(verdict.to_contract(), json.loads(_SCHEMA_PATH.read_text()))
+    assert verdict.guarantee.claimed == Tier.BOUNDED   # conformal's distribution-free claim
+    assert verdict.guarantee.demotion is None          # it STOOD (exchangeability confirmed)
+    assert verdict.guarantee.tier == Tier.WELL_FORMED  # end-to-end: still capped by feature + decode
+    assert verdict.decision == TRUE and verdict.score > 0.0

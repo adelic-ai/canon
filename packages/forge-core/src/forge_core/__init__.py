@@ -38,6 +38,12 @@ from forge_core.filters import (
 from forge_core.lock_in import lock_in
 from forge_core.matched_filter import matched_filter
 from forge_core.information import shannon_entropy, windowed_entropy
+from forge_core.conformal import (
+    conformal_detect,
+    conformal_far_bound,
+    conformal_guarantee_posture,
+    conformal_pvalues,
+)
 from forge_core.ingest import (
     DECODE_TIER_CEILING,
     decode_float64_stream,
@@ -89,6 +95,10 @@ __all__ = [
     "matched_filter",
     "shannon_entropy",
     "windowed_entropy",
+    "conformal_detect",
+    "conformal_pvalues",
+    "conformal_far_bound",
+    "conformal_guarantee_posture",
     "validate_float64_stream",
     "decode_float64_stream",
     "decode_guarantee_posture",
