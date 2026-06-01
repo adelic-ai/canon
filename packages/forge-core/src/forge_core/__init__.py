@@ -52,6 +52,7 @@ from forge_core.conformal import (
     conformal_guarantee_posture,
     conformal_pvalues,
 )
+from forge_core.fdr import fdr_adjust, fdr_control
 from forge_core.ingest import (
     DECODE_TIER_CEILING,
     decode_float64_stream,
@@ -112,6 +113,8 @@ __all__ = [
     "conformal_pvalues",
     "conformal_far_bound",
     "conformal_guarantee_posture",
+    "fdr_control",
+    "fdr_adjust",
     "validate_float64_stream",
     "decode_float64_stream",
     "decode_guarantee_posture",
