@@ -16,10 +16,12 @@ from pathlib import Path
 import pytest
 
 from detection.fanout import (
+    PASSWORD_SPRAY,
+    SERVICE_TICKET_FANOUT,
     bucket_fanout,
     detect_fanout,
     fanout_entropy,
-    load_kerberos_events,
+    run_binding,
 )
 from forge_core import fdr_control
 
@@ -94,8 +96,8 @@ def test_detects_labeled_password_sprays_in_real_kerberos():
     """The payoff: on real, labeled Kerberos telemetry, account fan-out at a 10-minute grain detects
     exactly the three ground-truth password-spray source IPs — full recall, no false positives at
     alpha=1e-3 (their fan-out entropy ~4.3 bits sits in a clean gap above the population)."""
-    events = load_kerberos_events(str(_DATA))  # entity = source IP, value = account (spray fan-out)
-    res = detect_fanout(events, grain_seconds=600, alpha=1e-3)
+    res = run_binding(str(_DATA), PASSWORD_SPRAY)  # entity = source IP, value = account
+    assert res["binding"].technique == "T1110.003"
     detected_sources = {c.entity for c in res["detected"]}
     labeled_spray_ips = {"10.3.27.24", "10.2.234.242", "10.5.155.7"}
     assert labeled_spray_ips <= detected_sources, "missed a labeled spray (recall)"
@@ -109,10 +111,9 @@ def test_detects_labeled_kerberoasting_in_real_kerberos():
     pass-the-ticket accounts too (both are 'one account, many service tickets'). Every detection is a
     labeled anomaly: full Kerberoast recall, no false positives. Two real bindings, one detector —
     the repeated structure StreamBinding should emerge from."""
-    events = load_kerberos_events(
-        str(_DATA), entity_field="Account_Name", value_field="Service_Name"
-    )
-    detected = {c.entity for c in detect_fanout(events, grain_seconds=600, alpha=1e-3)["detected"]}
+    res = run_binding(str(_DATA), SERVICE_TICKET_FANOUT)  # entity = account, value = service
+    assert res["binding"].technique == "T1558.003"
+    detected = {c.entity for c in res["detected"]}
     kerberoast = {"maria.montgomery", "jill.rhodes", "christopher.hall", "debra.gardner"}
     # pass-the-ticket accounts share the fan-out signature (many service tickets), so they are
     # expected, not false, detections; the union is the full set of labeled service-fan-out accounts.

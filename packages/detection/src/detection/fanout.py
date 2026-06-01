@@ -163,3 +163,58 @@ def detect_fanout(
         "alpha": alpha,
         "grain_seconds": grain_seconds,
     }
+
+
+@dataclass(frozen=True, slots=True)
+class FanoutBinding:
+    """A named fan-out detection binding — *the repeated structure made data*.
+
+    The two real Kerberos detections differ only in this object: which field is the ``entity``,
+    which is the ``value`` it fans out over, the time ``grain``, the sweep ``alpha``, and the ATT&CK
+    ``technique`` the fan-out evidences. Extracted only *after* both bindings were green (the
+    concrete-first discipline) — not a guessed abstraction. It is also the seam where a knowledge
+    layer (D3FEND/ATT&CK/OCSF) would eventually **generate** bindings instead of these hand-authored
+    two, and the carrier of the ``technique`` that the next step, verdict-emission, needs.
+
+    Kept deliberately specific (a *fan-out* binding, not a general ``StreamBinding``): a general
+    binding type should emerge only when a second *detector family* (e.g. MI coordination, which
+    needs two value-streams) forces a second binding shape.
+    """
+
+    name: str
+    entity_field: str
+    value_field: str
+    grain_seconds: float
+    technique: str
+    alpha: float = 1e-3
+
+
+#: Source IP → many accounts. ATT&CK T1110.003 (Brute Force: Password Spraying).
+PASSWORD_SPRAY = FanoutBinding(
+    name="password-spray",
+    entity_field="Client_Address",
+    value_field="Account_Name",
+    grain_seconds=600,
+    technique="T1110.003",
+)
+
+#: Account → many service tickets. ATT&CK T1558.003 (Kerberoasting); also catches the
+#: pass-the-ticket class (T1550.003), which shares the fan-out signature.
+SERVICE_TICKET_FANOUT = FanoutBinding(
+    name="service-ticket-fanout",
+    entity_field="Account_Name",
+    value_field="Service_Name",
+    grain_seconds=600,
+    technique="T1558.003",
+)
+
+
+def run_binding(path: str, binding: FanoutBinding) -> dict:
+    """Load the corpus under ``binding`` and run :func:`detect_fanout` — one detection, fully
+    specified by the binding. Returns ``detect_fanout``'s dict with the ``binding`` attached."""
+    events = load_kerberos_events(
+        path, entity_field=binding.entity_field, value_field=binding.value_field
+    )
+    res = detect_fanout(events, grain_seconds=binding.grain_seconds, alpha=binding.alpha)
+    res["binding"] = binding
+    return res
