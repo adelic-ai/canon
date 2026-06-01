@@ -11,7 +11,12 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from forge_core.information import shannon_entropy, windowed_entropy
+from forge_core.information import (
+    kl_divergence,
+    shannon_entropy,
+    windowed_entropy,
+    windowed_kl,
+)
 from forge_core.signal import Signal, SignalKind
 from provenance import Entity
 
@@ -87,3 +92,68 @@ def test_rejects_non_real_kind_at_build_time():
     cyclic = Signal(np.zeros(8), fs=1.0, kind=SignalKind.CYCLIC)
     with pytest.raises(TypeError, match="windowed_entropy"):
         windowed_entropy(cyclic, window=4)
+
+
+# ── kl_divergence: port fidelity ──────────────────────────────────────────────
+
+
+def test_identical_distributions_have_zero_kl():
+    assert kl_divergence([3, 1, 4], [3, 1, 4]) == pytest.approx(0.0)
+    assert kl_divergence([3, 1, 4], [6, 2, 8]) == pytest.approx(0.0)  # same after normalizing
+
+
+def test_kl_is_asymmetric_and_positive():
+    # A non-mirror pair (mirror pairs like [8,1,1]/[1,1,8] are coincidentally symmetric).
+    d_pq = kl_divergence([10, 1], [1, 1])
+    d_qp = kl_divergence([1, 1], [10, 1])
+    assert d_pq > 0 and d_qp > 0
+    assert d_pq != pytest.approx(d_qp)  # not symmetric
+
+
+def test_kl_known_value_two_symbols():
+    # P=(1,0), Q=(1/2,1/2): D = 1·log2(1 / 0.5) = 1 bit. (Q has no zero where P is positive.)
+    assert kl_divergence([1, 0], [1, 1]) == pytest.approx(1.0)
+
+
+def test_kl_disjoint_support_is_inf():
+    assert kl_divergence([1, 0], [0, 1]) == float("inf")
+
+
+# ── windowed_kl op: the binning decision made explicit ────────────────────────
+
+
+def test_windowed_kl_zero_when_window_matches_baseline():
+    # baseline uniform over 4 symbols; a window that is also uniform → KL ~ 0 (up to smoothing).
+    codes = _codes_signal([0, 1, 2, 3, 0, 1, 2, 3])
+    out = windowed_kl(codes, baseline=np.ones(4), window=4, step=4, smoothing=0.5).value().samples
+    assert np.all(out < 0.2)  # near zero; smoothing keeps it from being exactly 0
+
+
+def test_windowed_kl_spikes_on_a_distributional_break():
+    # baseline concentrated on symbol 0; a window that shifts onto rare symbols → large finite KL.
+    baseline = np.array([100.0, 1.0, 1.0, 1.0])  # symbol 0 dominates the normal profile
+    normal_win = [0, 0, 0, 0]
+    break_win = [3, 3, 3, 3]  # all mass on a symbol the baseline barely saw
+    out_normal = windowed_kl(_codes_signal(normal_win), baseline=baseline, window=4, smoothing=0.5).value().samples
+    out_break = windowed_kl(_codes_signal(break_win), baseline=baseline, window=4, smoothing=0.5).value().samples
+    assert out_break[0] > out_normal[0]
+    assert np.isfinite(out_break[0])  # novelty is finite (smoothed), not inf or dropped
+
+
+def test_windowed_kl_rejects_codes_outside_the_declared_alphabet():
+    # baseline length 3 → alphabet {0,1,2}; a code of 5 is out of the declared support.
+    with pytest.raises(ValueError, match="declared alphabet"):
+        windowed_kl(_codes_signal([0, 1, 5, 2]), baseline=np.ones(3), window=4).value()
+
+
+def test_windowed_kl_smoothing_must_be_positive():
+    with pytest.raises(ValueError, match="smoothing must be > 0"):
+        windowed_kl(_codes_signal([0, 1, 2, 3]), baseline=np.ones(4), window=4, smoothing=0.0).value()
+
+
+def test_windowed_kl_calibration_is_a_used_edge():
+    from provenance import lineage
+
+    det = windowed_kl(_codes_signal([0, 1, 2, 3]), baseline=np.ones(4), window=4)
+    assert isinstance(det, Entity)
+    assert len(lineage(det)) >= 3  # the kl node + the code source + the baseline source

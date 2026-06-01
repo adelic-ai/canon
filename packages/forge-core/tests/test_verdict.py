@@ -22,7 +22,7 @@ import pytest
 
 from forge_core.conformal import conformal_detect, conformal_guarantee_posture
 from forge_core.detection import ca_cfar
-from forge_core.information import windowed_entropy
+from forge_core.information import windowed_entropy, windowed_kl
 from forge_core.ingest import (
     decode_float64_stream,
     decode_guarantee_posture,
@@ -569,4 +569,67 @@ def test_entropy_conformal_verdict_conforms_and_claims_bounded_validly():
     assert verdict.guarantee.claimed == Tier.BOUNDED   # conformal's distribution-free claim
     assert verdict.guarantee.demotion is None          # it STOOD (exchangeability confirmed)
     assert verdict.guarantee.tier == Tier.WELL_FORMED  # end-to-end: still capped by feature + decode
+    assert verdict.decision == TRUE and verdict.score > 0.0
+
+
+# ── fourth producer: KL × conformal (a two-distribution feature; the binning decision) ──
+#
+# KL is the first feature that can't dodge the binning decision (entropy histograms each window
+# by itself; KL needs window P and baseline Q over an *aligned* alphabet). windowed_kl fixes the
+# alphabet to [0, K) from the baseline length, one bin per symbol, Lidstone smoothing. This
+# producer wires KL × conformal — a distributional *break* (mass shifting onto symbols rare in
+# the baseline), not a fan-out spike — and confirms a structurally different feature (two
+# distributions, a `used` baseline edge) still emits the canonical verdict through the same path.
+
+
+def _kl_conformal_verdict():
+    rng = np.random.default_rng(13)
+    W, K = 16, 8
+
+    def normal(n):
+        x = np.zeros(n)
+        flip = rng.random(n) < 0.1
+        x[flip] = rng.integers(1, 3, size=flip.sum())
+        return x.astype(np.float64)
+
+    # baseline Q: the normal symbol profile (symbol 0 dominant); calibration: KL of a normal stream.
+    baseline_counts = np.bincount(normal(W * 400).astype(int), minlength=K).astype(np.float64)
+    cal = (
+        windowed_kl(
+            Signal(normal(W * 200), fs=1.0, kind=SignalKind.REAL),
+            baseline=baseline_counts, window=W, step=W,
+        ).value().samples
+    )
+    # test: a distributional break — a window dominated by symbols the baseline barely saw.
+    break_win = rng.integers(5, 8, size=W).astype(np.float64)
+    test_codes = np.concatenate([normal(240), break_win, normal(240)])
+    raw = test_codes.tobytes()
+    raw_src = source(raw, evidence=True)
+    sig = decode_float64_stream(raw_src, fs=1.0, min_samples=21)
+    feat = windowed_kl(sig, baseline=baseline_counts, window=W, step=W)
+    root = conformal_detect(feat, calibration=cal, alpha=0.02, tail="upper")
+    r = root.value()
+
+    decode_claims, _ = decode_guarantee_posture(sig)
+    conf_claims, conf_monitors = conformal_guarantee_posture(root, exchangeability=TRUE)
+    verdict = assemble_verdict(
+        root,
+        technique="T1071",  # Application-layer C2 — a traffic-distribution break
+        confidence_evidence={root.id: Confidence.from_detector(True, pd=_PD, pfa=r["far_bound"])},
+        claims={**decode_claims, feat.id: Tier.WELL_FORMED, **conf_claims},
+        monitors=conf_monitors,
+        attestations={raw_src.id: _live_attestation(raw)},
+    )
+    return r, verdict
+
+
+def test_kl_conformal_is_a_fourth_producer_and_conforms():
+    """A structurally different feature (KL, two-distribution, baseline as a used edge) emits the
+    same canonical DetectionVerdict: the distributional break fires under conformal, and the
+    verdict validates against the PINNED schema with a standing BOUNDED claim."""
+    r, verdict = _kl_conformal_verdict()
+    assert r["indices"].tolist() == [15]  # the break window is the single detection
+    jsonschema.validate(verdict.to_contract(), json.loads(_SCHEMA_PATH.read_text()))
+    assert verdict.guarantee.claimed == Tier.BOUNDED and verdict.guarantee.demotion is None
+    assert verdict.guarantee.tier == Tier.WELL_FORMED  # capped by the unverified KL feature + decode
     assert verdict.decision == TRUE and verdict.score > 0.0
