@@ -3,7 +3,7 @@
 This is the vertical slice that proves the architecture composes. One content-addressed DAG
 
     raw telemetry bytes  (evidence source — the keystone in-toto product)
-        └─ ingest_normalize ─→ REAL test-statistic Signal
+        └─ decode_float64_stream ─→ REAL test-statistic Signal  (validity-checked ingest joint)
                └─ ca_cfar ─→ detection result   (the verdict's root node)
 
 is folded five ways (value, confidence, custody, guarantee, temporal) and projected into
@@ -21,7 +21,11 @@ import numpy as np
 import pytest
 
 from forge_core.detection import ca_cfar
-from forge_core.signal import Signal, SignalKind
+from forge_core.ingest import (
+    decode_float64_stream,
+    decode_guarantee_posture,
+    validate_float64_stream,
+)
 from forge_core.verdict import assemble_verdict
 from provenance import (
     BOTH,
@@ -35,13 +39,11 @@ from provenance import (
     Event,
     Tier,
     Trace,
-    Validity,
     Window,
     derive,
     evidence_digest,
     kjoin,
     localize,
-    malformed,
     recognize,
     source,
 )
@@ -64,11 +66,9 @@ def _detection_dag():
 
     raw_src = source(raw, evidence=True)  # keystone: src.id == evidence_digest(raw)
 
-    def _normalize(payload: bytes) -> Signal:
-        arr = np.frombuffer(payload, dtype=np.float64)
-        return Signal(arr, fs=1.0, kind=SignalKind.REAL)
-
-    sig = derive("ingest_normalize", _normalize, (raw_src,), kind="REAL")
+    # The ingest boundary is a real joint now (forge_core.ingest), not a per-test lambda: it
+    # validity-checks the raw bytes against the declared float64-stream schema, then decodes.
+    sig = decode_float64_stream(raw_src, fs=1.0, min_samples=21)
     root = ca_cfar(sig, guard=2, train=8, pfa=1e-3)
     return raw, raw_src, sig, root
 
@@ -81,8 +81,11 @@ def _claims(raw_src, sig, root) -> dict:
 
     * the detector op carries BOUNDED — CA-CFAR's analytic Pfa, conditional on the
       homogeneous-noise model (the capability).
-    * ``ingest_normalize`` is WELL_FORMED — a deterministic decode is structurally valid; we
-      have *not* machine-checked ``np.frombuffer``, so claiming more would be over-claiming.
+    * the ``decode_float64_stream`` joint claims its honest *ceiling* (MACHINE_CHECKED — a
+      byte-faithful reinterpret is an algebraic identity), but with no proof discharged the
+      posture's monitor defaults to NONE: a **recorded absence** that demotes the decode to
+      WELL_FORMED (``forge_core.ingest.decode_guarantee_posture``). Pre-joint this was a flat
+      WELL_FORMED claim with the reasoning in a comment; now the unproven-ness is machine-readable.
     * the evidence ``source`` is **left unclaimed on purpose** — a raw input carries no rigor
       tier (its trust is the orthogonal custody axis, exercised separately and TRUE here), so
       it is tier-transparent and does not enter the meet. Pre-fix it would have dragged the
@@ -90,13 +93,12 @@ def _claims(raw_src, sig, root) -> dict:
 
     Consequence (the finding the slice surfaces): the result is capped at WELL_FORMED — not
     by the source (transparent), but by the *decode*, a real computation on the
-    guarantee-critical chain. To earn BOUNDED end-to-end the ingest path must itself be
-    verified; the detector's BOUNDED capability alone is not enough.
+    guarantee-critical chain. The cap is the recorded absence of a machine-checked proof, and
+    is liftable by design (pass ``proof=TRUE`` to the posture once a proof exists); the
+    detector's BOUNDED capability alone is not enough.
     """
-    return {
-        sig.id: Tier.WELL_FORMED,
-        root.id: Tier.BOUNDED,
-    }
+    decode_claims, _ = decode_guarantee_posture(sig)  # ceiling MACHINE_CHECKED, demotes via NONE monitor
+    return {**decode_claims, root.id: Tier.BOUNDED}
 
 
 def _fired_index(root) -> int:
@@ -171,7 +173,7 @@ def test_keystone_custody_is_true_for_a_signed_live_evidence_source():
 
 def test_result_is_capped_at_well_formed_by_the_decode_not_the_source():
     """Weakest-link, end-to-end: the detector *claims* BOUNDED but earns WELL_FORMED — capped
-    by the *decode* (``ingest_normalize``, a real computation), not by the raw source (which
+    by the *decode* (``decode_float64_stream``, a real computation), not by the raw source (which
     is tier-transparent). The capability is recorded (``claimed == BOUNDED``); the result
     honestly does not inherit it. The cap is structural (weakest-link), not a per-result
     monitor demotion — so ``demotion is None``."""
@@ -235,14 +237,6 @@ def test_w_record_score_is_the_fraction_of_grounded_ws():
 # check cannot tell which — and crucially must NOT drop it.
 
 
-def _check_float64_stream(payload: bytes) -> Validity:
-    if len(payload) % 8 != 0:
-        return malformed(f"byte length {len(payload)} not a multiple of 8 — truncated float64 stream")
-    if len(payload) // 8 < 21:
-        return malformed(f"{len(payload) // 8} samples < 21 — below CA-CFAR's minimum window")
-    return VALID
-
-
 def _malformed_source_verdict(*, what):
     """A bunk payload delivered through an INTACT, signed, live custody chain. The detector node
     keys on the schema violation; `what` is the deviation routed as a feature by the caller."""
@@ -250,7 +244,7 @@ def _malformed_source_verdict(*, what):
     bad_src = source(bad, evidence=True)  # keystone: id == evidence_digest(bad)
     flag = derive("schema_violation_detect", lambda _p: None, (bad_src,))  # structural; never evaluated
 
-    v = _check_float64_stream(bad)
+    v = validate_float64_stream(bad, min_samples=21)  # the ingest joint's schema check
     assert v.verdict == FALSE and v.deviation  # malformed, and it carries the deviation
 
     # The digest chain is INTACT — the bunk was faithfully delivered (this is the hard case).

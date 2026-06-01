@@ -37,6 +37,12 @@ from forge_core.filters import (
 )
 from forge_core.lock_in import lock_in
 from forge_core.matched_filter import matched_filter
+from forge_core.ingest import (
+    DECODE_TIER_CEILING,
+    decode_float64_stream,
+    decode_guarantee_posture,
+    validate_float64_stream,
+)
 from forge_core.circular import (
     circular_mean,
     circular_variance,
@@ -80,6 +86,10 @@ __all__ = [
     "EEG_BANDS",
     "lock_in",
     "matched_filter",
+    "validate_float64_stream",
+    "decode_float64_stream",
+    "decode_guarantee_posture",
+    "DECODE_TIER_CEILING",
     "circular_mean",
     "circular_variance",
     "resultant_length",
