@@ -87,21 +87,36 @@ def custody(
     root: Entity,
     *,
     attestations: dict[str, CustodyAttestation] | None = None,
+    chains: dict[str, "tuple[CustodyStep, ...]"] | None = None,
 ) -> dict[str, Four]:
     """Fold the DAG to a custody :class:`~provenance.carrier.Four` per node, keyed by id.
 
-    ``attestations`` maps a *source* node id to its ingest attestation; a source without
-    one earns ``NONE``. A derived node's custody is :func:`~provenance.carrier.tmeet` over
-    its inputs' custody (a no-input derived node is the vacuous ``TRUE`` — the tmeet
-    identity: nothing was ingested, so nothing could be tampered). The root's verdict is
-    ``result[root.id]``.
+    A source's leaf verdict comes from one of two paths (extend, not replace):
+
+    * ``chains`` maps a source node id to a multi-hop :class:`CustodyStep` chain — the richer,
+      contract-aligned path; its leaf verdict is :func:`localize`\\ ``(chain, held).verdict``
+      (the structured :class:`Localization` is recovered by calling ``localize`` directly).
+    * ``attestations`` maps a source node id to a single ingest attestation — the degenerate
+      one-hop path.
+
+    A chain takes precedence where both are given; a source in neither earns ``NONE``. A
+    derived node's custody is :func:`~provenance.carrier.tmeet` over its inputs' custody (a
+    no-input derived node is the vacuous ``TRUE``). The root's verdict is ``result[root.id]``.
     """
     attestations = attestations or {}
+    chains = chains or {}
     verdicts: dict[str, Four] = {}
     for node in lineage(root):  # dependency order: every child precedes its parent
         nid = node.id
         if node.producer is None:
-            verdicts[nid] = _source_custody(node, attestations.get(nid))
+            chain = chains.get(nid)
+            if chain is not None:
+                # held bytes = the source's content digest (its CID, for an evidence source —
+                # the keystone alignment, so the chain's last product must equal it).
+                held = node.id if node.is_evidence else evidence_digest(node.payload)
+                verdicts[nid] = localize(chain, held).verdict
+            else:
+                verdicts[nid] = _source_custody(node, attestations.get(nid))
         else:
             v = TRUE  # tmeet identity; vacuous custody for a derived node with no inputs
             for child in node.producer.used:

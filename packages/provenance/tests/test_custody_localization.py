@@ -7,7 +7,16 @@ seam mismatch) → a localized FALSE. Unsigned anywhere → NONE. These tests pi
 
 Chain ordering is origin → … → ingest; the last step's product is what canon holds.
 """
-from provenance import FALSE, NONE, TRUE, CustodyStep, localize
+from provenance import (
+    FALSE,
+    NONE,
+    TRUE,
+    CustodyStep,
+    custody,
+    derive,
+    localize,
+    source,
+)
 
 
 def _relay(agent: str, digest: str) -> CustodyStep:
@@ -105,3 +114,33 @@ def test_origin_is_always_a_suspect():
     loc = localize((CustodyStep("source-host", materials=(), product=D, signed=True),), held_digest=D)
     assert loc.verdict is TRUE
     assert loc.suspect == ("source-host",)
+
+
+# ── integration with the custody fold (extend, not replace) ─────────────────────────────
+def test_fold_uses_a_chain_when_given_one():
+    """A source with a CustodyStep chain: the fold's leaf verdict is the chain's localize
+    verdict, and it propagates by tmeet to derived nodes — the keystone holds because the
+    chain's last product equals the evidence source's CID."""
+    payload = b"connection-rate telemetry"
+    src = source(payload, evidence=True)  # src.id == evidence_digest(payload)
+    chain = (
+        CustodyStep("source-host", materials=(), product=src.id, signed=True),
+        _relay("collector", src.id),
+    )
+    root = derive("detect", lambda _p: None, (src,))
+    verdicts = custody(root, chains={src.id: chain})
+    assert verdicts[src.id] is TRUE  # intact chain
+    assert verdicts[root.id] is TRUE  # tmeet propagation
+
+
+def test_fold_chain_with_broken_anchor_is_false():
+    payload = b"connection-rate telemetry"
+    src = source(payload, evidence=True)
+    # chain's last product does NOT match the held bytes (the source CID) → tamper.
+    chain = (CustodyStep("source-host", materials=(), product="not-the-digest", signed=True),)
+    assert custody(src, chains={src.id: chain})[src.id] is FALSE
+
+
+def test_fold_falls_back_to_none_without_a_chain_or_attestation():
+    src = source(b"x", evidence=True)
+    assert custody(src)[src.id] is NONE  # neither chain nor attestation
