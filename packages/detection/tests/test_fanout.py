@@ -100,3 +100,22 @@ def test_detects_labeled_password_sprays_in_real_kerberos():
     labeled_spray_ips = {"10.3.27.24", "10.2.234.242", "10.5.155.7"}
     assert labeled_spray_ips <= detected_sources, "missed a labeled spray (recall)"
     assert detected_sources == labeled_spray_ips, f"false positives: {detected_sources - labeled_spray_ips}"
+
+
+@pytest.mark.skipif(not _DATA.exists(), reason="faker-kerberos corpus not present")
+def test_detects_labeled_kerberoasting_in_real_kerberos():
+    """The SECOND binding, the SAME detector: entity = Account_Name, value = Service_Name. Account
+    service-ticket fan-out catches the four labeled Kerberoasting accounts — and, as a *class*, the
+    pass-the-ticket accounts too (both are 'one account, many service tickets'). Every detection is a
+    labeled anomaly: full Kerberoast recall, no false positives. Two real bindings, one detector —
+    the repeated structure StreamBinding should emerge from."""
+    events = load_kerberos_events(
+        str(_DATA), entity_field="Account_Name", value_field="Service_Name"
+    )
+    detected = {c.entity for c in detect_fanout(events, grain_seconds=600, alpha=1e-3)["detected"]}
+    kerberoast = {"maria.montgomery", "jill.rhodes", "christopher.hall", "debra.gardner"}
+    # pass-the-ticket accounts share the fan-out signature (many service tickets), so they are
+    # expected, not false, detections; the union is the full set of labeled service-fan-out accounts.
+    service_fanout_labeled = kerberoast | {"robert.johnson", "amanda.dudley"}
+    assert kerberoast <= detected, "missed a labeled Kerberoast account (recall)"
+    assert detected <= service_fanout_labeled, f"false positives: {detected - service_fanout_labeled}"

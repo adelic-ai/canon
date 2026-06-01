@@ -1,10 +1,17 @@
 """Fan-out detection — the first telemetry→spine slice (Kerberos password-spray).
 
-A *fan-out* is one entity touching unusually many distinct values in a window: a source IP
-hitting many accounts (password spray), an account requesting many service tickets
-(Kerberoasting). The detection is the cyber instantiation of the ``entropy × conformal`` producer
-already proven in forge-core — here fed by **real, labeled** telemetry (``faker-kerberos``) instead
-of a synthetic stream.
+A *fan-out* is one entity touching unusually many distinct values in a window. The same detector,
+under two different **bindings**, catches two different attack classes in the ``faker-kerberos``
+corpus — which is the repeated structure the binding abstraction is meant to emerge from:
+
+    password spray   entity = Client_Address (source IP)   value = Account_Name
+    service-ticket   entity = Account_Name                 value = Service_Name
+
+The first finds a source IP hitting many accounts (password spray). The second finds an account
+requesting many distinct service tickets — which catches **Kerberoasting *and* pass-the-ticket**
+together, because both are "one account, many service tickets": the detector keys on the fan-out
+signature, not the technique label. The detection is the cyber instantiation of the
+``entropy × conformal`` producer proven in forge-core, here fed by **real, labeled** telemetry.
 
 The pipeline, with the layer boundary kept sharp:
 
