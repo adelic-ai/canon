@@ -34,17 +34,15 @@ import numpy as np
 
 from forge_core import (
     DetectionVerdict,
-    assemble_verdict,
     circular_mean,
     conformal_pvalues,
     resultant_length,
 )
 from forge_core.signal import Signal, SignalKind
-from provenance import TRUE, Confidence, Tier, derive, source
 
+from detection._verdict import emit_detection_verdict
 from detection.fanout import load_kerberos_events
 
-_PD = 0.9  # nominal detection probability for the confidence leaf
 _MIN_HISTORY = 10  # an account needs this many events before a circular routine is meaningful
 
 
@@ -152,28 +150,18 @@ def run_offhours(path: str, binding: TemporalBinding = OFF_HOURS) -> dict:
 
 
 def offhours_verdict(detection: OffHoursDetection, binding: TemporalBinding) -> DetectionVerdict:
-    """Emit the canonical :class:`~forge_core.DetectionVerdict` for one off-hours detection.
-
-    Same honesty as the fan-out path: the corpus is an unsigned CSV, so the source is wired by
-    reference (no attestation) and the verdict reports ``custody = NONE`` / ``trustworthiness =
-    NONE`` while the detection stands (``decision = TRUE``, a score from the rare conformal p). The
-    W-record grounds who (the account) and when (the off-hours time); what is the ∃-detect; where /
-    how stay ``NONE``. Tier ``WELL_FORMED`` (circular conformal over an unattested ingest)."""
-    ref = f"{binding.name}|{detection.entity}|{detection.at:.0f}"
-    src = source(ref, name=ref)  # by-reference — unattested log, no integrity
-    root = derive(
-        "offhours_detect",
-        lambda _p: None,
-        (src,),
-        {"entity": detection.entity, "hour": round(detection.hour, 2), "technique": binding.technique},
-    )
-    return assemble_verdict(
-        root,
+    """Emit the canonical :class:`~forge_core.DetectionVerdict` for one off-hours detection. Same
+    honest projection as the fan-out path (custody ``NONE`` on an unsigned corpus; who/when grounded)
+    via the shared :func:`~detection._verdict.emit_detection_verdict`."""
+    return emit_detection_verdict(
+        f"{binding.name}|{detection.entity}|{detection.at:.0f}",
         technique=binding.technique,
-        confidence_evidence={root.id: Confidence.from_detector(True, pd=_PD, pfa=detection.pvalue)},
-        claims={root.id: Tier.WELL_FORMED},
-        who=TRUE,  # the account is identified
-        when=TRUE,  # the off-hours time is known
+        pvalue=detection.pvalue,
+        params={
+            "entity": detection.entity,
+            "hour": round(detection.hour, 2),
+            "technique": binding.technique,
+        },
     )
 
 

@@ -43,11 +43,11 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from forge_core import DetectionVerdict, assemble_verdict, conformal_pvalues, shannon_entropy
-from provenance import TRUE, Confidence, Tier, derive, source
+from forge_core import DetectionVerdict, conformal_pvalues, shannon_entropy
+
+from detection._verdict import emit_detection_verdict
 
 _EPOCH = dt.datetime(1970, 1, 1)  # fixed naive reference → deterministic bucketing across machines
-_PD = 0.9  # nominal detection probability for the confidence leaf (no calibrated Pd for fan-out)
 
 
 def load_kerberos_events(
@@ -236,43 +236,19 @@ def run_binding(path: str, binding: FanoutBinding) -> dict:
 
 def fanout_verdict(detection: FanoutDetection, binding: FanoutBinding) -> DetectionVerdict:
     """Emit the canonical :class:`~forge_core.DetectionVerdict` for one detected fan-out cell —
-    closing the loop: real telemetry → binding → detection → the schema-validated verdict.
-
-    **Custody is honestly ``NONE``.** The corpus is an unsigned CSV, not cryptographically attested
-    evidence, so the source is wired *by reference* (no :class:`CustodyAttestation`) — the keystone
-    does not hold. The verdict therefore reports ``custody = NONE`` and (with no payload validity
-    check) ``trustworthiness = NONE``, while the *detection* is still statistically meaningful (a
-    high ``score`` from the rare conformal p-value, ``decision = TRUE``). Stating both truths
-    separately — "the detection is real; the input's custody is unattested; trust reflects that" —
-    is exactly what the verdict model is for. Faking an attestation to inflate trust would defeat it.
-
-    The W-record grounds who (the entity), when (the time bin), and what (the ∃-detect); where (host)
-    and how (the procedure) are left ``NONE`` — honestly ungrounded in this slice. The tier is
-    ``WELL_FORMED``: a population-rank conformal over an unattested, unverified ingest earns the floor.
+    closing the loop: real telemetry → binding → detection → the schema-validated verdict. Custody
+    is honestly ``NONE`` (unsigned corpus); the W-record grounds who (the entity) and when (the time
+    bin). The shared, honest projection lives in :func:`~detection._verdict.emit_detection_verdict`.
     """
-    ref = f"{binding.name}|{detection.cell.entity}|{detection.cell.bin}"
-    src = source(ref, name=ref)  # by-reference identity — carries NO integrity (unattested log)
-    root = derive(
-        "fanout_detect",
-        lambda _p: None,  # structural node: the verdict reads the folds, never evaluates a kernel
-        (src,),
-        {
+    return emit_detection_verdict(
+        f"{binding.name}|{detection.cell.entity}|{detection.cell.bin}",
+        technique=binding.technique,
+        pvalue=detection.pvalue,
+        params={
             "entity": detection.cell.entity,
             "bin": detection.cell.bin,
             "technique": binding.technique,
         },
-    )
-    return assemble_verdict(
-        root,
-        technique=binding.technique,
-        confidence_evidence={
-            root.id: Confidence.from_detector(True, pd=_PD, pfa=detection.pvalue)
-        },
-        claims={root.id: Tier.WELL_FORMED},
-        # NO attestations → custody = NONE; default validity UNCHECKED → trustworthiness = NONE.
-        who=TRUE,  # the entity (source IP / account) is identified
-        when=TRUE,  # the time bin is known
-        # where / how default NONE (host + procedure ungrounded); what defaults to the ∃-detect.
     )
 
 
