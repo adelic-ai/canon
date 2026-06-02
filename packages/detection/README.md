@@ -1,0 +1,71 @@
+# detection — telemetry → spine, validated on real data
+
+The orchestration layer above `forge-core`. forge-core is the domain-agnostic statistical spine
+(features, tests, FP control); this layer holds **telemetry semantics**: turning real events into
+candidate streams, choosing the grain, dispatching forge-core's primitives, and projecting results
+into the canonical `DetectionVerdict`.
+
+> **The tests are the source of truth.** This file is a human-readable *map* of what is validated
+> and what was found; every claim below is asserted in `tests/test_fanout.py` (named inline) and the
+> test wins on any conflict. Validation that isn't in a test isn't validated.
+
+## Pipeline
+
+```
+real events → FanoutBinding → bucket_fanout (grain) → fanout_entropy → detect_fanout (conformal α)
+            → fanout_verdict → DetectionVerdict → schema validation
+```
+
+The layer boundary is sharp: **this layer** owns the *semantic* bucketing (partition by entity, bin
+by a chosen **grain**, project the value field); **forge-core** owns the math (`shannon_entropy`,
+`conformal_pvalues`, `fdr_control`). A `FanoutBinding` is the repeated structure made data —
+extracted only *after* two bindings were green, not guessed.
+
+## What is validated (corpus: `faker-kerberos` v1)
+
+Synthetic-but-realistic Windows Kerberos, 25,971 events / 30 days / 15 labeled anomalies
+(`~/data/faker-kerberos/v1/`, deterministic seed 42; manifest carries Dublin Core + sha256). The
+real-data tests skip if the corpus is absent.
+
+<<<
+binding                 entity → value                technique   result on real labels
+PASSWORD_SPRAY          Client_Address → Account_Name  T1110.003   all 3 labeled spray IPs; 0 false positives
+SERVICE_TICKET_FANOUT   Account_Name → Service_Name    T1558.003   all 4 Kerberoast accounts + 2 pass-the-ticket; 0 FP
+>>>
+
+- `test_detects_labeled_password_sprays_in_real_kerberos` — full recall, exact match (no FP) at
+  grain 10 min, α=1e-3. Spray fan-out entropy ~4.3 bits sits in a clean gap above the population q99 (1.0).
+- `test_detects_labeled_kerberoasting_in_real_kerberos` — the *same* detector, second binding, catches
+  a whole **class**: Kerberoasting *and* pass-the-ticket share the "one account, many service tickets"
+  signature. Every detection is a labeled anomaly.
+- `test_fanout_verdict_is_honest_about_unattested_custody` / `test_real_spray_verdicts_are_schema_valid_and_unattested`
+  — detections project into schema-valid `DetectionVerdict`s.
+
+## Findings (surfaced by real data, both tested)
+
+1. **The grain is load-bearing, and guarded.** `bucket_fanout` materializes the time-bin partition,
+   so changing the grain changes the artifact identity and every downstream entropy
+   (`test_changing_grain_changes_the_bucketed_stream`). This is the guard against the recurring
+   `c_bin → 1` collapse — if grain ever silently collapsed to the native unit, the test fails.
+
+2. **FDR over all cells rejects nothing — FDR is a T1 control, not a T0 sweep.** The discrete
+   conformal p-value floor `1/(n+1)` sits ~`1/q` times the Benjamini–Hochberg threshold `q/m` at
+   m ~ 10⁴ cells, so even the most extreme cell can't pass. A T0 standing sweep uses a per-cell α;
+   FDR enters at the *reduced-multiplicity* discovery tier (scoped pairs, clean permutation null).
+   `test_fdr_over_all_cells_is_too_stringent_a_t0_sweep_uses_alpha`.
+
+3. **Honest custody on unattested telemetry.** The corpus is an unsigned CSV, not attested evidence,
+   so verdicts report `custody = NONE` / `trustworthiness = NONE` while the detection is still real
+   (`decision = TRUE`, high score). No faked attestation — the verdict states both truths separately.
+
+4. **`faker-kerberos` has no validatable coordination signal.** Its attacks are point/burst anomalies
+   (the spray is a 36-second co-occurrence burst of 20 normally-independent accounts — a *clustering*
+   signal, not the sustained two-entity dependence mutual information needs). MI-coordination needs a
+   lateral-movement corpus (e.g. BOTS v3 Windows security) or an explicitly-labeled injected signal;
+   it is **not** validated here, and forcing it would be plumbing without ground truth.
+
+## Reproduce
+
+```
+uv run pytest packages/detection            # all detection tests (real-data tests skip if corpus absent)
+```
