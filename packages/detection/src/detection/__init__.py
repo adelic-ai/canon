@@ -6,8 +6,12 @@ dispatching forge-core's primitives, and (later) generating candidate pairs from
 layer. forge-core stays ignorant — it sees streams, windows, scores, p-values; this layer knows
 what a source IP or an account is.
 
-First slice: :mod:`detection.fanout` — Kerberos password-spray as account fan-out, the concrete
-vertical that the binding abstraction is meant to *emerge from*, not be designed ahead of.
+Two detector families validated on real labeled data:
+- :mod:`detection.fanout` — ``entity → distribution over values`` (password spray, Kerberoasting):
+  a *hard* anomaly, exact label match.
+- :mod:`detection.offhours` — ``entity → distribution over time-of-day`` (circular statistics):
+  a *soft* anomaly, partially labeled. Two binding shapes (``FanoutBinding`` / ``TemporalBinding``)
+  now exist; a general ``Binding`` is extracted only if they force it.
 """
 from detection.fanout import (
     PASSWORD_SPRAY,
@@ -23,8 +27,18 @@ from detection.fanout import (
     load_kerberos_events,
     run_binding,
 )
+from detection.offhours import (
+    OFF_HOURS,
+    OffHoursDetection,
+    TemporalBinding,
+    detect_offhours,
+    offhours_verdict,
+    offhours_verdicts,
+    run_offhours,
+)
 
 __all__ = [
+    # fan-out family (hard anomaly)
     "FanoutCell",
     "FanoutDetection",
     "FanoutBinding",
@@ -37,4 +51,12 @@ __all__ = [
     "fanout_verdict",
     "fanout_verdicts",
     "load_kerberos_events",
+    # temporal family (soft anomaly)
+    "TemporalBinding",
+    "OFF_HOURS",
+    "OffHoursDetection",
+    "detect_offhours",
+    "run_offhours",
+    "offhours_verdict",
+    "offhours_verdicts",
 ]

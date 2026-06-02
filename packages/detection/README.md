@@ -5,6 +5,13 @@ The orchestration layer above `forge-core`. forge-core is the domain-agnostic st
 candidate streams, choosing the grain, dispatching forge-core's primitives, and projecting results
 into the canonical `DetectionVerdict`.
 
+Two detector **families** are validated, with deliberately different validation regimes:
+- **fan-out** (`fanout.py`) — `entity → distribution over values`, a **hard** anomaly (exact label
+  match, precision measurable).
+- **off-hours** (`offhours.py`) — `entity → distribution over time-of-day`, circular statistics, a
+  **soft** anomaly (partial labels, precision *not cleanly identifiable* — and that is the point:
+  the architecture must represent graded evidence honestly, not only clean benchmark wins).
+
 > **The tests are the source of truth.** This file is a human-readable *map* of what is validated
 > and what was found; every claim below is asserted in `tests/test_fanout.py` (named inline) and the
 > test wins on any conflict. Validation that isn't in a test isn't validated.
@@ -27,6 +34,8 @@ Synthetic-but-realistic Windows Kerberos, 25,971 events / 30 days / 15 labeled a
 (`~/data/faker-kerberos/v1/`, deterministic seed 42; manifest carries Dublin Core + sha256). The
 real-data tests skip if the corpus is absent.
 
+### Fan-out family — hard anomaly, exact validation
+
 <<<
 binding                 entity → value                technique   result on real labels
 PASSWORD_SPRAY          Client_Address → Account_Name  T1110.003   all 3 labeled spray IPs; 0 false positives
@@ -40,6 +49,24 @@ SERVICE_TICKET_FANOUT   Account_Name → Service_Name    T1558.003   all 4 Kerbe
   signature. Every detection is a labeled anomaly.
 - `test_fanout_verdict_is_honest_about_unattested_custody` / `test_real_spray_verdicts_are_schema_valid_and_unattested`
   — detections project into schema-valid `DetectionVerdict`s.
+
+### Off-hours family — soft anomaly, recall + specificity (precision unidentifiable)
+
+<<<
+binding     entity         technique   gate (circular)                  result on real labels
+OFF_HOURS   Account_Name   T1078       resultant_length ≥ 0.5,           recall: both labeled off-hours
+                                        circular mean ∈ business hours    (jill.rhodes, jason.hahn) caught;
+                                                                          specificity: 0 service accounts
+>>>
+
+- `test_offhours_recall_and_service_account_specificity_on_real_kerberos` — **recall**: both planted
+  off-hours accounts caught. **Specificity**: no 24/7 `svc_*` account flagged (the circular
+  concentration gate excludes accounts with no business-hours routine). **Precision is deliberately
+  NOT asserted** — ~18 other flagged accounts are *unlabeled natural night activity*, real off-hours
+  that the corpus simply did not plant. They are **unidentifiable, not false** — this is what a soft
+  anomaly looks like, and claiming exact precision would be dishonest.
+- `test_offhours_verdicts_are_schema_valid_and_unattested` — off-hours detections also project into
+  schema-valid verdicts with `custody = NONE`.
 
 ## Findings (surfaced by real data, both tested)
 
@@ -58,7 +85,14 @@ SERVICE_TICKET_FANOUT   Account_Name → Service_Name    T1558.003   all 4 Kerbe
    so verdicts report `custody = NONE` / `trustworthiness = NONE` while the detection is still real
    (`decision = TRUE`, high score). No faked attestation — the verdict states both truths separately.
 
-4. **`faker-kerberos` has no validatable coordination signal.** Its attacks are point/burst anomalies
+4. **Two validation regimes, both honest.** Fan-out is a *hard* anomaly — exact label match,
+   precision measurable. Off-hours is a *soft* anomaly — recall + specificity are validatable, but
+   precision is **not identifiable** because natural night activity is unlabeled. Representing that
+   distinction (not forcing a precision number that isn't real) is the point of validating both. The
+   off-hours detector also exercises forge-core's circular primitives (`resultant_length`,
+   `circular_mean`), previously built-but-unused.
+
+5. **`faker-kerberos` has no validatable coordination signal.** Its attacks are point/burst anomalies
    (the spray is a 36-second co-occurrence burst of 20 normally-independent accounts — a *clustering*
    signal, not the sustained two-entity dependence mutual information needs). MI-coordination needs a
    lateral-movement corpus (e.g. BOTS v3 Windows security) or an explicitly-labeled injected signal;
