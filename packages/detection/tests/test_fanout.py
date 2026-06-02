@@ -11,8 +11,10 @@ Plus the finding that FDR over every cell is too stringent (the T0-uses-alpha ti
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
+import jsonschema
 import pytest
 
 from detection.fanout import (
@@ -21,11 +23,15 @@ from detection.fanout import (
     bucket_fanout,
     detect_fanout,
     fanout_entropy,
+    fanout_verdict,
+    fanout_verdicts,
     run_binding,
 )
 from forge_core import fdr_control
+from provenance import NONE, TRUE
 
 _DATA = Path.home() / "data" / "faker-kerberos" / "v1" / "export.csv"
+_SCHEMA = Path(__file__).parents[3] / "contracts" / "detection_verdict.schema.json"
 
 
 def _normal_cells(n: int) -> list[tuple[float, str, str]]:
@@ -44,7 +50,7 @@ def _spray(at: float, n_accounts: int, src: str = "spray") -> list[tuple[float, 
 def test_detects_a_synthetic_fanout_and_not_normal_cells():
     events = _normal_cells(300) + _spray(5_000_000.0, 16)
     res = detect_fanout(events, grain_seconds=600, alpha=0.02)
-    detected = {c.entity for c in res["detected"]}
+    detected = {d.cell.entity for d in res["detected"]}
     assert detected == {"spray"}  # the high-entropy fan-out cell, and only it
 
 
@@ -84,7 +90,7 @@ def test_fdr_over_all_cells_is_too_stringent_a_t0_sweep_uses_alpha():
     fan-out; naive FDR-over-all-cells does not. FDR belongs at the reduced-multiplicity T1 layer."""
     events = _normal_cells(500) + _spray(9_000_000.0, 16)
     res = detect_fanout(events, grain_seconds=600, alpha=0.02)
-    assert any(c.entity == "spray" for c in res["detected"])  # alpha sweep catches it
+    assert any(d.cell.entity == "spray" for d in res["detected"])  # alpha sweep catches it
     assert fdr_control(res["pvalues"], q=0.05)["n_rejected"] == 0  # BH over all cells: nothing
 
 
@@ -98,7 +104,7 @@ def test_detects_labeled_password_sprays_in_real_kerberos():
     alpha=1e-3 (their fan-out entropy ~4.3 bits sits in a clean gap above the population)."""
     res = run_binding(str(_DATA), PASSWORD_SPRAY)  # entity = source IP, value = account
     assert res["binding"].technique == "T1110.003"
-    detected_sources = {c.entity for c in res["detected"]}
+    detected_sources = {d.cell.entity for d in res["detected"]}
     labeled_spray_ips = {"10.3.27.24", "10.2.234.242", "10.5.155.7"}
     assert labeled_spray_ips <= detected_sources, "missed a labeled spray (recall)"
     assert detected_sources == labeled_spray_ips, f"false positives: {detected_sources - labeled_spray_ips}"
@@ -113,10 +119,44 @@ def test_detects_labeled_kerberoasting_in_real_kerberos():
     the repeated structure StreamBinding should emerge from."""
     res = run_binding(str(_DATA), SERVICE_TICKET_FANOUT)  # entity = account, value = service
     assert res["binding"].technique == "T1558.003"
-    detected = {c.entity for c in res["detected"]}
+    detected = {d.cell.entity for d in res["detected"]}
     kerberoast = {"maria.montgomery", "jill.rhodes", "christopher.hall", "debra.gardner"}
     # pass-the-ticket accounts share the fan-out signature (many service tickets), so they are
     # expected, not false, detections; the union is the full set of labeled service-fan-out accounts.
     service_fanout_labeled = kerberoast | {"robert.johnson", "amanda.dudley"}
     assert kerberoast <= detected, "missed a labeled Kerberoast account (recall)"
     assert detected <= service_fanout_labeled, f"false positives: {detected - service_fanout_labeled}"
+
+
+# ── verdict-emission: the canonical verdict, honest about unattested custody ───
+
+
+def test_fanout_verdict_is_honest_about_unattested_custody():
+    """Closing the loop on synthetic data: a detected fan-out → a schema-valid DetectionVerdict that
+    states both truths separately — the detection is real (decision TRUE, high score), but the input
+    is an unattested CSV (custody NONE), so trust reflects that (trustworthiness NONE)."""
+    res = detect_fanout(_normal_cells(300) + _spray(5_000_000.0, 16), grain_seconds=600, alpha=0.02)
+    (det,) = res["detected"]  # the single sprayer cell
+    verdict = fanout_verdict(det, PASSWORD_SPRAY)
+    contract = verdict.to_contract()
+    jsonschema.validate(contract, json.loads(_SCHEMA.read_text()))
+
+    assert verdict.decision == TRUE  # the detection fired
+    assert verdict.score > 0.5  # statistically meaningful — a rare cell
+    assert verdict.custody == NONE  # unattested CSV: honest, not faked
+    assert verdict.trustworthiness == NONE  # no custody + no validity → trust unknown
+    assert contract["technique"] == "T1110.003"
+    assert contract["w_record"]["who"] == "true" and contract["w_record"]["when"] == "true"
+
+
+@pytest.mark.skipif(not _DATA.exists(), reason="faker-kerberos corpus not present")
+def test_real_spray_verdicts_are_schema_valid_and_unattested():
+    """The full loop on real telemetry: every detected spray cell projects into a schema-valid
+    verdict; all report custody/trustworthiness NONE (the corpus is unsigned) and decision TRUE."""
+    verdicts = fanout_verdicts(run_binding(str(_DATA), PASSWORD_SPRAY))
+    schema = json.loads(_SCHEMA.read_text())
+    assert len(verdicts) >= 3  # the labeled spray cells
+    for v in verdicts:
+        jsonschema.validate(v.to_contract(), schema)
+        assert v.custody == NONE and v.trustworthiness == NONE
+        assert v.decision == TRUE and v.technique == "T1110.003"

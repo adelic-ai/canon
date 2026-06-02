@@ -14,15 +14,19 @@ from detection.fanout import (
     SERVICE_TICKET_FANOUT,
     FanoutBinding,
     FanoutCell,
+    FanoutDetection,
     bucket_fanout,
     detect_fanout,
     fanout_entropy,
+    fanout_verdict,
+    fanout_verdicts,
     load_kerberos_events,
     run_binding,
 )
 
 __all__ = [
     "FanoutCell",
+    "FanoutDetection",
     "FanoutBinding",
     "PASSWORD_SPRAY",
     "SERVICE_TICKET_FANOUT",
@@ -30,5 +34,7 @@ __all__ = [
     "fanout_entropy",
     "detect_fanout",
     "run_binding",
+    "fanout_verdict",
+    "fanout_verdicts",
     "load_kerberos_events",
 ]

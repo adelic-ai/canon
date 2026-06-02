@@ -46,12 +46,14 @@ source = { editable = "packages/detection" }
 dependencies = [
     { name = "forge-core" },
     { name = "numpy" },
+    { name = "provenance" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "forge-core", editable = "packages/forge-core" },
     { name = "numpy", specifier = ">=1.26" },
+    { name = "provenance", editable = "packages/provenance" },
 ]
 
 [[package]]

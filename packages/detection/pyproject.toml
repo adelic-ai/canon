@@ -2,7 +2,7 @@
 name = "detection"
 version = "0.1.0"
 requires-python = ">=3.11"
-dependencies = ["numpy>=1.26", "forge-core"]
+dependencies = ["numpy>=1.26", "forge-core", "provenance"]
 
 [build-system]
 requires = ["hatchling"]
@@ -10,6 +10,7 @@ build-backend = "hatchling.build"
 
 [tool.uv.sources]
 forge-core = { workspace = true }
+provenance = { workspace = true }
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/detection"]
