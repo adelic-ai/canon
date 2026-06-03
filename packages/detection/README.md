@@ -163,6 +163,18 @@ negative control                               no shared beacon → MI flags not
    lateral-movement corpus (e.g. BOTS v3 Windows security) or an explicitly-labeled injected signal;
    it is **not** validated here, and forcing it would be plumbing without ground truth.
 
+6. **Conformal-entropy has no detection advantage over `distinct-count > k` here — measured, deflating,
+   recorded** (`test_baseline_comparison.py`). Held against the best justifiable baselines (not a
+   strawman): spray IPs touch 20 distinct accounts, no normal IP exceeds 3, so `distinct > 5` catches all
+   three sprays 0 FP — identical to conformal, at a *wider* margin (17 vs entropy's 2.7). The entropy
+   feature *and* the conformal calibration are both unnecessary for detection here; the signal is fully in
+   the simplest statistic. (Raw volume does *not* separate — it is the fan-out, not activity, that carries
+   it.) Conformal's real value is *orthogonal to detection*: distribution-free automatic threshold
+   selection + a calibrated FAR bound — not better separation. Combined with the CloudTrail burst (where
+   the baseline *beats* conformal), **conformal's detection advantage is unproven on both real corpora.**
+   See the guarantees ledger; proving it needs a corpus where the simple statistic does *not* separate but
+   conformal does.
+
 ## Reproduce
 
 ```

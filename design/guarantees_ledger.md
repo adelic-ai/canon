@@ -84,14 +84,31 @@ Detailed record + the exact assertions: `packages/detection/README.md` (the vali
   p ≈ 0.17. Correctly, the detector then **asserts nothing** — no verdict manufactured for a detection the
   calibration can't justify (the north star, applied to our own output). Same structural fact as the
   FDR-over-cells finding. `test_cloudtrail.py`.
-- **Conformal-vs-trivial-baseline, first concrete data point** (answers the long-open question): on BOTS
-  CloudTrail the trivial `distinct-region-count > 5` baseline isolates `web_admin` *exactly* (0 FP) where
-  conformal stayed silent — so **on a burst the baseline beats conformal**, because a fixed domain prior
-  needs no population and conformal's distribution-free guarantee needs one it doesn't have. This does NOT
-  generalize to a win for thresholds: it localizes *when* conformal earns its keep (large standing normal
-  population, as in 30-day Kerberos) vs when a domain assumption is the only thing that works (single
-  burst). The trade is explicit and recorded; the marginal value of conformal *with* a population is still
-  unmeasured on real data. `forge_core`/`detection.fanout.detect_by_distinct_count`, `test_cloudtrail.py`.
+- **Conformal's detection marginal value is UNPROVEN on real data — measured both ways, 2026-06-03.** The
+  long-open question, now resolved on both available real corpora, and the answer deflates the conformal
+  narrative (recorded, not avoided — this is what the ledger is for):
+    - **burst (BOTS CloudTrail):** the trivial `distinct-region-count > 5` baseline isolates `web_admin`
+      *exactly* (0 FP) where conformal stayed silent — **baseline beats conformal** (conformal needs a
+      population the burst can't supply). `test_cloudtrail.py`.
+    - **large population (faker-kerberos, 30-day, where conformal *works*):** held against the *best
+      justifiable* baselines (not a strawman), conformal-entropy has **no detection advantage over
+      `distinct-count > k`** — spray IPs touch 20 distinct accounts, *no* normal IP exceeds 3, so
+      `distinct > 5` catches all three sprays 0 FP (identical to conformal) at a *wider* margin (17 vs
+      entropy's 2.7). The entropy *feature* and the conformal *calibration* are both unnecessary for
+      detection here; the signal is fully in the simplest statistic. (Raw volume does *not* separate —
+      it is the fan-out/distinct-count, not activity, that carries it.) `test_baseline_comparison.py`.
+  **So: in neither real corpus has conformal's *detection* advantage been demonstrated.** What conformal
+  genuinely provides is *orthogonal to detection* — distribution-free **automatic threshold selection** (no
+  hand-set `k`) + a **calibrated FAR bound** — i.e. the same detection with the threshold chosen by a
+  population instead of a human, and an error bound attached; real, but not better separation. This applies
+  the *same* "beat the marginals" standard we held MI to, back onto conformal — and on real data it has not
+  cleared it. **To prove conformal's detection value** a corpus is needed where the simple statistic does
+  *not* separate but conformal does (heterogeneous entities needing per-entity adaptive thresholds, or where
+  distribution *shape* matters and count does not) — a specific, falsifiable target.
+  *flaws.cloud probed as a second labeled corpus and rejected:* large + real (~2M records, 2017–2019) but
+  **unlabeled** (no ground-truth positives), so it cannot measure recall/FP — usable only for an
+  *unsupervised* detector-agreement analysis (do conformal and distinct-count flag the same entities?),
+  which is a future option, not a supervised validation.
 - **"Constructively validated capability" — a named tier between PROVEN and VALIDATED, and a recorded
   ceiling.** The MI coordination family (`detection/coordination.py`) is shown to work on a *synthetic
   mechanism-modelled* corpus (recovers the coordinated set, beats the marginals), which is **more than
