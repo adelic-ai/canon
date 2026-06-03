@@ -223,15 +223,53 @@ SERVICE_TICKET_FANOUT = FanoutBinding(
 )
 
 
-def run_binding(path: str, binding: FanoutBinding) -> dict:
+def run_binding(path: str, binding: FanoutBinding, *, loader=load_kerberos_events) -> dict:
     """Load the corpus under ``binding`` and run :func:`detect_fanout` — one detection, fully
-    specified by the binding. Returns ``detect_fanout``'s dict with the ``binding`` attached."""
-    events = load_kerberos_events(
+    specified by the binding. Returns ``detect_fanout``'s dict with the ``binding`` attached.
+
+    ``loader`` is the corpus-specific telemetry binding (signature
+    ``(path, *, entity_field, value_field) -> list[(seconds, entity, value)]``); it defaults to
+    :func:`load_kerberos_events` and is swapped for :func:`detection.cloudtrail.load_cloudtrail_events`
+    to run the *same* fan-out detector over a different corpus. Only the loader is corpus-specific —
+    the bucket/entropy/conformal machinery is not, which is the point the third binding demonstrates.
+    """
+    events = loader(
         path, entity_field=binding.entity_field, value_field=binding.value_field
     )
     res = detect_fanout(events, grain_seconds=binding.grain_seconds, alpha=binding.alpha)
     res["binding"] = binding
     return res
+
+
+def distinct_value_counts(
+    events: "list[tuple[float, str, str]]", *, grain_seconds: float
+) -> dict[tuple[str, int], int]:
+    """Per ``(entity, time-bin)`` cell, the **count of distinct values** — the trivial-baseline
+    statistic the conformal-entropy fan-out is measured against. Reuses the same materialized
+    :func:`bucket_fanout` grain, so the baseline and the entropy detector see the *same* cells."""
+    return {key: len(set(vals)) for key, vals in bucket_fanout(events, grain_seconds=grain_seconds).items()}
+
+
+def detect_by_distinct_count(
+    events: "list[tuple[float, str, str]]", *, grain_seconds: float, threshold: int
+) -> set[str]:
+    """The **trivial baseline**: flag any entity with a cell touching more than ``threshold`` distinct
+    values. No population, no calibration — just a fixed domain-informed cut. Returns the flagged
+    entities.
+
+    This exists to answer a long-open question honestly: *does the conformal-entropy detector beat
+    plain ``distinct-count > k``?* The answer is corpus-dependent. On a large standing population
+    (30-day Kerberos, ~10⁴ cells) conformal earns its distribution-free guarantee; on a single short
+    burst (BOTS CloudTrail, ~10 cells) conformal is underpowered (its floor ``1/(n+1)`` sits far above
+    a useful ``alpha``) and this threshold — which encodes a human prior the conformal test does not
+    have — wins. The trade is explicit: distribution-free rigor (conformal) vs a domain assumption
+    (the threshold). See ``test_cloudtrail.py``.
+    """
+    return {
+        entity
+        for (entity, _b), c in distinct_value_counts(events, grain_seconds=grain_seconds).items()
+        if c > threshold
+    }
 
 
 def fanout_verdict(detection: FanoutDetection, binding: FanoutBinding) -> DetectionVerdict:

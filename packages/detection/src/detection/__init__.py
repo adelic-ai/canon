@@ -13,6 +13,10 @@ Two detector families validated on real labeled data:
   a *soft* anomaly, partially labeled. Two binding shapes (``FanoutBinding`` / ``TemporalBinding``)
   now exist; a general ``Binding`` is extracted only if they force it.
 """
+from detection.cloudtrail import (
+    CLOUDTRAIL_REGION_SWEEP,
+    load_cloudtrail_events,
+)
 from detection.fanout import (
     PASSWORD_SPRAY,
     SERVICE_TICKET_FANOUT,
@@ -20,7 +24,9 @@ from detection.fanout import (
     FanoutCell,
     FanoutDetection,
     bucket_fanout,
+    detect_by_distinct_count,
     detect_fanout,
+    distinct_value_counts,
     fanout_entropy,
     fanout_verdict,
     fanout_verdicts,
@@ -51,6 +57,11 @@ __all__ = [
     "fanout_verdict",
     "fanout_verdicts",
     "load_kerberos_events",
+    "distinct_value_counts",
+    "detect_by_distinct_count",
+    # fan-out, third binding — a new telemetry domain (AWS CloudTrail) for the same detector
+    "CLOUDTRAIL_REGION_SWEEP",
+    "load_cloudtrail_events",
     # temporal family (soft anomaly)
     "TemporalBinding",
     "OFF_HOURS",

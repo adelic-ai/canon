@@ -28,7 +28,7 @@ by a chosen **grain**, project the value field); **forge-core** owns the math (`
 `conformal_pvalues`, `fdr_control`). A `FanoutBinding` is the repeated structure made data —
 extracted only *after* two bindings were green, not guessed.
 
-## What is validated (corpus: `faker-kerberos` v1)
+## What is validated (corpora: `faker-kerberos` v1, BOTS v3 CloudTrail)
 
 Synthetic-but-realistic Windows Kerberos, 25,971 events / 30 days / 15 labeled anomalies
 (`~/data/faker-kerberos/v1/`, deterministic seed 42; manifest carries Dublin Core + sha256). The
@@ -67,6 +67,35 @@ OFF_HOURS   Account_Name   T1078       resultant_length ≥ 0.5,           recal
   anomaly looks like, and claiming exact precision would be dishonest.
 - `test_offhours_verdicts_are_schema_valid_and_unattested` — off-hours detections also project into
   schema-valid verdicts with `custody = NONE`.
+
+### Fan-out, third binding — a NEW telemetry domain (AWS CloudTrail), same detector
+
+Corpus: **BOTS v3** (Splunk Boss of the SOC, CloudTrail export, `~/data/bots-v3/2018/`, CC0). The
+*same* fan-out machinery run over AWS CloudTrail by changing **only the loader** (`load_cloudtrail_events`)
+— the test of whether the detector was Kerberos-shaped or corpus-agnostic. It is corpus-agnostic. But
+the new domain surfaced two findings worth more than a green check, and the honest regime here is
+**signal-validated, detection-capped** (`test_cloudtrail.py`):
+
+<<<
+binding                 entity → value                technique   result on real ground truth
+cloudtrail-region-sweep userIdentity → awsRegion       T1496       web_admin swept all 15 AWS regions
+                                                        (+T1078.004) (RunInstances, cryptojacking); entropy
+                                                                    ≈3.9 bits, cleanly isolated. SIGNAL real.
+>>>
+
+1. **The fan-out axis is domain-specific.** In cloud-API telemetry the high-entropy fan-out is over
+   **region** (the cryptojacking geographic spray), *not* over API name — over API name the attacker is
+   *low*-entropy (mode-collapsed on RunInstances) while normal admins are high-entropy, so an API-name
+   fan-out would invert and flag the innocents. Choosing the fan-out axis is a binding decision.
+2. **Conformal needs a population; a burst does not supply one — so the detector correctly stays silent.**
+   The whole attack is ~38 min → ~11 `(credential, hour)` cells, so the conformal floor `1/(n+1) ≈ 0.08`
+   sits far above the same `alpha=1e-3` that works on 30-day Kerberos. The standing sweep fires on nothing
+   and `web_admin` gets p ≈ 0.17 — and the detector then emits **no verdict**, refusing to assert a
+   detection its calibration can't justify. The trivial `distinct-region-count > 5` baseline, which encodes
+   a domain prior conformal lacks, isolates `web_admin` *exactly* (0 FP): **on this burst the baseline beats
+   conformal.** Honest scope: this localizes *when* conformal earns its keep (large standing population),
+   not a general win for thresholds. Proper conformal detection here needs an external normal baseline
+   (per-identity history / many normal days) — *deferred*, not present in a single-burst corpus.
 
 ## Findings (surfaced by real data, both tested)
 

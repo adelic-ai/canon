@@ -56,6 +56,13 @@ Detailed record + the exact assertions: `packages/detection/README.md` (the vali
 - **Off-hours family** (soft anomaly): **recall** (both labeled off-hours) + **specificity** (0 service
   accounts). **Precision deliberately not claimed** — unlabeled natural night activity is *unidentifiable,
   not false*. Representing graded evidence honestly is the point. `test_offhours.py`.
+- **Fan-out, third binding — a new domain, SIGNAL validated, detection capped** (BOTS v3 CloudTrail,
+  2026-06-03): the *same* fan-out detector over AWS CloudTrail, changing only the loader. The cryptojacking
+  credential `web_admin` (ATT&CK **T1496** Resource Hijacking on a **T1078.004** cloud credential) swept
+  `RunInstances` across **all 15 AWS regions** → near-maximal region entropy (≈ log2(15) = 3.9 bits),
+  cleanly separated from every other identity (≤ 1.2 bits). **Signal validated, exact ground truth.**
+  Detector reuse validated: only `load_cloudtrail_events` is new. `test_cloudtrail.py`. **But the standing
+  conformal sweep does NOT fire — see CAPPED.**
 
 ## CAPPED — honest recorded absence (the floor, because more is not backed)
 
@@ -70,6 +77,21 @@ Detailed record + the exact assertions: `packages/detection/README.md` (the vali
   custody/trustworthiness `NONE` while the detection stands — no faked attestation. `detection/_verdict.py`.
 - **Source tier-transparency:** a raw source carries no rigor tier (its trust is the orthogonal custody
   axis), so it never drags a result to the floor; absence-of-claim is `None`-like, not `False`-like.
+- **Conformal is empty without a population — capped to silence on a burst, and the detector emits no
+  verdict** (BOTS v3 CloudTrail, 2026-06-03). The whole attack is a ~38-min window → ~11 `(credential,
+  hour)` cells, so the conformal floor `1/(n+1) ≈ 0.08` sits *three orders* above the `alpha=1e-3` that
+  works on 30-day Kerberos. The standing sweep flags nothing; `web_admin` (the visual attacker) gets
+  p ≈ 0.17. Correctly, the detector then **asserts nothing** — no verdict manufactured for a detection the
+  calibration can't justify (the north star, applied to our own output). Same structural fact as the
+  FDR-over-cells finding. `test_cloudtrail.py`.
+- **Conformal-vs-trivial-baseline, first concrete data point** (answers the long-open question): on BOTS
+  CloudTrail the trivial `distinct-region-count > 5` baseline isolates `web_admin` *exactly* (0 FP) where
+  conformal stayed silent — so **on a burst the baseline beats conformal**, because a fixed domain prior
+  needs no population and conformal's distribution-free guarantee needs one it doesn't have. This does NOT
+  generalize to a win for thresholds: it localizes *when* conformal earns its keep (large standing normal
+  population, as in 30-day Kerberos) vs when a domain assumption is the only thing that works (single
+  burst). The trade is explicit and recorded; the marginal value of conformal *with* a population is still
+  unmeasured on real data. `forge_core`/`detection.fanout.detect_by_distinct_count`, `test_cloudtrail.py`.
 
 ## DEFERRED — named, not built
 
@@ -80,9 +102,23 @@ Detailed record + the exact assertions: `packages/detection/README.md` (the vali
 - **Multi-scale** — the divisibility lattice (`forge_core/lattice.py`) is built but unused by the
   detectors; the grain-divisibility discipline beyond a single window, with the materialized-bucket
   guard, is future work. Earns its keep first at multi-scale MI (coordination cadence).
-- **MI-coordination** — built primitive (`windowed_mi` + permutation null), but **no validatable corpus**:
-  `faker-kerberos` has no sustained coordination (FALSIFIED below). Needs BOTS v3 Windows (lateral
-  movement, CTF ground truth) or an explicitly-labeled injected signal.
+- **MI-coordination** — built primitive (`windowed_mi` + permutation null), but **no validatable corpus**,
+  and the corpus search has now turned up an **emerging pattern, not just a gap** (probed 2026-06-02→03):
+  three corpora examined, all show *single-entity distribution collapse*, none show the *sustained
+  two-stream dependence* MI is for —
+    (a) `faker-kerberos`: point/burst spray (FALSIFIED below);
+    (b) BOTS v3 Windows-Security **export**: no network-logon lateral movement (291 logons, all logonType 5
+        service; zero Type 3/10) — *scope: the SPL-derived JSON export, not the full `botsv3.tgz` index,
+        which is unprobed; absence-in-an-export ≠ absence-in-the-corpus*;
+    (c) BOTS v3 CloudTrail: real attack but a ~38-min single-credential burst (web_admin → RunInstances),
+        again a fan-out/collapse signal, not sustained coordination.
+  **Hypothesis (n=3, one a partial export — suggestive, not settled):** sustained relational dependence
+  is rarer in common cyber corpora than single-entity collapse, so MI likely needs an *injected, labeled*
+  coordination signal (C2 beaconing / multi-host campaign), not any corpus on disk. And MI's marginal value
+  is doubly unestablished: even given a coordination corpus, the joint signal must beat OR-ing the fan-out
+  marginals — the *same* species of question as the open conformal-vs-trivial-baseline gap (now partly
+  answered, see VALIDATED/CAPPED). MI stays DEFERRED with this sharper reason; do not re-attempt on a corpus
+  before confirming a sustained-coordination signal exists in it.
 - **General `Binding`** — `FanoutBinding`/`TemporalBinding` are too different to parent yet; wait for a
   third detector family. Shared *behavior* (verdict emission) is already extracted; shared *ontology* is not.
 - **`cost` fold** — the one §3 fold unbuilt.
