@@ -1,0 +1,46 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://canon/contracts/regime_record.schema.json",
+  "title": "RegimeRecord",
+  "description": "One (context -> winning primitive) observation: under what conditions does a detection primitive beat the cheapest alternative. The unit of the regime ledger (design/regime_ledger.jsonl) and the eventual training row for a learned applicability/dispatch model (Level 3 — automating the tiered-dispatch policy the self-validation architecture specifies). Operationalizes the session's crystallized principle: every primitive earns its place by beating the cheapest alternative on an IDENTIFIABLE CONDITION. Append-only; the cited test/experiment is the source of truth, this row records the epistemic summary.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id", "corpus", "task", "signal_type", "population_size", "label_quality",
+    "candidates", "winner", "beaten", "margin", "evidence_tier", "source"
+  ],
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-z0-9-]+$", "description": "stable kebab id for this regime observation" },
+    "corpus": { "type": "string", "description": "data source (or '(hypothesized)' for an untested expected regime)" },
+    "task": { "type": "string", "description": "the detection task + ATT&CK technique where applicable" },
+    "entity_grain": { "type": "string", "description": "what the entity is: source-ip, credential, host-pair, domain-string, mixed" },
+    "signal_type": {
+      "enum": ["cardinality", "shape", "joint", "temporal", "mixed"],
+      "description": "WHERE the signal lives — the primary regime axis. cardinality=#distinct (count's turf); shape=distribution form (entropy/KL); joint=two-stream dependence (MI); temporal=ordering/timing."
+    },
+    "population_size": {
+      "enum": ["small", "medium", "large"],
+      "description": "# of cells/entities available to calibrate against — the conformal-needs-a-population axis (small=burst, conformal underpowered)."
+    },
+    "heterogeneity": { "enum": ["homogeneous", "heterogeneous", "unknown"], "description": "do entities share a regime, or need per-stratum thresholds (conformal's hypothesized turf)" },
+    "label_quality": { "enum": ["clean", "weak", "synthetic", "none"], "description": "clean=exact labels; weak=derived/noisy; synthetic=constructed ground truth; none=unlabeled/hypothesized" },
+    "candidates": { "type": "array", "items": { "type": "string" }, "minItems": 1, "description": "the primitives compared" },
+    "winner": { "type": "string", "description": "the dominating primitive; 'tie' if none dominates, 'none' if nothing separates" },
+    "beaten": { "type": "array", "items": { "type": "string" }, "description": "the cheaper/alternative primitives the winner beat — the 'beat the marginals' record" },
+    "margin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "metric"],
+      "properties": {
+        "value": { "type": ["number", "string"], "description": "quantitative advantage, or a short qualitative tag (e.g. 'baseline-only', 'untested')" },
+        "metric": { "type": "string", "description": "what the margin is measured in: AUC-delta | |disc| | recall@0FP | tie | qualitative note" }
+      }
+    },
+    "evidence_tier": {
+      "enum": ["validated", "constructive", "fair_test", "hypothesized", "falsified"],
+      "description": "validated=real labeled data; constructive=synthetic mechanism-modelled; fair_test=self-contained fair test (real-ish, with caveats); hypothesized=expected, not tested; falsified=tested and the expected winner lost."
+    },
+    "source": { "type": "string", "description": "the test/experiment that is the source of truth for this row" },
+    "notes": { "type": "string", "description": "caveats and the one-line why (what condition made the winner win)" }
+  }
+}

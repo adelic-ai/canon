@@ -8,6 +8,10 @@ canon exists to keep: *frameworks are validatable hypotheses; bedrock is logic +
 > disagrees with the test it cites, the test wins and this file is wrong. A guarantee not backed by a
 > cited test is not a guarantee.
 
+> **Machine-readable sibling: `regime_ledger.jsonl`** (schema `contracts/regime_record.schema.json`). Where
+> this file records *what is proven*, the regime ledger records *which primitive wins under which condition*
+> — the applicability map, and the seed dataset for a future learned dispatch policy. See `regime_ledger.md`.
+
 Status tags: **PROVEN** (algebraically checkable or empirically property-tested) · **ASSUMED**
 (holds only if a named precondition holds; demotes otherwise) · **VALIDATED** (checked on real
 labeled data) · **CAPPED** (an honest recorded absence — the floor earned because a stronger claim is
