@@ -129,6 +129,20 @@ Detailed record + the exact assertions: `packages/detection/README.md` (the vali
   ties; flaws: entropy ≈ count, neither separates the noisy-labeled compromise via region fan-out). The
   discriminating corpus — where the richer feature robustly beats the count — has NOT been found; the
   search for it (or the standing conclusion that the sophistication is unearned on real data) continues.
+- **IT-feature value LOCATED — it's *which* IT feature, not IT-vs-baseline (the first positive IT result).**
+  DGA char-entropy fair test (`packages/detection/experiments/dga_entropy_fair_test.py`): real English words
+  vs documented DGA algorithms, char-entropy held against the best cheap baselines by AUC. Result (|disc| =
+  |AUC−0.5|, random DGA): **naive char-frequency Shannon entropy is WEAK (0.200), beaten even by trivial
+  vowel-ratio (0.409)** — third strike for symbol-entropy (redundant on fan-out, mediocre here). **But the
+  IT approach done RIGHT wins decisively: KL-from-English (0.423 — canon's `kl_divergence`) and bigram
+  cross-entropy (0.499, near-perfect).** Same split MI surfaced: the **marginal/symbol-frequency** IT
+  feature (Shannon entropy) is weak; the **relational/conditional/reference-based** IT features
+  (KL-from-reference, cross-entropy, MI) carry the signal. **Product guidance (feature engineering is a
+  product): ship KL / cross-entropy / MI; demote naive Shannon entropy to a cheap-but-weak add-on.**
+  Caveats: benign = dict-words proxy (no real top-domains list, no net); simplified DGA generators; the
+  dict-DGA `length` separation is a generation artifact; single-feature AUC, not a fitted model — *fair-test
+  demonstrated, not validated on real DGA feeds.* Also reframes the prior conformal/entropy negatives: those
+  used naive symbol-entropy on cardinality tasks (count's home turf) — doubly off-turf for an IT feature.
 - **"Constructively validated capability" — a named tier between PROVEN and VALIDATED, and a recorded
   ceiling.** The MI coordination family (`detection/coordination.py`) is shown to work on a *synthetic
   mechanism-modelled* corpus (recovers the coordinated set, beats the marginals), which is **more than
