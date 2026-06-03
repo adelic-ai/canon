@@ -101,6 +101,15 @@ Detailed record + the exact assertions: `packages/detection/README.md` (the vali
   discipline that keeps the tier honest: the corpus models an *attack mechanism* and lets the MI signal
   *emerge* (as faker-kerberos's fan-out emerged from the spray), rather than planting an MI-shaped target —
   otherwise "MI beats the marginals" would be teaching-to-the-test. `test_coordination.py`.
+  **Earns this tier iff ALL FOUR hold (else it is just a mechanics/`well_formed` test, not this tier — the
+  tier must stay rare or it rots into a second VALIDATED):** (1) it **beats a cheaper/marginal alternative**
+  on the same corpus (distinct capability, not merely "the detector fired"); (2) the corpus is
+  **mechanism-modelled** — the signal *emerges* from a modelled mechanism, never planted to fit the detector;
+  (3) a **negative control** passes (remove the mechanism → the detector goes quiet); (4) it **explicitly
+  declines** operational value (synthetic ground truth). Miss any one and it does not earn the tier. The
+  scope of the claim is exactly "*there exists at least one **mechanism-modelled** scenario where this method
+  has value beyond the marginals*" — **not** "...at least one *realistic/operational* scenario" (that is the
+  deferred question; do not let the word "realistic" smuggle the synthetic result toward a field claim).
 
 ## DEFERRED — named, not built
 
