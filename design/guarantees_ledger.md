@@ -105,10 +105,19 @@ Detailed record + the exact assertions: `packages/detection/README.md` (the vali
   cleared it. **To prove conformal's detection value** a corpus is needed where the simple statistic does
   *not* separate but conformal does (heterogeneous entities needing per-entity adaptive thresholds, or where
   distribution *shape* matters and count does not) — a specific, falsifiable target.
-  *flaws.cloud probed as a second labeled corpus and rejected:* large + real (~2M records, 2017–2019) but
-  **unlabeled** (no ground-truth positives), so it cannot measure recall/FP — usable only for an
-  *unsupervised* detector-agreement analysis (do conformal and distinct-count flag the same entities?),
-  which is a future option, not a supervised validation.
+  *flaws.cloud — re-probed and FOUND USABLE (correcting a prior note that wrongly called it "unlabeled";
+  3rd wrong guess about this dataset, each from reasoning instead of loading the file):* large + real
+  (~2M records, 2017–2019) with **derivable identity-based ground truth** — the documented challenge
+  identities appear by name: `backup`/`Level6` are the *compromised* creds, abused for a massive
+  **RunInstances cryptojacking flood** (~320K events, InstanceLimitExceeded/Unauthorized errors — same
+  class as BOTS `web_admin`, at 2.5-yr scale and 100× volume), while `piper`/`flaws`/`SecurityMonkey`/`Root`
+  are the legitimate owner/infra baseline. So it furnishes **both real positives and a normal population at
+  large scale** — the very large-real-population instrument the conformal-vs-baseline question wanted.
+  Caveat: labels are *identity-derived* (not per-event), and the leaked creds were also used by legit
+  challenge players, so a labeling must key on the *abuse pattern* (mass RunInstances / region sweep), not
+  mere credential identity. **The comparison is not yet run** — this corpus is the concrete next instrument
+  for it (and possibly the discriminating large-population case that would settle whether conformal earns
+  its complexity).
 - **"Constructively validated capability" — a named tier between PROVEN and VALIDATED, and a recorded
   ceiling.** The MI coordination family (`detection/coordination.py`) is shown to work on a *synthetic
   mechanism-modelled* corpus (recovers the coordinated set, beats the marginals), which is **more than
