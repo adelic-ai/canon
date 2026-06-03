@@ -5,12 +5,16 @@ The orchestration layer above `forge-core`. forge-core is the domain-agnostic st
 candidate streams, choosing the grain, dispatching forge-core's primitives, and projecting results
 into the canonical `DetectionVerdict`.
 
-Two detector **families** are validated, with deliberately different validation regimes:
+Three detector **families**, with deliberately different validation regimes:
 - **fan-out** (`fanout.py`) — `entity → distribution over values`, a **hard** anomaly (exact label
-  match, precision measurable).
+  match, precision measurable). Validated on real labeled telemetry (Kerberos + AWS CloudTrail).
 - **off-hours** (`offhours.py`) — `entity → distribution over time-of-day`, circular statistics, a
   **soft** anomaly (partial labels, precision *not cleanly identifiable* — and that is the point:
   the architecture must represent graded evidence honestly, not only clean benchmark wins).
+- **coordination** (`coordination.py`) — `two entity streams → their dependence` (mutual information),
+  a **constructive existence-proof** on a synthetic mechanism-modelled corpus, **not** field-validated.
+  The first family that reads *two* streams (the new binding shape) and the first whose claim is
+  *constructively validated capability*, not operational validation. See its section below.
 
 > **The tests are the source of truth.** This file is a human-readable *map* of what is validated
 > and what was found; every claim below is asserted in `tests/test_fanout.py` (named inline) and the
@@ -96,6 +100,38 @@ cloudtrail-region-sweep userIdentity → awsRegion       T1496       web_admin s
    conformal.** Honest scope: this localizes *when* conformal earns its keep (large standing population),
    not a general win for thresholds. Proper conformal detection here needs an external normal baseline
    (per-identity history / many normal days) — *deferred*, not present in a single-burst corpus.
+
+### Coordination family — MI over entity PAIRS, a constructive existence-proof (synthetic)
+
+The third detector family, and the first that reads *two* streams. Mutual information catches
+*coordination* (two normally-independent streams becoming dependent) where the other families catch
+*single-entity collapse*. The corpus is **synthetic and self-contained** (`test_coordination.py` always
+runs) — and that is a *deliberately limited* claim: **constructively validated capability**, not field
+validation. It establishes exactly three things:
+
+<<<
+claim                                          how (test)
+MI + FDR recovers the coordinated set exactly  3 compromised host pairs, full recall, 0 false pairs
+  (synchronized multi-host beaconing)          (test_mi_recovers_the_coordinated_hosts_and_no_others)
+MI beats the marginals                         per-host activity rate/entropy of coordinated hosts
+  (the load-bearing claim)                     overlap the normal hosts' — no single-stream cut separates
+                                               them (test_the_marginals_are_blind_to_the_coordination)
+negative control                               no shared beacon → MI flags nothing (no crying wolf)
+                                               (test_no_beacon_no_detection)
+>>>
+
+- **Model the mechanism, not the signature.** The corpus plants a *shared beacon schedule* (a latent
+  `B_w` every compromised host follows), with each host's background tuned so its **marginal activity rate
+  is identical to a normal host's**. The coordination is then a *consequence* of the modelled C2 mechanism
+  (T1071), not a hand-placed MI-shaped blob — the same reason faker-kerberos's fan-out was real (entropy
+  emerged from the spray). That distinction is what stops "MI beats the marginals" from being
+  teaching-to-the-test.
+- **FDR, not a per-cell alpha.** The O(n²) pair sweep against a clean permutation null is the
+  *reduced-multiplicity discovery tier* where Benjamini–Hochberg is correct — the other half of the
+  fan-out FDR finding (T0 sweeps use alpha; T1 scoped-pair discovery uses FDR).
+- **What it does NOT claim:** operational value on real attacks. The signal is synthetic; ground truth is
+  ours by construction. Real-data MI validation stays deferred (no adequate real corpus yet — the leading
+  lead is ICS coupling-collapse; see the guarantees ledger).
 
 ## Findings (surfaced by real data, both tested)
 

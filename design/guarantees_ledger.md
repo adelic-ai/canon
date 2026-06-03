@@ -92,6 +92,15 @@ Detailed record + the exact assertions: `packages/detection/README.md` (the vali
   population, as in 30-day Kerberos) vs when a domain assumption is the only thing that works (single
   burst). The trade is explicit and recorded; the marginal value of conformal *with* a population is still
   unmeasured on real data. `forge_core`/`detection.fanout.detect_by_distinct_count`, `test_cloudtrail.py`.
+- **"Constructively validated capability" — a named tier between PROVEN and VALIDATED, and a recorded
+  ceiling.** The MI coordination family (`detection/coordination.py`) is shown to work on a *synthetic
+  mechanism-modelled* corpus (recovers the coordinated set, beats the marginals), which is **more than
+  PROVEN** (it's an end-to-end detector on data, not an algebraic identity) but **less than VALIDATED**
+  (the data is synthetic, ground truth ours by construction). The capability is backed; the operational
+  value is an **honest recorded absence** — not claimed, because synthetic existence ≠ field evidence. The
+  discipline that keeps the tier honest: the corpus models an *attack mechanism* and lets the MI signal
+  *emerge* (as faker-kerberos's fan-out emerged from the spray), rather than planting an MI-shaped target —
+  otherwise "MI beats the marginals" would be teaching-to-the-test. `test_coordination.py`.
 
 ## DEFERRED — named, not built
 
@@ -102,10 +111,19 @@ Detailed record + the exact assertions: `packages/detection/README.md` (the vali
 - **Multi-scale** — the divisibility lattice (`forge_core/lattice.py`) is built but unused by the
   detectors; the grain-divisibility discipline beyond a single window, with the materialized-bucket
   guard, is future work. Earns its keep first at multi-scale MI (coordination cadence).
-- **MI-coordination** — built primitive (`windowed_mi` + permutation null), but **no validatable corpus**,
-  and the corpus search has now turned up an **emerging pattern, not just a gap** (probed 2026-06-02→03):
-  three corpora examined, all show *single-entity distribution collapse*, none show the *sustained
-  two-stream dependence* MI is for —
+- **MI-coordination** — primitive built, and a **constructive existence-proof now built too**
+  (`detection/coordination.py` + `test_coordination.py`, 2026-06-03): on a synthetic corpus *modelling a
+  mechanism* (synchronized multi-host C2 beaconing — a shared beacon schedule, **not** a planted MI-shaped
+  blob), MI + FDR recovers **exactly** the coordinated host pairs (full recall, 0 false pairs) **and beats
+  the marginals** — each coordinated host is individually indistinguishable from normal (activity rate /
+  entropy ranges overlap), so no single-stream detector can separate them; only the joint sees it. This is a
+  **constructively validated capability** (the precise tier — implementation works + catches a
+  mechanism-derived pattern + beats marginals on a controlled example), and it is explicitly **NOT**
+  operational validation: the signal is synthetic, ground truth ours by construction. It moves MI off
+  fully-`None` for the *capability* question while leaving the *operational* question at `None`.
+  **What remains DEFERRED is a real-data corpus** — and the search there turned up an **emerging pattern**
+  (probed 2026-06-02→03): three *real* corpora examined, all show *single-entity distribution collapse*,
+  none show the *sustained two-stream dependence* MI is for —
     (a) `faker-kerberos`: point/burst spray (FALSIFIED below);
     (b) BOTS v3 Windows-Security **export**: no network-logon lateral movement (291 logons, all logonType 5
         service; zero Type 3/10) — *scope: the SPL-derived JSON export, not the full `botsv3.tgz` index,
@@ -167,15 +185,21 @@ Detailed record + the exact assertions: `packages/detection/README.md` (the vali
   constantly, hence the easy validation. MI targets *coordination / coupling / dependence* — inherently more
   structural, and apparently rarer in readily-available data. The difficulty of validation may indicate MI
   is aimed at a rarer and higher-value class of phenomena, not a useless one.
-  **Standing observation (the durable statement):** locally-examined corpora readily furnish entropy/fan-out
-  anomalies but have *not yet* furnished an *adequate instrument* for the MI experiment — let alone a target
-  where joint dependence beats the marginals. The negative result to date is **instrument-limited (`None`),
-  not a finding about MI (`False`)**: the experiment is unrun, not failed. **Further corpus exploration
-  required** — the first adequate instrument is the goal (ICS coupling-collapse is the leading lead). MI stays
-  DEFERRED; do not re-attempt on a corpus before confirming *both* a signal (increase or collapse) *and* that
-  it beats the marginals.
-- **General `Binding`** — `FanoutBinding`/`TemporalBinding` are too different to parent yet; wait for a
-  third detector family. Shared *behavior* (verdict emission) is already extracted; shared *ontology* is not.
+  **Standing observation (the durable statement):** locally-examined *real* corpora readily furnish
+  entropy/fan-out anomalies but have *not yet* furnished an *adequate real instrument* for the MI experiment.
+  A **synthetic** adequate instrument now exists and the *capability* experiment is **run and passed**
+  (constructive proof above: MI recovers the coordinated set and beats the marginals). What is still unrun is
+  the **operational** experiment — on real data — and the negative result there remains **instrument-limited
+  (`None`), not a finding about MI (`False`)**. **Further (real) corpus exploration required** (ICS
+  coupling-collapse is the leading lead); MI's operational value stays DEFERRED. Do not re-attempt the
+  *operational* claim on a corpus before confirming *both* a signal (increase or collapse) *and* that it beats
+  the marginals — the synthetic proof shows the capability is real, not that any given real corpus exercises it.
+- **General `Binding`** — the "wait for a 3rd family" gate is now **met**: `CoordinationBinding` (the
+  two-stream shape) joins `FanoutBinding`/`TemporalBinding`, and the shared *behavior* (verdict emission via
+  `emit_detection_verdict`) generalized cleanly across all three. But generalization stays **deliberately
+  unforced** — extract a general `Binding` only if the three shapes actually *rhyme* (concrete-first), not
+  because a counter reached three. Shared *ontology* still not demonstrated; the two-stream shape is in fact
+  quite different (pairs, not entity→value), which is mild evidence *against* a clean common parent.
 - **`cost` fold** — the one §3 fold unbuilt.
 
 ## FALSIFIED — tested and found false (recorded so it is not re-attempted)

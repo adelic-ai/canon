@@ -6,16 +6,35 @@ dispatching forge-core's primitives, and (later) generating candidate pairs from
 layer. forge-core stays ignorant — it sees streams, windows, scores, p-values; this layer knows
 what a source IP or an account is.
 
-Two detector families validated on real labeled data:
-- :mod:`detection.fanout` — ``entity → distribution over values`` (password spray, Kerberoasting):
-  a *hard* anomaly, exact label match.
+Three detector families now:
+- :mod:`detection.fanout` — ``entity → distribution over values`` (password spray, Kerberoasting;
+  also the AWS CloudTrail region-sweep, a third binding in a new domain): a *hard* anomaly, exact
+  label match on real labeled telemetry.
 - :mod:`detection.offhours` — ``entity → distribution over time-of-day`` (circular statistics):
-  a *soft* anomaly, partially labeled. Two binding shapes (``FanoutBinding`` / ``TemporalBinding``)
-  now exist; a general ``Binding`` is extracted only if they force it.
+  a *soft* anomaly, partially labeled.
+- :mod:`detection.coordination` — ``two entity streams → their dependence`` (mutual information;
+  synchronized multi-host beaconing): a *constructive existence-proof* on a synthetic mechanism-
+  modelled corpus (MI beats the marginals), **not** field-validated.
+
+Three binding shapes now exist (``FanoutBinding`` / ``TemporalBinding`` / ``CoordinationBinding`` —
+the last is the *two-stream* shape the others said to wait for). The "wait for a 3rd family" gate on a
+general ``Binding`` is therefore met — but generalization stays *deliberately unforced*: extract it
+only if the three shapes actually rhyme (concrete-first), not because a counter hit three.
 """
 from detection.cloudtrail import (
     CLOUDTRAIL_REGION_SWEEP,
     load_cloudtrail_events,
+)
+from detection.coordination import (
+    BEACON_COORDINATION,
+    CoordinationBinding,
+    CoordinationDetection,
+    coordination_verdict,
+    coordination_verdicts,
+    detect_coordination,
+    host_activity_vectors,
+    host_marginal_features,
+    synthesize_coordination_events,
 )
 from detection.fanout import (
     PASSWORD_SPRAY,
@@ -62,6 +81,16 @@ __all__ = [
     # fan-out, third binding — a new telemetry domain (AWS CloudTrail) for the same detector
     "CLOUDTRAIL_REGION_SWEEP",
     "load_cloudtrail_events",
+    # coordination family (third detector family — MI over entity PAIRS; constructive existence-proof)
+    "CoordinationBinding",
+    "CoordinationDetection",
+    "BEACON_COORDINATION",
+    "synthesize_coordination_events",
+    "host_activity_vectors",
+    "host_marginal_features",
+    "detect_coordination",
+    "coordination_verdict",
+    "coordination_verdicts",
     # temporal family (soft anomaly)
     "TemporalBinding",
     "OFF_HOURS",
