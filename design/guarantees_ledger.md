@@ -112,11 +112,24 @@ Detailed record + the exact assertions: `packages/detection/README.md` (the vali
         which is unprobed; absence-in-an-export ≠ absence-in-the-corpus*;
     (c) BOTS v3 CloudTrail: real attack but a ~38-min single-credential burst (web_admin → RunInstances),
         again a fan-out/collapse signal, not sustained coordination.
-  **Two claims, kept separate (the load-bearing distinction — do not collapse them):**
-    - **Claim A — *our currently-held corpora* furnish no validated MI target.** Well-supported (the three
-      above). This is a statement about three datasets on disk.
+  **Three claims, kept separate (the load-bearing distinction — do not collapse them):**
+    - **Claim A — *our currently-held corpora* furnish no validated MI target.** Weaker than first written.
+      The three corpora are too small / too particular to have *tested* MI in the first place:
+      faker-kerberos's generator plants *point/burst* anomalies, never coordination (the test is not given
+      by construction); BOTS CloudTrail is **38 minutes / ~11 identities** (cannot resolve *sustained*
+      dependence or establish a normal-independence baseline); BOTS-Windows is a process-noise export. So
+      the carrier value of "MI adds value" from this evidence is **`None` (no information — the instrument
+      could not see it), not `False` (tested and failed).** Writing this as "well-supported" was the
+      **`None`→`False` drift** this very project exists to prevent — the absence-of-evidence/evidence-of-
+      absence error, committed in canon's own register. *What is genuinely supported* (`None`-resistant):
+      entropy/fan-out anomalies are abundant and these corpora surface them readily; faker-kerberos
+      demonstrably produces point/burst, not coordination. The honest statement is **not** "our corpora lack
+      an MI target" but "**we have not yet had a corpus capable of running the MI experiment, in either
+      direction**" (increase *or* collapse — see the two-models note in DEFERRED actions). Action unchanged;
+      its justification changes from "keep looking in case the answer differs" to "the experiment is unrun."
     - **Claim B — *cyber telemetry generally* lacks MI-worthy signal.** **NOT supported, and must not be
-      inferred from A.** The examined search space (three corpora) is negligible against what exists:
+      inferred from A** (especially now that A itself is only `None`). The examined search space (three
+      corpora) is negligible against what exists:
       public intrusion sets, academic *beaconing* datasets, network-flow corpora, malware-sandbox traces,
       cloud-attack simulations, ATT&CK-emulation telemetry, DARPA-era corpora, honeypot collections,
       red-team exercise logs (often richest — intentional, documented attack narrative), plus thousands of
@@ -131,14 +144,36 @@ Detailed record + the exact assertions: `packages/detection/README.md` (the vali
   classes to look for (weak-marginal + strong-coupling): multi-host beaconing (host-A timing × host-B
   timing), distributed credential relay (account stream × host stream), multi-stage campaigns (two entity
   classes that become coupled *during* the attack).
+  **Two MI operating models — directions on one statistic (the durable, architecture-level refinement).**
+  Recorded as **fact** (survives independent of any dataset claim):
+    - **increase / coordination-emergence** — `I(X;Y) ≈ 0` normally, `↑` under attack: streams normally
+      independent become dependent (coordinated beaconing, distributed credential use, synchronized actors).
+      *This is what canon implements* — `windowed_mi` + `mi_shuffle_null`, flagging MI above an independence
+      (shuffle) null. **Built.**
+    - **collapse / coupling-breakdown** — `I(X;Y) ≫ 0` normally, `↓` under attack: streams normally coupled
+      decouple (sensor spoofing, process injection, physical-system manipulation). Requires a
+      *baseline-coupling reference* + a *below-baseline* test (conformal could supply the FAR on the
+      deviation). **Not built.** Mirrors entropy collapse-vs-expansion: same statistic, opposite directions
+      — naming both *completes the detector family conceptually* even with one implemented.
+    Consequence (resolves a recurring tension — "why can't we find MI corpora?"): we were searching only the
+    *increase* half; admitting collapse as a first-class anomaly type enlarges the search space.
+  Recorded as **hypothesis, not fact** (flagged; probe before adopting, exactly as BOTS was probed): the
+  collapse model *may* fit canon better — forge-core is already a coupled-sensor DSP spine
+  (Welch/CFAR/Goertzel/matched-filter) — and public ICS corpora with coupled sensors + labeled injection
+  attacks (SWaT, WADI, BATADAL, HAI) *appear* to be plausible MI-collapse validation candidates and **should
+  be investigated**. "ICS is the better-fit target" and "those datasets are adequate instruments" are leads,
+  **not** ledger facts. (External-LLM-sourced framing.)
   **Why this may matter more, not less.** Entropy/fan-out catch *concentration / collapse* — which occur
   constantly, hence the easy validation. MI targets *coordination / coupling / dependence* — inherently more
   structural, and apparently rarer in readily-available data. The difficulty of validation may indicate MI
   is aimed at a rarer and higher-value class of phenomena, not a useless one.
   **Standing observation (the durable statement):** locally-examined corpora readily furnish entropy/fan-out
-  anomalies but have *not yet* furnished a convincing target where joint dependence clearly beats marginal
-  detectors. **Further corpus exploration required.** MI stays DEFERRED; do not re-attempt on a corpus
-  before confirming *both* a sustained-coordination signal *and* that it beats the marginals.
+  anomalies but have *not yet* furnished an *adequate instrument* for the MI experiment — let alone a target
+  where joint dependence beats the marginals. The negative result to date is **instrument-limited (`None`),
+  not a finding about MI (`False`)**: the experiment is unrun, not failed. **Further corpus exploration
+  required** — the first adequate instrument is the goal (ICS coupling-collapse is the leading lead). MI stays
+  DEFERRED; do not re-attempt on a corpus before confirming *both* a signal (increase or collapse) *and* that
+  it beats the marginals.
 - **General `Binding`** — `FanoutBinding`/`TemporalBinding` are too different to parent yet; wait for a
   third detector family. Shared *behavior* (verdict emission) is already extracted; shared *ontology* is not.
 - **`cost` fold** — the one §3 fold unbuilt.
