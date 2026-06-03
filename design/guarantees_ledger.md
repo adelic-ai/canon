@@ -112,13 +112,33 @@ Detailed record + the exact assertions: `packages/detection/README.md` (the vali
         which is unprobed; absence-in-an-export ≠ absence-in-the-corpus*;
     (c) BOTS v3 CloudTrail: real attack but a ~38-min single-credential burst (web_admin → RunInstances),
         again a fan-out/collapse signal, not sustained coordination.
-  **Hypothesis (n=3, one a partial export — suggestive, not settled):** sustained relational dependence
-  is rarer in common cyber corpora than single-entity collapse, so MI likely needs an *injected, labeled*
-  coordination signal (C2 beaconing / multi-host campaign), not any corpus on disk. And MI's marginal value
-  is doubly unestablished: even given a coordination corpus, the joint signal must beat OR-ing the fan-out
-  marginals — the *same* species of question as the open conformal-vs-trivial-baseline gap (now partly
-  answered, see VALIDATED/CAPPED). MI stays DEFERRED with this sharper reason; do not re-attempt on a corpus
-  before confirming a sustained-coordination signal exists in it.
+  **Two claims, kept separate (the load-bearing distinction — do not collapse them):**
+    - **Claim A — *our currently-held corpora* furnish no validated MI target.** Well-supported (the three
+      above). This is a statement about three datasets on disk.
+    - **Claim B — *cyber telemetry generally* lacks MI-worthy signal.** **NOT supported, and must not be
+      inferred from A.** The examined search space (three corpora) is negligible against what exists:
+      public intrusion sets, academic *beaconing* datasets, network-flow corpora, malware-sandbox traces,
+      cloud-attack simulations, ATT&CK-emulation telemetry, DARPA-era corpora, honeypot collections,
+      red-team exercise logs (often richest — intentional, documented attack narrative), plus thousands of
+      proprietary sets. Hardness-to-validate is **not** evidence of unimportance — plausibly the opposite
+      (see below).
+  **The actual requirement is narrower than "a corpus with `I(X;Y)>0`."** The target must be one where the
+  joint dependence *adds value beyond the marginals*: individual streams weak / noisy / ambiguous, yet the
+  coupling strong. A 500-host botnet beaconing every 60 s may light MI up beautifully, but if each host is
+  *individually* an obvious periodic-beacon hit, MI has proven nothing — the marginal detector already won.
+  This is the *same* species of question as the conformal-vs-trivial-baseline gap (now partly answered, see
+  VALIDATED/CAPPED): a method earns its keep only where it beats the cheaper alternative. Candidate target
+  classes to look for (weak-marginal + strong-coupling): multi-host beaconing (host-A timing × host-B
+  timing), distributed credential relay (account stream × host stream), multi-stage campaigns (two entity
+  classes that become coupled *during* the attack).
+  **Why this may matter more, not less.** Entropy/fan-out catch *concentration / collapse* — which occur
+  constantly, hence the easy validation. MI targets *coordination / coupling / dependence* — inherently more
+  structural, and apparently rarer in readily-available data. The difficulty of validation may indicate MI
+  is aimed at a rarer and higher-value class of phenomena, not a useless one.
+  **Standing observation (the durable statement):** locally-examined corpora readily furnish entropy/fan-out
+  anomalies but have *not yet* furnished a convincing target where joint dependence clearly beats marginal
+  detectors. **Further corpus exploration required.** MI stays DEFERRED; do not re-attempt on a corpus
+  before confirming *both* a sustained-coordination signal *and* that it beats the marginals.
 - **General `Binding`** — `FanoutBinding`/`TemporalBinding` are too different to parent yet; wait for a
   third detector family. Shared *behavior* (verdict emission) is already extracted; shared *ontology* is not.
 - **`cost` fold** — the one §3 fold unbuilt.
