@@ -114,10 +114,21 @@ Detailed record + the exact assertions: `packages/detection/README.md` (the vali
   are the legitimate owner/infra baseline. So it furnishes **both real positives and a normal population at
   large scale** — the very large-real-population instrument the conformal-vs-baseline question wanted.
   Caveat: labels are *identity-derived* (not per-event), and the leaked creds were also used by legit
-  challenge players, so a labeling must key on the *abuse pattern* (mass RunInstances / region sweep), not
-  mere credential identity. **The comparison is not yet run** — this corpus is the concrete next instrument
-  for it (and possibly the discriminating large-population case that would settle whether conformal earns
-  its complexity).
+  challenge players, so most `backup`/`Level6` activity is NOT the cryptojacking (weak labels). **The
+  comparison was then RUN (`packages/detection/experiments/flaws_conformal_vs_baseline.py`) and the lead
+  did NOT survive** — confirming the Kerberos finding on a second, larger, real corpus:
+    - A first-pass *per-identity max* view suggested entropy (3.97) separates where distinct-count fails
+      (legit `flaws` infra touches 17 regions). **That was a max-aggregation artifact.** At the proper
+      **cell level** (Mann-Whitney AUC of POS vs LEGIT cells), region-entropy ≈ distinct-count at *every*
+      grain — DAY 0.761 vs 0.759, HOUR 0.601 vs 0.587, 15-min 0.542 vs 0.530 (within ~0.02). Finer grain
+      made it *worse*, not better. **Entropy earns no feature advantage over the trivial count (Q1: no).**
+    - Conformal on that weak feature gives recall ≈ FAR (0.10 vs 0.08 at α=0.05, day) and FAR *exceeds*
+      nominal α (noisy real labels violate exchangeability) — calibration cannot rescue a non-separating
+      feature. **Conformal adds no detection over a fixed threshold (Q2: no).**
+  **So conformal/entropy's detection advantage is now unproven on TWO real corpora** (Kerberos: baseline
+  ties; flaws: entropy ≈ count, neither separates the noisy-labeled compromise via region fan-out). The
+  discriminating corpus — where the richer feature robustly beats the count — has NOT been found; the
+  search for it (or the standing conclusion that the sophistication is unearned on real data) continues.
 - **"Constructively validated capability" — a named tier between PROVEN and VALIDATED, and a recorded
   ceiling.** The MI coordination family (`detection/coordination.py`) is shown to work on a *synthetic
   mechanism-modelled* corpus (recovers the coordinated set, beats the marginals), which is **more than
