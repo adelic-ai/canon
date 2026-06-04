@@ -91,6 +91,18 @@ class WRecord:
 
 
 @dataclass(frozen=True, slots=True)
+class Calibration:
+    """Attached calibration evidence — the false-alarm-rate bound this detection's threshold was set
+    against, and by which method. Surfaced so the verdict *carries* its FAR honesty (e.g. "FAR ≤ α,
+    conformal, distribution-free") instead of leaving it implicit in the score/tier. Whether the bound
+    actually *held* on this input is the guarantee tier's job (per-result demotion); this records the
+    claim and the method, not a redesign of the guarantee system."""
+
+    method: str  # "conformal" | "cfar" | "fdr"
+    far_bound: float
+
+
+@dataclass(frozen=True, slots=True)
 class DetectionVerdict:
     """The canonical detection unit. ``provenance`` is the root node's CID — the one object
     all the folds are interpretations of; full justification is reachable by walking it.
@@ -117,6 +129,9 @@ class DetectionVerdict:
     # ``BOTH`` when the two disagree: the soundness alarm, for free. ``None`` = no cross-check supplied.
     # MECHANICS only — that a disagreement is operationally meaningful is a separate, deferred claim.
     cross_check: Four | None = None
+    # OPTIONAL calibration evidence — the FAR bound + method the threshold was set against (attached so
+    # the verdict carries its FAR honesty explicitly). ``None`` = uncalibrated (honest absence).
+    calibration: Calibration | None = None
 
     def to_contract(self) -> dict:
         """Project into ``detection_verdict.schema.json`` JSON. Validated against the PINNED
@@ -156,6 +171,8 @@ class DetectionVerdict:
             }
         if self.cross_check is not None:  # optional redundant-measure cross-check (BOTH on disagreement)
             out["cross_check"] = _BELNAP[self.cross_check]
+        if self.calibration is not None:  # optional FAR-bound + method, attached (honesty made explicit)
+            out["calibration"] = {"method": self.calibration.method, "far_bound": self.calibration.far_bound}
         return out
 
 
@@ -170,6 +187,7 @@ def assemble_verdict(
     chains: dict[str, tuple[CustodyStep, ...]] | None = None,
     localization: Localization | None = None,
     check: Four | None = None,
+    calibration: Calibration | None = None,
     validity: Validity = UNCHECKED,
     when: Four = NONE,
     what: Four | None = None,
@@ -242,4 +260,5 @@ def assemble_verdict(
         provenance=root.id,
         custody_localization=localization,  # optional explanatory surface (where to look)
         cross_check=cross,  # optional redundant-measure agreement (BOTH on disagreement)
+        calibration=calibration,  # optional FAR-bound + method, attached (None = uncalibrated)
     )

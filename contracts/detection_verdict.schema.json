@@ -157,6 +157,30 @@
       "$ref": "#/$defs/belnap",
       "description": "OPTIONAL cross-check carrier — kjoin of the primary exists-detect with an INDEPENDENT redundant measure of the same thing (a primitive in its CHECK role, e.g. distinct-count vs entropy for fan-out). 'both' = the two disagree (a soundness alarm / possible evasion); agreement preserves the primary decision; absent = no cross-check performed. Carries MECHANICS only — that a disagreement is operationally meaningful is a separate, unproven claim."
     },
+    "calibration": {
+      "type": "object",
+      "description": "OPTIONAL calibration evidence — the false-alarm-rate bound this detection's threshold was set against, and the method (conformal=distribution-free / cfar=analytic Neyman-Pearson / fdr=batch multiplicity). Attached so the verdict CARRIES its FAR honesty explicitly rather than leaving it implicit in score/tier. Absent = uncalibrated (honest). Whether the bound HELD on this input is the guarantee tier's job, not this field's.",
+      "additionalProperties": false,
+      "required": [
+        "method",
+        "far_bound"
+      ],
+      "properties": {
+        "method": {
+          "type": "string",
+          "enum": [
+            "conformal",
+            "cfar",
+            "fdr"
+          ]
+        },
+        "far_bound": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    },
     "provenance": {
       "$ref": "#/$defs/cid",
       "description": "CID of the lazy provenance DAG node this verdict is about — full justification on demand. The one object all the other folds are interpretations of (justification IS the result, not a side-log)."

@@ -65,6 +65,7 @@ from forge_core.circular import (
     resultant_length,
 )
 from forge_core.verdict import (
+    Calibration,
     DetectionVerdict,
     WRecord,
     assemble_verdict,
@@ -122,6 +123,7 @@ __all__ = [
     "circular_mean",
     "circular_variance",
     "resultant_length",
+    "Calibration",
     "DetectionVerdict",
     "WRecord",
     "assemble_verdict",

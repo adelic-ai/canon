@@ -29,7 +29,7 @@ from detection.fanout import (
     fanout_verdicts,
     run_binding,
 )
-from forge_core import fdr_control
+from forge_core import Calibration, fdr_control
 from provenance import BOTH, NONE, TRUE
 
 _DATA = Path.home() / "data" / "faker-kerberos" / "v1" / "export.csv"
@@ -168,6 +168,18 @@ def test_fanout_verdict_cross_checks_distinct_count_against_entropy():
     contract = verdict.to_contract()
     assert contract["cross_check"] == "both"
     jsonschema.validate(contract, json.loads(_SCHEMA.read_text()))  # still schema-valid with the new field
+
+
+def test_fanout_verdict_attaches_conformal_calibration():
+    """The calibrator role wired: a conformal-thresholded fan-out verdict CARRIES its FAR honesty —
+    method 'conformal' at the binding's alpha (distribution-free FAR ≤ alpha, marginal), attached not
+    recomputed. Schema-valid with the new field."""
+    res = detect_fanout(_normal_cells(300) + _spray(5_000_000.0, 16), grain_seconds=600, alpha=0.02)
+    (det,) = res["detected"]
+    v = fanout_verdict(det, PASSWORD_SPRAY)
+    assert v.calibration == Calibration("conformal", PASSWORD_SPRAY.alpha)
+    assert v.to_contract()["calibration"] == {"method": "conformal", "far_bound": PASSWORD_SPRAY.alpha}
+    jsonschema.validate(v.to_contract(), json.loads(_SCHEMA.read_text()))
 
 
 @pytest.mark.skipif(not _DATA.exists(), reason="faker-kerberos corpus not present")

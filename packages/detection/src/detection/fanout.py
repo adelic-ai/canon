@@ -43,7 +43,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from forge_core import DetectionVerdict, conformal_pvalues, shannon_entropy
+from forge_core import Calibration, DetectionVerdict, conformal_pvalues, shannon_entropy
 from provenance import FALSE, TRUE
 
 from detection._verdict import emit_detection_verdict
@@ -304,6 +304,9 @@ def fanout_verdict(
             "technique": binding.technique,
         },
         check=distinct_check,  # independent fan-out measure → cross_check carrier
+        # calibration evidence: the detection thresholded a conformal p-value at the binding's alpha →
+        # distribution-free FAR ≤ alpha (marginal). Already computed; attached, not recomputed.
+        calibration=Calibration("conformal", binding.alpha),
     )
 
 

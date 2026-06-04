@@ -34,7 +34,7 @@ from forge_core.ingest import (
     validate_float64_stream,
 )
 from forge_core.signal import Signal, SignalKind
-from forge_core.verdict import assemble_verdict
+from forge_core.verdict import Calibration, assemble_verdict
 from provenance import (
     BOTH,
     FALSE,
@@ -253,6 +253,28 @@ def test_cross_check_carrier_is_both_on_disagreement_and_absent_when_no_check():
     both = assemble_verdict(root, check=FALSE, **base)
     assert both.to_contract()["cross_check"] == "both"
     jsonschema.validate(both.to_contract(), json.loads(_SCHEMA_PATH.read_text()))  # schema-valid with the field
+
+
+def test_calibration_evidence_is_attached_when_present_and_omitted_when_absent():
+    """The calibrator role (MECHANICS): a verdict can CARRY its FAR bound + method, attached explicitly,
+    or honestly omit it when uncalibrated. Does not touch the guarantee tier — it is a peer attachment."""
+    raw, raw_src, sig, root = _detection_dag()
+    pfa = root.value()["pfa"]
+    base = dict(
+        technique="T1071.001",
+        confidence_evidence={root.id: Confidence.from_detector(True, pd=_PD, pfa=pfa)},
+        claims=_claims(raw_src, sig, root),
+        monitors={root.id: TRUE},
+        attestations={raw_src.id: _live_attestation(raw)},
+    )
+    v_cal = assemble_verdict(root, calibration=Calibration("conformal", 1e-3), **base)
+    assert v_cal.calibration == Calibration("conformal", 1e-3)
+    assert v_cal.to_contract()["calibration"] == {"method": "conformal", "far_bound": 1e-3}
+    jsonschema.validate(v_cal.to_contract(), json.loads(_SCHEMA_PATH.read_text()))
+
+    v_none = assemble_verdict(root, **base)  # uncalibrated detector
+    assert v_none.calibration is None
+    assert "calibration" not in v_none.to_contract()  # honest absence, not a faked bound
 
 
 def test_w_record_score_is_the_fraction_of_grounded_ws():

@@ -16,7 +16,7 @@ from the rare conformal p-value). No faked attestation to inflate trust.
 
 from __future__ import annotations
 
-from forge_core import DetectionVerdict, assemble_verdict
+from forge_core import Calibration, DetectionVerdict, assemble_verdict
 from provenance import NONE, TRUE, Confidence, Four, Tier, derive, source
 
 _PD = 0.9  # nominal detection probability for the confidence leaf (no calibrated Pd per detector)
@@ -35,6 +35,7 @@ def emit_detection_verdict(
     where: Four = NONE,
     how: Four = NONE,
     check: Four | None = None,
+    calibration: Calibration | None = None,
 ) -> DetectionVerdict:
     """Project a detection into the canonical :class:`~forge_core.DetectionVerdict`.
 
@@ -57,4 +58,5 @@ def emit_detection_verdict(
         where=where,
         how=how,
         check=check,  # the independent redundant-measure decision → cross_check carrier (BOTH on disagreement)
+        calibration=calibration,  # optional FAR-bound + method, attached to the verdict
     )
