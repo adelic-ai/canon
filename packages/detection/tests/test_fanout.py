@@ -172,6 +172,19 @@ def test_fanout_verdict_cross_checks_distinct_count_against_entropy():
     jsonschema.validate(contract, json.loads(_SCHEMA.read_text()))  # still schema-valid with the new field
 
 
+def test_when_is_earned_only_default_none_true_only_when_a_temporal_check_runs():
+    """`when` is the temporal ∀-validate verdict — EARNED-only. emit_detection_verdict defaults it to
+    NONE, so a producer that runs no temporal recognize() does NOT claim a timing validation. when=TRUE
+    appears ONLY when a producer passes it, having actually run a temporal check (cf. test_verdict's
+    recognize slice). This locks the default so the fan-out/off-hours/coordination honesty can't regress."""
+    from detection._verdict import emit_detection_verdict
+
+    v_default = emit_detection_verdict("ref", technique="T1", pvalue=1e-3, params={})
+    assert v_default.w_record.when == NONE  # no temporal check ran → honest NONE, not an asserted TRUE
+    v_temporal = emit_detection_verdict("ref", technique="T1", pvalue=1e-3, params={}, when=TRUE)
+    assert v_temporal.w_record.when == TRUE  # a producer that ran a temporal ∀-validate may assert it
+
+
 def test_fanout_verdict_attaches_conformal_calibration():
     """The calibrator role wired: a conformal-thresholded fan-out verdict CARRIES its FAR honesty —
     method 'conformal' at the binding's alpha (distribution-free FAR ≤ alpha, marginal), attached not

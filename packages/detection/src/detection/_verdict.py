@@ -41,7 +41,7 @@ def emit_detection_verdict(
     params: dict,
     tier: Tier = Tier.WELL_FORMED,
     who: Four = TRUE,
-    when: Four = TRUE,
+    when: Four = NONE,
     what: Four | None = None,
     where: Four = NONE,
     how: Four = NONE,
@@ -52,9 +52,15 @@ def emit_detection_verdict(
 
     ``ref`` is the by-reference source identity (unattested telemetry ⇒ ``custody = NONE``);
     ``params`` are the provenance recipe params (recorded in lineage); ``pvalue`` is the detection's
-    false-alarm rate, feeding the confidence leaf. The W-record and ``tier`` default to the common
-    case (who/when grounded, ``what`` = the ∃-detect, ``WELL_FORMED`` over an unattested ingest) but
-    are parameters so a detector that grounds more — or earns a higher tier — can say so honestly.
+    false-alarm rate, feeding the confidence leaf.
+
+    **``when`` is EARNED-only.** It is the temporal ∀-validate fold's verdict (``recognize(pattern,
+    trace)``), so it defaults to ``NONE`` — *a detector claims ``when = TRUE`` only by passing it, having
+    actually run a temporal pattern check.* A detector that is "about time" (off-hours, coordination) but
+    whose temporal-ness lives in its ∃-detect, not a separate ``recognize``, leaves ``when`` ``NONE``:
+    that is honest, not a regression. (``who`` defaults ``TRUE`` because every current producer identifies
+    its entity; ``what`` defaults to the ∃-detect; ``where``/``how`` default ``NONE``.) All are parameters
+    so a detector that grounds more — or earns a higher tier — can say so honestly.
     """
     root = build_detection_root(ref, params)  # the verdict's provenance root (SHACL-checkable)
     return assemble_verdict(

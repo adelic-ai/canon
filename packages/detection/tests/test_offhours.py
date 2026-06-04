@@ -96,10 +96,12 @@ def test_offhours_verdicts_are_schema_valid_and_unattested():
         assert v.decision == TRUE and v.technique == "T1078"
 
 
-def test_offhours_verdict_w_record_grounds_who_and_when():
+def test_offhours_verdict_grounds_who_but_not_when():
     res = detect_offhours(_synthetic_population(), OFF_HOURS)
     alice_det = next(d for d in res["detections"] if d.entity == "alice")
     contract = offhours_verdict(alice_det, OFF_HOURS).to_contract()
     jsonschema.validate(contract, json.loads(_SCHEMA.read_text()))
-    assert contract["w_record"]["who"] == "true" and contract["w_record"]["when"] == "true"
+    # who is grounded (the account); when is honestly NONE — off-hours is about time, but its temporal
+    # claim is the ∃-detect (circular concentration), not a separate ∀-validate (recognize) that ran.
+    assert contract["w_record"]["who"] == "true" and contract["w_record"]["when"] == "none"
     assert contract["technique"] == "T1078"

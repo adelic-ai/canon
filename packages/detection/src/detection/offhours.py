@@ -151,8 +151,10 @@ def run_offhours(path: str, binding: TemporalBinding = OFF_HOURS) -> dict:
 
 def offhours_verdict(detection: OffHoursDetection, binding: TemporalBinding) -> DetectionVerdict:
     """Emit the canonical :class:`~forge_core.DetectionVerdict` for one off-hours detection. Same
-    honest projection as the fan-out path (custody ``NONE`` on an unsigned corpus; who/when grounded)
-    via the shared :func:`~detection._verdict.emit_detection_verdict`."""
+    honest projection as the fan-out path (custody ``NONE`` on an unsigned corpus; ``who`` grounds the
+    account). ``when`` is honestly ``NONE``: off-hours is *about* time, but its temporal claim is the
+    ∃-detect (circular concentration), not a separate temporal ∀-validate (``recognize``) — so it does
+    not assert a ``when`` validation it never ran. Via :func:`~detection._verdict.emit_detection_verdict`."""
     return emit_detection_verdict(
         f"{binding.name}|{detection.entity}|{detection.at:.0f}",
         technique=binding.technique,

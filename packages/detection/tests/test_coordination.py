@@ -119,7 +119,8 @@ def test_coordination_verdict_is_schema_valid_and_unattested():
         assert v.decision == TRUE and v.technique == "T1071"
         assert v.custody == NONE and v.trustworthiness == NONE  # synthetic corpus: honest, not faked
 
-    # the W-record grounds *who* (the pair) and *when*; one detection projects cleanly.
+    # the W-record grounds *who* (the pair); *when* is honestly NONE — coordination is about timing, but
+    # the MI dependence is the ∃-detect, not a separate temporal ∀-validate (recognize) that ran.
     one = coordination_verdict(res["detected"][0], BEACON_COORDINATION)
     contract = one.to_contract()
-    assert contract["w_record"]["who"] == "true" and contract["w_record"]["when"] == "true"
+    assert contract["w_record"]["who"] == "true" and contract["w_record"]["when"] == "none"
