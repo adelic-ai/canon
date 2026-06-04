@@ -44,19 +44,19 @@ def main() -> None:
 
     print("\nWHAT IT IS (the result):")
     line("technique", c["technique"], "asserted (ATT&CK label)")
-    line("decision", c["decision"], "MECHANICAL — kjoin(detect, when)")
-    line("score", f"{c['score']:.4f}", "MECHANICAL — conformal p-value")
+    line("decision", c["decision"], "MECHANICAL — kjoin(detect=TRUE, when=none) = TRUE")
+    line("score", f"{c['score']:.4f}", "computed — LLR fusion (nominal Pd 0.9 × conformal pfa)")
 
     print("\nWHO/WHAT/WHEN (the grounding):")
     w = c["w_record"]
-    line("who", w["who"], "grounded — the source IP")
+    line("who", w["who"], "grounded — the source IP is identified")
     line("what", w["what"], "MECHANICAL — the ∃-detect")
-    line("when", w["when"], "grounded — the time bin")
+    line("when", w["when"], "ABSENT (none) — fan-out runs no temporal ∀-validate")
     line("where/how", f"{w['where']}/{w['how']}", "ABSENT (none) — honestly unknown")
-    line("w_record.score", f"{w['score']:.2f}", "MECHANICAL — fraction of W's TRUE")
+    line("w_record.score", f"{w['score']:.2f}", "MECHANICAL — 2/5 W's TRUE (who+what; when honestly none)")
 
     print("\nHOW SURE / HOW SOUND (the epistemics):")
-    line("guarantee.tier", c["guarantee"]["tier"], "EARNED — capped at the unattested floor")
+    line("guarantee.tier", c["guarantee"]["tier"], "claimed — the well_formed FLOOR (default on this path)")
     line("calibration", f"{c['calibration']['method']} FAR≤{c['calibration']['far_bound']}",
          "ATTACHED — distribution-free bound")
     line("cross_check", c["cross_check"], "MECHANICAL — distinct⟷entropy agree")

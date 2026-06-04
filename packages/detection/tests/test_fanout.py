@@ -143,12 +143,14 @@ def test_fanout_verdict_is_honest_about_unattested_custody():
     contract = verdict.to_contract()
     jsonschema.validate(contract, json.loads(_SCHEMA.read_text()))
 
-    assert verdict.decision == TRUE  # the detection fired
+    assert verdict.decision == TRUE  # the detection fired (kjoin(detect=TRUE, when=NONE) = TRUE)
     assert verdict.score > 0.5  # statistically meaningful — a rare cell
     assert verdict.custody == NONE  # unattested CSV: honest, not faked
     assert verdict.trustworthiness == NONE  # no custody + no validity → trust unknown
     assert contract["technique"] == "T1110.003"
-    assert contract["w_record"]["who"] == "true" and contract["w_record"]["when"] == "true"
+    # who is grounded (the source IP); when is honestly NONE — fan-out runs no temporal ∀-validate, so it
+    # does NOT claim a timing validation that never happened (the None-vs-True discipline, on our own verdict).
+    assert contract["w_record"]["who"] == "true" and contract["w_record"]["when"] == "none"
 
 
 def test_fanout_verdict_cross_checks_distinct_count_against_entropy():

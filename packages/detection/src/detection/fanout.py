@@ -44,7 +44,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from forge_core import Calibration, DetectionVerdict, conformal_pvalues, shannon_entropy
-from provenance import FALSE, TRUE
+from provenance import FALSE, NONE, TRUE
 
 from detection._verdict import emit_detection_verdict
 
@@ -307,6 +307,10 @@ def fanout_verdict(
         # calibration evidence: the detection thresholded a conformal p-value at the binding's alpha →
         # distribution-free FAR ≤ alpha (marginal). Already computed; attached, not recomputed.
         calibration=Calibration("conformal", binding.alpha),
+        # `when` is the TEMPORAL ∀-validate fold's verdict; fan-out runs NO temporal recognition, so it is
+        # honestly NONE (unanswered), not the TRUE default — claiming a validation that never ran would be
+        # the None-vs-True drift the substrate exists to prevent. decision = kjoin(detect, NONE) = detect.
+        when=NONE,
     )
 
 
