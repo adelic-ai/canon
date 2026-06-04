@@ -33,12 +33,14 @@ from dataclasses import dataclass
 import numpy as np
 
 from forge_core import (
+    Calibration,
     DetectionVerdict,
     circular_mean,
     conformal_pvalues,
     resultant_length,
 )
 from forge_core.signal import Signal, SignalKind
+from provenance import FALSE, TRUE
 
 from detection._verdict import emit_detection_verdict
 from detection.fanout import load_kerberos_events
@@ -154,7 +156,16 @@ def offhours_verdict(detection: OffHoursDetection, binding: TemporalBinding) -> 
     honest projection as the fan-out path (custody ``NONE`` on an unsigned corpus; ``who`` grounds the
     account). ``when`` is honestly ``NONE``: off-hours is *about* time, but its temporal claim is the
     ∃-detect (circular concentration), not a separate temporal ∀-validate (``recognize``) — so it does
-    not assert a ``when`` validation it never ran. Via :func:`~detection._verdict.emit_detection_verdict`."""
+    not assert a ``when`` validation it never ran. Via :func:`~detection._verdict.emit_detection_verdict`.
+
+    **Cross-check + calibration (the same justified shape as fan-out).** The primary detector is the
+    *conformal statistical rarity* (this event is anomalously off-hours vs the population). The independent
+    *check* is the **literal** off-hours test — is ``hour`` outside ``binding.business_hours``? — a count-
+    free, distribution-free answer to the same question. They normally agree (a deep-night event is both
+    statistically rare *and* literally off-hours); a disagreement → ``BOTH`` (e.g. statistically rare but
+    inside business hours, a population-shape artifact worth flagging). Calibration: conformal FAR ≤ α."""
+    bh = binding.business_hours
+    literal_offhours = TRUE if (detection.hour < bh[0] or detection.hour >= bh[1]) else FALSE
     return emit_detection_verdict(
         f"{binding.name}|{detection.entity}|{detection.at:.0f}",
         technique=binding.technique,
@@ -164,6 +175,8 @@ def offhours_verdict(detection: OffHoursDetection, binding: TemporalBinding) -> 
             "hour": round(detection.hour, 2),
             "technique": binding.technique,
         },
+        check=literal_offhours,  # independent: literal off-hours vs the conformal statistical rarity
+        calibration=Calibration("conformal", binding.alpha),
     )
 
 

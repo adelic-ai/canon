@@ -30,6 +30,7 @@ from detection.coordination import (
     host_marginal_features,
     synthesize_coordination_events,
 )
+from forge_core import Calibration
 from provenance import NONE, TRUE
 
 _SCHEMA = Path(__file__).parents[3] / "contracts" / "detection_verdict.schema.json"
@@ -124,3 +125,17 @@ def test_coordination_verdict_is_schema_valid_and_unattested():
     one = coordination_verdict(res["detected"][0], BEACON_COORDINATION)
     contract = one.to_contract()
     assert contract["w_record"]["who"] == "true" and contract["w_record"]["when"] == "none"
+
+
+def test_coordination_verdict_carries_crosscheck_and_calibration():
+    """Coverage: coordination emits the SAME justified shape — a cross_check (the independent linear
+    Pearson correlation vs the non-linear MI; synchronized beaconing → positive correlation agrees → TRUE)
+    and an FDR calibration (level q, since this family thresholds via Benjamini-Hochberg, not conformal)."""
+    events, _ = synthesize_coordination_events(**_CORPUS)
+    res = detect_coordination(events, **_DETECT)
+    v = coordination_verdict(res["detected"][0], BEACON_COORDINATION)
+    assert v.cross_check == TRUE  # synchronized: positive correlation agrees with the MI detection
+    assert v.calibration == Calibration("fdr", BEACON_COORDINATION.q)
+    c = v.to_contract()
+    assert c["cross_check"] == "true"
+    assert c["calibration"] == {"method": "fdr", "far_bound": BEACON_COORDINATION.q}

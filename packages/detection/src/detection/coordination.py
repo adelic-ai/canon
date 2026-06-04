@@ -34,12 +34,14 @@ from dataclasses import dataclass
 import numpy as np
 
 from forge_core import (
+    Calibration,
     DetectionVerdict,
     fdr_control,
     mi_shuffle_null,
     mutual_information,
     shannon_entropy,
 )
+from provenance import FALSE, TRUE
 
 from detection._verdict import emit_detection_verdict
 
@@ -120,12 +122,15 @@ def host_activity_vectors(
 class CoordinationDetection:
     """A detected coordinated host *pair* — the unit the coordination family emits (note: a *pair*, not a
     single entity — the new binding shape). ``mi`` is the observed mutual information (bits) between the
-    two hosts' activity vectors; ``pvalue`` its permutation-null p-value (the bias-cancelled rarity)."""
+    two hosts' activity vectors; ``pvalue`` its permutation-null p-value (the bias-cancelled rarity).
+    ``correlation`` is the Pearson correlation of the two activity vectors — the *independent* (linear)
+    measure the (non-linear) MI is cross-checked against."""
 
     host_a: str
     host_b: str
     mi: float
     pvalue: float
+    correlation: float
 
 
 @dataclass(frozen=True, slots=True)
@@ -178,7 +183,10 @@ def detect_coordination(
         obs = mutual_information(a, b)
         null = mi_shuffle_null(a, b, window=len(a), step=1, n_perm=n_perm, seed=seed + k)
         pvalue = float((1 + np.count_nonzero(null >= obs)) / (n_perm + 1))
-        scored.append(CoordinationDetection(host_a=ha, host_b=hb, mi=obs, pvalue=pvalue))
+        # the independent (LINEAR) measure MI is cross-checked against; 0.0 if either vector is constant
+        # (no variance → Pearson undefined). MI catches non-linear dependence correlation misses.
+        corr = float(np.corrcoef(a, b)[0, 1]) if a.std() > 0 and b.std() > 0 else 0.0
+        scored.append(CoordinationDetection(host_a=ha, host_b=hb, mi=obs, pvalue=pvalue, correlation=corr))
 
     rejected = fdr_control(np.array([d.pvalue for d in scored]), q=q)["rejected"]
     return {
@@ -210,7 +218,15 @@ def coordination_verdict(detection: CoordinationDetection, binding: Coordination
     """Emit the canonical :class:`~forge_core.DetectionVerdict` for one coordinated pair. ``who`` grounds
     the *pair* (both hosts); custody is honestly ``NONE`` (synthetic, unattested corpus). Reuses the
     shared :func:`~detection._verdict.emit_detection_verdict` — the third family confirms that helper
-    generalizes (shared *behavior*), even though the binding *shape* is new (shared *ontology* does not)."""
+    generalizes (shared *behavior*), even though the binding *shape* is new (shared *ontology* does not).
+
+    **Cross-check + calibration (the same justified shape as fan-out).** The primary detector is MI
+    (non-linear dependence); the independent *check* is the **Pearson correlation** of the two activity
+    vectors (linear dependence). For synchronized beaconing both are positive → agree; an MI detection
+    with non-positive correlation → ``BOTH`` (MI sees a non-linear / anti-phase coupling the linear measure
+    misses — a meaningful divergence). Calibration: this family thresholds via **FDR** (Benjamini–Hochberg
+    over the pair p-values), so the bound is the FDR level ``q``, not a conformal α."""
+    corr_check = TRUE if detection.correlation > 0 else FALSE
     return emit_detection_verdict(
         f"{binding.name}|{detection.host_a}|{detection.host_b}",
         technique=binding.technique,
@@ -221,6 +237,8 @@ def coordination_verdict(detection: CoordinationDetection, binding: Coordination
             "mi_bits": detection.mi,
             "technique": binding.technique,
         },
+        check=corr_check,  # independent linear measure (Pearson) vs the non-linear MI
+        calibration=Calibration("fdr", binding.q),  # FDR level q (BH over pair p-values)
     )
 
 

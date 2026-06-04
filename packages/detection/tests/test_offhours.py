@@ -23,6 +23,7 @@ from detection.offhours import (
     offhours_verdicts,
     run_offhours,
 )
+from forge_core import Calibration
 from provenance import NONE, TRUE
 
 _DATA = Path.home() / "data" / "faker-kerberos" / "v1" / "export.csv"
@@ -94,6 +95,21 @@ def test_offhours_verdicts_are_schema_valid_and_unattested():
         jsonschema.validate(v.to_contract(), schema)
         assert v.custody == NONE and v.trustworthiness == NONE
         assert v.decision == TRUE and v.technique == "T1078"
+
+
+def test_offhours_verdict_carries_crosscheck_and_calibration():
+    """Coverage: off-hours emits the SAME justified shape as fan-out — a cross_check (the literal
+    off-hours test vs the conformal statistical rarity; they agree on a deep-night detection → TRUE) and
+    a conformal calibration bound. Same honest verdict shape across detector families."""
+    res = detect_offhours(_synthetic_population(), OFF_HOURS)
+    alice_det = next(d for d in res["detections"] if d.entity == "alice")
+    v = offhours_verdict(alice_det, OFF_HOURS)
+    assert v.cross_check == TRUE  # deep-night event: literal off-hours agrees with the conformal rarity
+    assert v.calibration == Calibration("conformal", OFF_HOURS.alpha)
+    c = v.to_contract()
+    assert c["cross_check"] == "true"
+    assert c["calibration"] == {"method": "conformal", "far_bound": OFF_HOURS.alpha}
+    jsonschema.validate(c, json.loads(_SCHEMA.read_text()))
 
 
 def test_offhours_verdict_grounds_who_but_not_when():
