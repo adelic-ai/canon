@@ -112,6 +112,11 @@ class DetectionVerdict:
     provenance: str
     # OPTIONAL explanatory structure — the custody-chain walk; "where do I look", not a scalar.
     custody_localization: Localization | None = None
+    # OPTIONAL cross-check carrier — ``kjoin`` of the primary ∃-detect with an INDEPENDENT measure of the
+    # same thing (a redundant primitive in its *check* role, e.g. distinct-count vs entropy for fan-out).
+    # ``BOTH`` when the two disagree: the soundness alarm, for free. ``None`` = no cross-check supplied.
+    # MECHANICS only — that a disagreement is operationally meaningful is a separate, deferred claim.
+    cross_check: Four | None = None
 
     def to_contract(self) -> dict:
         """Project into ``detection_verdict.schema.json`` JSON. Validated against the PINNED
@@ -149,6 +154,8 @@ class DetectionVerdict:
                 "exonerated": list(loc.exonerated),
                 **({"seam_break": loc.seam_break} if loc.seam_break is not None else {}),
             }
+        if self.cross_check is not None:  # optional redundant-measure cross-check (BOTH on disagreement)
+            out["cross_check"] = _BELNAP[self.cross_check]
         return out
 
 
@@ -162,6 +169,7 @@ def assemble_verdict(
     attestations: dict[str, CustodyAttestation] | None = None,
     chains: dict[str, tuple[CustodyStep, ...]] | None = None,
     localization: Localization | None = None,
+    check: Four | None = None,
     validity: Validity = UNCHECKED,
     when: Four = NONE,
     what: Four | None = None,
@@ -207,6 +215,9 @@ def assemble_verdict(
 
     detect = conf.belnap  # ∃-detect: did the detector's evidence say fired?
     decision = kjoin(detect, when)  # fuse with the ∀-validate temporal verdict
+    # cross-check: kjoin the primary detect with an INDEPENDENT redundant measure (if supplied) →
+    # BOTH on disagreement. None when no check was supplied (the cross-check was not performed).
+    cross = None if check is None else kjoin(detect, check)
     score = conf.probability if conf.probability is not None else 0.0
     # custody (digest) and validity stay separate primitives; trustworthiness is the derived view.
     trust = trustworthiness(digest_custody, validity)
@@ -230,4 +241,5 @@ def assemble_verdict(
         trustworthiness=trust,
         provenance=root.id,
         custody_localization=localization,  # optional explanatory surface (where to look)
+        cross_check=cross,  # optional redundant-measure agreement (BOTH on disagreement)
     )

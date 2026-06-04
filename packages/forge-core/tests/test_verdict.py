@@ -230,6 +230,31 @@ def test_detect_validate_disagreement_surfaces_as_both_the_soundness_alarm():
     jsonschema.validate(verdict.to_contract(), json.loads(_SCHEMA_PATH.read_text()))
 
 
+def test_cross_check_carrier_is_both_on_disagreement_and_absent_when_no_check():
+    """The cross-check (MECHANICS): a verdict can carry the kjoin of the primary ∃-detect with an
+    INDEPENDENT redundant measure (a primitive in its *check* role). Agreement preserves the decision;
+    disagreement → BOTH (the same soundness-alarm carrier as detect/validate); no check → field absent."""
+    raw, raw_src, sig, root = _detection_dag()
+    pfa = root.value()["pfa"]
+    base = dict(
+        technique="T1071.001",
+        confidence_evidence={root.id: Confidence.from_detector(True, pd=_PD, pfa=pfa)},
+        claims=_claims(raw_src, sig, root),
+        monitors={root.id: TRUE},
+        attestations={raw_src.id: _live_attestation(raw)},
+    )
+    # primary ∃-detect is TRUE (the detector fired)
+    assert assemble_verdict(root, check=TRUE, **base).cross_check == TRUE   # agree
+    assert assemble_verdict(root, check=FALSE, **base).cross_check == BOTH  # disagree → soundness alarm
+    assert assemble_verdict(root, check=NONE, **base).cross_check == TRUE   # check abstains → take primary
+    v_none = assemble_verdict(root, **base)
+    assert v_none.cross_check is None                      # no cross-check performed
+    assert "cross_check" not in v_none.to_contract()       # absent from the contract (optional field)
+    both = assemble_verdict(root, check=FALSE, **base)
+    assert both.to_contract()["cross_check"] == "both"
+    jsonschema.validate(both.to_contract(), json.loads(_SCHEMA_PATH.read_text()))  # schema-valid with the field
+
+
 def test_w_record_score_is_the_fraction_of_grounded_ws():
     """Honest aggregate: only confirmed (TRUE) W's count, so an unattributed hit scores low."""
     verdict, _ = _confirming_verdict(when=TRUE)

@@ -34,6 +34,7 @@ def emit_detection_verdict(
     what: Four | None = None,
     where: Four = NONE,
     how: Four = NONE,
+    check: Four | None = None,
 ) -> DetectionVerdict:
     """Project a detection into the canonical :class:`~forge_core.DetectionVerdict`.
 
@@ -55,4 +56,5 @@ def emit_detection_verdict(
         what=what,
         where=where,
         how=how,
+        check=check,  # the independent redundant-measure decision → cross_check carrier (BOTH on disagreement)
     )

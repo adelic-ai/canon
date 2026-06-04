@@ -16,6 +16,17 @@ another; this table records *which role each canon primitive serves*, so the ver
 Vocabulary (aligned with Atlas `ap:role`): **detector · check · calibrator · feature · summary.**
 A primitive has MANY; "weak as a detector" ≠ "no value."
 
+**Evidence status per role** (canon's `None`-vs-`False` discipline, applied to roles — a role is not a
+fact until backed): **validated** (measured on real labeled data) · **canonical** (the definitional role
+from the literature, not yet demonstrated in canon) · **hypothesized** (plausible, untested) · **deferred**
+(the *operational value* of a wired mechanism, distinct from its mechanics). Key assignments:
+`distinct_count → detector` = **validated** (Kerberos, CloudTrail); `kl/cross-entropy → shape detector` =
+**validated** (DGA fair test); `mutual_information → joint detector` = **constructive** (synthetic);
+`conformal → calibrator` and `fdr → calibrator` = **canonical** (definitional, not yet demonstrated as a
+cross-check in canon); `entropy → check` and `mutual_information → redundancy check` = **hypothesized**.
+*A wired cross-check is `validated` for its **mechanics** and `deferred` for its **operational value** —
+those are different claims (see below).*
+
 <<<
 primitive (canon op)              detector            check                 calibrator    other
 distinct_count (fanout)           ✓ (cardinality)     ✓ (vs entropy)                      feature
@@ -47,6 +58,14 @@ primitives are exactly those validators. The disagreement is a Belnap `BOTH` (a 
    entropy was "redundant" at detection). On disagreement → `BOTH`: either a measurement fault, a parser
    evasion, or an attacker gaming one statistic but not the correlated one (evasion-robustness — gaming both
    jointly is harder than gaming one). **The first cross-check to wire.**
+   **Evidence status (the honest split):** the cross-check carrier is **validated for its MECHANICS**
+   (agreement preserves the verdict; disagreement yields `BOTH` — testable now) but its **OPERATIONAL VALUE
+   is `deferred`/hypothesized**: because the two measures are *correlated* they will rarely disagree, and we
+   have NOT yet shown that a disagreement coincides with anything real (a labeled fault / evasion). When they
+   *do* diverge it means the distribution *shape* departs from what cardinality implies (high distinct-count
+   but one value dominating — the same shape-vs-count axis the DGA result turned on), which is *meaningful in
+   principle* — but "the alarm catches real problems" is a claim to validate later (do disagreements on the
+   real corpora coincide with anything labeled?), not to assume from wiring it.
 2. **conformal-FAR ⟷ CFAR-analytic-FAR** — two false-alarm-rate estimates that should agree where both
    apply (the analytic-vs-conformal pairing already noted in the guarantees ledger). Disagreement caps the
    tier / raises `BOTH`.

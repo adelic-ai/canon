@@ -44,6 +44,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from forge_core import DetectionVerdict, conformal_pvalues, shannon_entropy
+from provenance import FALSE, TRUE
 
 from detection._verdict import emit_detection_verdict
 
@@ -81,12 +82,15 @@ class FanoutCell:
 
     ``entity`` is the partition key (e.g. a source IP), ``bin`` the integer time-bin index at the
     chosen grain, ``entropy`` the Shannon entropy (bits) of the distinct values touched in the cell.
-    ``bin_start`` is the cell's start time in epoch seconds (``bin * grain_seconds``)."""
+    ``bin_start`` is the cell's start time in epoch seconds (``bin * grain_seconds``). ``distinct`` is
+    the count of distinct values — the *independent* fan-out measure entropy is cross-checked against
+    (carried for free; it's the cardinality the entropy is the spread of)."""
 
     entity: str
     bin: int
     entropy: float
     bin_start: float
+    distinct: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -132,6 +136,7 @@ def fanout_entropy(
                 bin=b,
                 entropy=shannon_entropy(counts),
                 bin_start=b * grain_seconds,
+                distinct=len(counts),
             )
         )
     return out
@@ -272,12 +277,23 @@ def detect_by_distinct_count(
     }
 
 
-def fanout_verdict(detection: FanoutDetection, binding: FanoutBinding) -> DetectionVerdict:
+def fanout_verdict(
+    detection: FanoutDetection, binding: FanoutBinding, *, distinct_threshold: int = 5
+) -> DetectionVerdict:
     """Emit the canonical :class:`~forge_core.DetectionVerdict` for one detected fan-out cell —
     closing the loop: real telemetry → binding → detection → the schema-validated verdict. Custody
     is honestly ``NONE`` (unsigned corpus); the W-record grounds who (the entity) and when (the time
     bin). The shared, honest projection lives in :func:`~detection._verdict.emit_detection_verdict`.
+
+    **Cross-check (the redundant-primitive *check* role, mechanics only).** The primary detector is
+    entropy/conformal; the *independent* measure is the cell's **distinct count** (``cell.distinct >
+    distinct_threshold``). Their kjoin is carried as the verdict's ``cross_check``: agreement preserves
+    the decision, disagreement → ``BOTH`` (a soundness alarm — the two should track since entropy is the
+    spread of that cardinality; a divergence means the distribution *shape* departed from what the count
+    implies). That a disagreement is *operationally* meaningful is a deferred claim (they are correlated,
+    so disagreement is rare — see ``design/primitive_roles.md``); this wires the carrier, not its value.
     """
+    distinct_check = TRUE if detection.cell.distinct > distinct_threshold else FALSE
     return emit_detection_verdict(
         f"{binding.name}|{detection.cell.entity}|{detection.cell.bin}",
         technique=binding.technique,
@@ -287,6 +303,7 @@ def fanout_verdict(detection: FanoutDetection, binding: FanoutBinding) -> Detect
             "bin": detection.cell.bin,
             "technique": binding.technique,
         },
+        check=distinct_check,  # independent fan-out measure → cross_check carrier
     )
 
 

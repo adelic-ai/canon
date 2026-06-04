@@ -12,6 +12,7 @@ Plus the finding that FDR over every cell is too stringent (the T0-uses-alpha ti
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import jsonschema
@@ -20,6 +21,7 @@ import pytest
 from detection.fanout import (
     PASSWORD_SPRAY,
     SERVICE_TICKET_FANOUT,
+    FanoutDetection,
     bucket_fanout,
     detect_fanout,
     fanout_entropy,
@@ -28,7 +30,7 @@ from detection.fanout import (
     run_binding,
 )
 from forge_core import fdr_control
-from provenance import NONE, TRUE
+from provenance import BOTH, NONE, TRUE
 
 _DATA = Path.home() / "data" / "faker-kerberos" / "v1" / "export.csv"
 _SCHEMA = Path(__file__).parents[3] / "contracts" / "detection_verdict.schema.json"
@@ -147,6 +149,34 @@ def test_fanout_verdict_is_honest_about_unattested_custody():
     assert verdict.trustworthiness == NONE  # no custody + no validity → trust unknown
     assert contract["technique"] == "T1110.003"
     assert contract["w_record"]["who"] == "true" and contract["w_record"]["when"] == "true"
+
+
+def test_fanout_verdict_cross_checks_distinct_count_against_entropy():
+    """The cross-check applied (MECHANICS): distinct-count is the *independent* measure vs the
+    entropy/conformal detector. A detected spray cell has high distinct → agreement (cross_check TRUE,
+    decision preserved). The same detection forced below the distinct threshold → BOTH (the soundness
+    alarm). Operational value of a disagreement is deferred (the two are correlated, so it's rare)."""
+    res = detect_fanout(_normal_cells(300) + _spray(5_000_000.0, 16), grain_seconds=600, alpha=0.02)
+    (det,) = res["detected"]
+    assert det.cell.distinct == 16  # the sprayer touched 16 distinct accounts — the independent measure
+    assert fanout_verdict(det, PASSWORD_SPRAY).cross_check == TRUE  # distinct 16 > 5 → agrees with entropy
+
+    # force a disagreement: same detection, distinct below the threshold → entropy says fired, count doesn't
+    low = FanoutDetection(cell=replace(det.cell, distinct=3), pvalue=det.pvalue)
+    verdict = fanout_verdict(low, PASSWORD_SPRAY)
+    assert verdict.cross_check == BOTH  # kjoin(TRUE detect, FALSE check) = BOTH — the alarm
+    contract = verdict.to_contract()
+    assert contract["cross_check"] == "both"
+    jsonschema.validate(contract, json.loads(_SCHEMA.read_text()))  # still schema-valid with the new field
+
+
+@pytest.mark.skipif(not _DATA.exists(), reason="faker-kerberos corpus not present")
+def test_real_spray_verdicts_cross_check_agrees():
+    """On real labeled sprays the two fan-out measures AGREE: every emitted verdict's cross_check is
+    TRUE — distinct-count is high wherever entropy flagged (they are correlated). Agreement preserves
+    the decision; a disagreement would be the rare soundness alarm, and there is none here."""
+    for v in fanout_verdicts(run_binding(str(_DATA), PASSWORD_SPRAY)):
+        assert v.cross_check == TRUE
 
 
 @pytest.mark.skipif(not _DATA.exists(), reason="faker-kerberos corpus not present")

@@ -7,7 +7,12 @@
   "$defs": {
     "belnap": {
       "type": "string",
-      "enum": ["none", "true", "false", "both"],
+      "enum": [
+        "none",
+        "true",
+        "false",
+        "both"
+      ],
       "description": "A carrier.md Belnap Four value as a string. none=(0,0) no info; true=(1,0); false=(0,1); both=(1,1) contradiction. NOT a bare bool — an unanswered question is 'none', never 'false' (absence of evidence != evidence of absence)."
     },
     "cid": {
@@ -19,15 +24,46 @@
       "type": "object",
       "description": "The five W's — the empirical grounding that turns a semantic technique label into checkable telemetry facts. Each W is itself a Belnap-typed claim with its own provenance node (recursively justified); an unanswered W is 'none', never 'false'.",
       "properties": {
-        "who": {"$ref": "#/$defs/belnap", "description": "principal/account resolved? (none = unattributed)"},
-        "what": {"$ref": "#/$defs/belnap", "description": "the technique's artifact present?"},
-        "when": {"$ref": "#/$defs/belnap", "description": "temporal window satisfied? (the temporal fold's verdict)"},
-        "where": {"$ref": "#/$defs/belnap", "description": "host/segment located?"},
-        "how": {"$ref": "#/$defs/belnap", "description": "mechanism/procedure matched?"},
-        "score": {"type": "number", "minimum": 0, "maximum": 1, "description": "aggregate W-confidence in [0,1]"},
-        "provenance": {"$ref": "#/$defs/cid", "description": "CID of this W-record's own DAG node"}
+        "who": {
+          "$ref": "#/$defs/belnap",
+          "description": "principal/account resolved? (none = unattributed)"
+        },
+        "what": {
+          "$ref": "#/$defs/belnap",
+          "description": "the technique's artifact present?"
+        },
+        "when": {
+          "$ref": "#/$defs/belnap",
+          "description": "temporal window satisfied? (the temporal fold's verdict)"
+        },
+        "where": {
+          "$ref": "#/$defs/belnap",
+          "description": "host/segment located?"
+        },
+        "how": {
+          "$ref": "#/$defs/belnap",
+          "description": "mechanism/procedure matched?"
+        },
+        "score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "aggregate W-confidence in [0,1]"
+        },
+        "provenance": {
+          "$ref": "#/$defs/cid",
+          "description": "CID of this W-record's own DAG node"
+        }
       },
-      "required": ["who", "what", "when", "where", "how", "score", "provenance"]
+      "required": [
+        "who",
+        "what",
+        "when",
+        "where",
+        "how",
+        "score",
+        "provenance"
+      ]
     }
   },
   "properties": {
@@ -49,7 +85,10 @@
     },
     "guarantee": {
       "type": "object",
-      "required": ["subject_cid", "tier"],
+      "required": [
+        "subject_cid",
+        "tier"
+      ],
       "description": "The GuaranteeCertificate (guarantee_certificate.schema.json) — the tier this result EARNED on this input, demotable per result. Referenced by shape here; validated in full by that schema."
     },
     "custody": {
@@ -60,10 +99,22 @@
       "type": "object",
       "description": "PRIMITIVE dimension — source-payload well-formedness (does the content conform to its declared schema/kind), distinct from custody (integrity) and guarantee (computation rigor). A malformed source is NOT dropped and NOT 'what=false': the deviation is a detection feature. The corruption-vs-attack reading is left to correlation.",
       "properties": {
-        "verdict": {"$ref": "#/$defs/belnap", "description": "true=conforms, false=malformed, none=unchecked (no validator ran — absence of a check is not a clean bill of health)."},
-        "deviation": {"type": "array", "items": {"type": "string"}, "description": "HOW it is malformed (which constraint failed) — the feature a detector reads; empty when valid/unchecked. 'NONE carries what was missing', applied to validity."}
+        "verdict": {
+          "$ref": "#/$defs/belnap",
+          "description": "true=conforms, false=malformed, none=unchecked (no validator ran — absence of a check is not a clean bill of health)."
+        },
+        "deviation": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "HOW it is malformed (which constraint failed) — the feature a detector reads; empty when valid/unchecked. 'NONE carries what was missing', applied to validity."
+        }
       },
-      "required": ["verdict", "deviation"]
+      "required": [
+        "verdict",
+        "deviation"
+      ]
     },
     "trustworthiness": {
       "$ref": "#/$defs/belnap",
@@ -73,17 +124,53 @@
       "type": "object",
       "description": "OPTIONAL explanatory structure (not a scalar, not required) — the result of walking the multi-hop custody chain backward from the held bytes. Populate when actionable, especially trustworthiness in {false, both}: it answers 'where do I look'. It is a summary of the custody chain that lives in provenance (reachable via the 'provenance' CID), not an independent measurement — distinct from custody (primitive scalar) and trustworthiness (derived scalar view).",
       "properties": {
-        "verdict": {"$ref": "#/$defs/belnap", "description": "chain integrity: true intact / false proven in-transit tamper (localized at seam_break) / none unsigned-or-empty. Equals the custody scalar when this source is the binding one."},
-        "suspect": {"type": "array", "items": {"type": "string"}, "description": "agents where content could have entered without a detectable anomaly: {origin} ∪ {transform hops} ∪ {anomalous hops}. Start scrutiny here."},
-        "exonerated": {"type": "array", "items": {"type": "string"}, "description": "signed, content-preserving relay agents proven clean by digest-matching. Empty on a non-intact chain."},
-        "seam_break": {"type": "string", "description": "where digest-matching failed, when verdict=false; absent otherwise."}
+        "verdict": {
+          "$ref": "#/$defs/belnap",
+          "description": "chain integrity: true intact / false proven in-transit tamper (localized at seam_break) / none unsigned-or-empty. Equals the custody scalar when this source is the binding one."
+        },
+        "suspect": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "agents where content could have entered without a detectable anomaly: {origin} ∪ {transform hops} ∪ {anomalous hops}. Start scrutiny here."
+        },
+        "exonerated": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "signed, content-preserving relay agents proven clean by digest-matching. Empty on a non-intact chain."
+        },
+        "seam_break": {
+          "type": "string",
+          "description": "where digest-matching failed, when verdict=false; absent otherwise."
+        }
       },
-      "required": ["verdict", "suspect", "exonerated"]
+      "required": [
+        "verdict",
+        "suspect",
+        "exonerated"
+      ]
+    },
+    "cross_check": {
+      "$ref": "#/$defs/belnap",
+      "description": "OPTIONAL cross-check carrier — kjoin of the primary exists-detect with an INDEPENDENT redundant measure of the same thing (a primitive in its CHECK role, e.g. distinct-count vs entropy for fan-out). 'both' = the two disagree (a soundness alarm / possible evasion); agreement preserves the primary decision; absent = no cross-check performed. Carries MECHANICS only — that a disagreement is operationally meaningful is a separate, unproven claim."
     },
     "provenance": {
       "$ref": "#/$defs/cid",
       "description": "CID of the lazy provenance DAG node this verdict is about — full justification on demand. The one object all the other folds are interpretations of (justification IS the result, not a side-log)."
     }
   },
-  "required": ["technique", "score", "decision", "w_record", "guarantee", "custody", "validity", "trustworthiness", "provenance"]
+  "required": [
+    "technique",
+    "score",
+    "decision",
+    "w_record",
+    "guarantee",
+    "custody",
+    "validity",
+    "trustworthiness",
+    "provenance"
+  ]
 }
