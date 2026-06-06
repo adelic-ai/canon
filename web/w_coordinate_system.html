@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canon — The W's as a Coordinate System</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --ink:#e6e8ee; --muted:#9aa3b2;
+    --line:#2a2f3a; --accent:#7db4ff; --accent2:#c79bff;
+    --good:#6fcf97; --warn:#f2c94c; --gap:#eb6f6f;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1080px;margin:0 auto;padding:48px 28px 96px}
+  h1{font-size:30px;margin:0 0 6px;letter-spacing:-.01em}
+  .sub{color:var(--muted);margin:0 0 4px;font-size:18px}
+  .stamp{color:var(--muted);font:13px/1.5 var(--mono);margin:0 0 32px}
+  h2{font-size:21px;margin:48px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+  p{margin:10px 0}
+  code{font-family:var(--mono);font-size:.88em;background:#1e222b;padding:1px 5px;border-radius:4px}
+  pre{background:#10131a;border:1px solid var(--line);border-radius:8px;padding:14px 16px;
+    overflow-x:auto;font-family:var(--mono);font-size:13px;line-height:1.55;color:#d4d9e4}
+  .note{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:8px;padding:14px 18px;margin:18px 0}
+  .note.gap{border-left-color:var(--gap)}
+  .note.key{border-left-color:var(--accent2)}
+  .note.good{border-left-color:var(--good)}
+  .muted{color:var(--muted)}
+  ul{margin:10px 0;padding-left:22px}
+  li{margin:7px 0}
+  strong{color:#fff}
+  table{border-collapse:collapse;width:100%;margin:18px 0;font-size:14px;background:var(--panel);
+    border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  th,td{text-align:left;padding:10px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#1c212b;color:var(--muted);font-weight:600;font-size:12px;
+    text-transform:uppercase;letter-spacing:.04em}
+  tr:last-child td{border-bottom:none}
+  td.k{font-weight:600;white-space:nowrap;color:var(--accent)}
+  .good{color:var(--good)} .gap{color:var(--gap)} .warn{color:var(--warn)}
+  .lede{font-size:17px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>The W's as a coordinate system</h1>
+  <p class="sub">Framework = the axes. Graph = the points. Detection = a region.</p>
+  <p class="stamp">canon · the unifying lens · 2026-06-06 · <span class="muted">who · what · when · where · how</span></p>
+
+  <p class="lede">A node in the provenance graph already carries <strong>who / what / when / where / how</strong> as its
+  edges. So the W-record is not something a detector emits — it is the <strong>coordinates</strong> of an event in a
+  multi-dimensional space. Once you see the W's as coordinates, detection, routing, correlation, and the verdict all become
+  operations on one indexed space.</p>
+
+  <h2>The W's are the coordinates of each event</h2>
+  <pre>who   = the Agent        (prov:wasAssociatedWith)      — a user / principal
+what  = the Entity       (prov:used / wasGeneratedBy)   — a binary (by hash), file, resource
+when  = startedAtTime                                   — event-time
+where = host / data-component                           — the layer (host / net / cloud / auth)
+how   = command / params                                — the action taken</pre>
+  <p>An event is <em>located</em> at <code>(who, what, when, where, how)</code>. <strong>Slice</strong> by fixing some and
+  varying the rest — <code>[who=pupy.godoy, :, :, :, :]</code> is "everything that account did." <strong>Route</strong> by a
+  partial coordinate — fix what/how, retrieve the techniques that apply there. <strong>Correlate</strong> by shared
+  coordinates — same who across events is the same point on the who-axis.</p>
+
+  <h2>Three precisions that make the lens correct</h2>
+  <table>
+    <thead><tr><th>Precision</th><th>Consequence</th></tr></thead>
+    <tbody>
+      <tr><td class="k">categorical keys, not numeric positions</td>
+        <td>it's a <strong>dictionary / graph, not a tensor</strong> — no native distance between who=A and who=B.
+          <span class="good">Resolves tensor-vs-graph: sparse + categorical → don't densify.</span></td></tr>
+      <tr><td class="k">coordinates can be NONE</td>
+        <td>a <strong>partially-addressed</strong> space — who=known but where=unobserved. The address itself carries honest gaps.</td></tr>
+      <tr><td class="k">each axis is a structured ontology</td>
+        <td>what ∈ process-tree, who ∈ AD/IAM, where ∈ ATT&CK/OSI layers — you query by <strong>walking axis-ontologies</strong>
+          (why RDF/SKOS), not by exact key match.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note key">
+    <strong>The unification.</strong> If the W's are coordinates, then <strong>the framework <em>is</em> the coordinate
+    system.</strong>
+    <pre>framework (semantic-cyber / OCSF / CASE-UCO)  =  the AXES + their structure
+provenance graph                              =  the POINTS plotted in it
+detection                                     =  an anomalous REGION
+routing (W→route)                             =  a partial-coordinate LOOKUP
+verdict                                       =  a fully-addressed point + carrier values</pre>
+    The framework stops being "a verifier library beside the work" and becomes the space the work happens in.
+  </div>
+
+  <h2>W→route, after the reshape</h2>
+  <p>W→route was discovered through the IT/DT battery, but the W's were never the battery's — they are <em>native to the
+  graph</em>. So W→route is really the <strong>graph ↔ framework join, keyed on any flagged node's coordinates.</strong> The
+  battery is one <em>flagger</em> among many (a framework signature firing, a milestone hit, a human pick); routing is uniform
+  over any flagged node, which makes the bidirectional entry trivial.</p>
+  <div class="note good">
+    <strong>The alignment problem relocates (not dissolves).</strong> Old: route-time fuzzy mapping from canon's vocabulary
+    (entity=IP) to framework terms — the open research problem. New: the ingest-time <strong>un-flatten</strong>
+    (SKOS → OCSF → CASE-UCO) assigns framework-aligned coordinates <em>up front</em>, so routing is a lookup in
+    already-aligned terms. The alignment becomes a <strong>bounded, per-source, do-once</strong> bridge at ingest instead of
+    an open per-query inference. Better place for it — though the bridge quality is now load-bearing (itself a
+    fidelity-attestation target).
+  </div>
+
+  <h2>canonmon = one shared coordinate system</h2>
+  <p>The multi-source unifier's whole job, in these terms: <strong>put every source in the same W-coordinate system.</strong>
+  The un-flatten assigns comparable coordinates across host / network / cloud / auth; the content hash (CID) is identity along
+  the who/what axes; <em>same entity across sources = same coordinate</em>. Cross-layer correlation is just "events at the same
+  coordinates," and lateral movement is a path through coordinate space.</p>
+
+  <div class="note gap">
+    <strong>It's a lens, not the implementation.</strong> The real objects are the graph + framework + folds. The one thing
+    <em>not</em> to take from the coordinate picture is "so build a tensor" — the categorical-keys + sparsity precisions say
+    dictionary / graph, never a dense array.
+  </div>
+
+  <p class="stamp" style="margin-top:40px">Companions: <code>canonmon_multisource_unifier.html</code>,
+  <code>validation_fold_family.html</code>, <code>ocsf_json_vs_rdf.html</code>. A conceptual model, not a live document.</p>
+</div>
+</body>
+</html>
