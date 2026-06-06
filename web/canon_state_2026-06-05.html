@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canon — Where It Stands (2026-06-05)</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --ink:#e6e8ee; --muted:#9aa3b2;
+    --line:#2a2f3a; --accent:#7db4ff; --accent2:#c79bff;
+    --good:#6fcf97; --warn:#f2c94c; --gap:#eb6f6f;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1080px;margin:0 auto;padding:48px 28px 96px}
+  h1{font-size:30px;margin:0 0 6px;letter-spacing:-.01em}
+  .sub{color:var(--muted);margin:0 0 4px;font-size:18px}
+  .stamp{color:var(--muted);font:13px/1.5 var(--mono);margin:0 0 32px}
+  h2{font-size:21px;margin:48px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+  h3{font-size:16px;margin:22px 0 6px;color:var(--accent2)}
+  p{margin:10px 0}
+  code{font-family:var(--mono);font-size:.88em;background:#1e222b;padding:1px 5px;border-radius:4px}
+  .note{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:8px;padding:14px 18px;margin:18px 0}
+  .note.gap{border-left-color:var(--gap)}
+  .note.key{border-left-color:var(--accent2)}
+  .note.good{border-left-color:var(--good)}
+  .muted{color:var(--muted)}
+  ul{margin:10px 0;padding-left:22px}
+  li{margin:7px 0}
+  strong{color:#fff}
+  table{border-collapse:collapse;width:100%;margin:18px 0;font-size:14px;background:var(--panel);
+    border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  th,td{text-align:left;padding:10px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#1c212b;color:var(--muted);font-weight:600;font-size:12px;
+    text-transform:uppercase;letter-spacing:.04em}
+  tr:last-child td{border-bottom:none}
+  td.k{font-weight:600;white-space:nowrap;color:var(--accent)}
+  .good{color:var(--good)} .gap{color:var(--gap)} .warn{color:var(--warn)}
+  .lede{font-size:17px}
+  .tag{display:inline-block;font:11px/1 var(--mono);padding:3px 7px;border-radius:4px;
+    border:1px solid var(--line);background:#1c212b;color:var(--muted);margin-right:6px}
+  .tag.built{color:var(--good);border-color:#2c4636}
+  .tag.held{color:var(--warn);border-color:#4a4326}
+  .tag.inert{color:var(--gap);border-color:#4a2b2b}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Canon — where it stands</h1>
+  <p class="sub">After the inversion reframe: surfacer + verifier + fidelity-checking.</p>
+  <p class="stamp">canon · state readout · 2026-06-05 · <span class="muted">main 405be89 · branch detection-otrf-first-cell</span></p>
+
+  <p class="lede">This session sharpened the architecture and tested two of its load-bearing assumptions against
+  real data. The design got dramatically more coherent; the build did not keep pace. This is an honest readout
+  of what is <strong>proven</strong>, what is <strong>designed</strong>, and what is <strong>inert by design</strong> —
+  because the gap between those three is the real story.</p>
+
+  <h2>The reframe, in one line</h2>
+  <p>Canon shifted from <em>"self-validating detection substrate (with a battery)"</em> to a sharper shape: the
+  <strong>battery is one of two search directions</strong> (bottom-up surfacer of statistical <em>shape</em>); the
+  <strong>frameworks are the other</strong> (top-down Sigma/CAR/ATT&amp;CK verifiers of known <em>content</em>); the
+  <strong>W-record routes between them</strong>; and the substrate's distinctive job is to emit justified verdicts
+  <em>and</em> <strong>check the verifiers' own fidelity</strong>. Continuous with "substrate is the value, detectors
+  are a vehicle" — but it finally says <em>what</em> the substrate does with the frameworks: active routing + fidelity
+  attestation, not passive coverage mapping.</p>
+
+  <div class="note key">
+    <strong>Why two directions.</strong> The battery sees <em>shape</em> (volume, distinct, timing) and is blind to
+    low-volume, content-specific acts. The frameworks see <em>known content</em> and are blind to the novel. They cover
+    each other's blind spots. Proven on real data below.
+  </div>
+
+  <h2>Three buckets — the honest state</h2>
+
+  <h3><span class="tag built">BUILT + PROVEN</span> load-bearing now, on real data</h3>
+  <ul>
+    <li>The uniform justified-verdict substrate across 3 detector families (539 tests) — <span class="muted">pre-session</span>.</li>
+    <li><strong>First cell on real OTRF/Mordor data</strong> (committed + pushed). It proved three things previously only
+      asserted: (1) the pipeline runs end-to-end on a diverse, ATT&amp;CK-labeled corpus that does <em>not</em> collapse;
+      (2) the substrate emits honest verdicts on real data; (3) <strong>the fidelity-checking thesis is real</strong> —
+      on an LSASS credential-dump, both the statistical battery <em>and</em> the off-the-shelf Sigma rule
+      <span class="gap">missed</span> the comsvcs/<code>rundll32</code> LOLBin; only checking the exact mechanism caught it.</li>
+    <li>Two probes converted to evidence: routing SPARQL is fast (<em>bind-the-seed</em>, single-digit ms on the real D3FEND
+      graph); OTRF/Mordor cleared as a usable diverse labeled corpus (52 techniques, NDJSON, per-event, bucketable).</li>
+  </ul>
+
+  <div class="note good">
+    <strong>The one piece of genuinely new ground.</strong> "Check the detector's fidelity" went from claim to
+    demonstration. The off-the-shelf rule's <code>filter_generic</code> trusts all of <code>system32</code> to cut false
+    positives — so a LOLBin abusing a trusted system binary walks right through it. Canon caught the gap by diffing the
+    rule against the allowlist-off mechanism, and recorded <em>why</em> the rule missed in the verdict.
+  </div>
+
+  <h3><span class="tag held">DESIGNED</span> coherent, not built (held)</h3>
+  <ul>
+    <li>The <em>real</em> inversion pipeline: battery → W → <strong>retrieve</strong> verifier from the framework → fire →
+      Belnap. The cell <em>hand-wired</em> this; the actual W→framework retrieval is the seam the whole architecture rests
+      on and is the one thing the cell faked.</li>
+    <li>Milestone orchestration / two-direction search / firing-order policy (the "tops" = ATT&amp;CK tactics; kill-chain
+      sequences the escalation; parallel where independent, sequential on the surface→verify spine).</li>
+    <li>The <strong>"primitive cannon" = Atlas (catalog/relations) + the verification substrate</strong> (verified bindings +
+      transparency knob + guarantee tiers); the self-populating-then-gated Atlas agent.</li>
+    <li>The <strong>per-rule fidelity attestation</strong> as a STIX object distributed over TAXII (canon-novel); the
+      layer / data-component axis built into objects; deterministic field→clause human-prose rendering.</li>
+    <li>The agent-substrate vision (LLM proposes, canon verifies); TDA/imaging/ML-sequencing <span class="muted">(spitball tier)</span>.</li>
+  </ul>
+
+  <h3><span class="tag inert">INERT BY DESIGN</span> honest-NONE, contributing nothing now</h3>
+  <p>A real fraction of canon's folds are <em>correct but currently silent</em> — they ask questions the available data
+  can't answer. This is honest (they report <code>NONE</code> rather than faking a result), not a defect — but the
+  <em>currently load-bearing</em> core is narrower than the architecture's surface area.</p>
+  <table>
+    <thead><tr><th>Fold</th><th>Why inert now</th><th>What would activate it</th></tr></thead>
+    <tbody>
+      <tr><td class="k">custody</td><td>=<code>NONE</code> always — needs telemetry <em>signed at collection</em> (in-toto/DSSE);
+        no corpus is signed, and almost no live pipeline signs either</td><td>a high-assurance / forensic pipeline that signs at ingest</td></tr>
+      <tr><td class="k">off-hours / behavioral</td><td>structurally untestable — no labeled negatives; needs a per-environment baseline
+        that isn't in the logs</td><td>per-environment baseline + schedule/policy (out-of-band)</td></tr>
+      <tr><td class="k">cross-check value</td><td>operational value untestable on current corpora (legs correlated, or the corpus can't
+        produce disagreement)</td><td>a corpus where independent checks legitimately disagree, with labels</td></tr>
+      <tr><td class="k">MI / coordination</td><td>needs a multi-host campaign corpus; OTRF "compound" datasets are single-host</td><td>a real multi-host lateral-movement corpus</td></tr>
+    </tbody>
+  </table>
+  <div class="note">
+    <strong>A class, not four accidents.</strong> Custody, off-hours, and layer-observability are all
+    <em>out-of-band-dependent</em> folds: honest-<code>NONE</code> by default, informative only when external infra or
+    knowledge is wired in (custody needs signing; off-hours needs a baseline; observability needs the sensor). Claiming
+    any of them as a <em>live</em> differentiator today is overclaiming until that wiring exists.
+  </div>
+
+  <h2>Atlas and the seams, specifically</h2>
+  <ul>
+    <li><strong>Atlas: unchanged — still thin, still paused.</strong> What moved is its <em>justification</em>: the session
+      named its consumer (the firing-order / primitive-selection search) and reframed the cannon as Atlas + substrate. So
+      Atlas went from "parked, no consumer" to "consumer identified, not yet pulled." Progress in why, zero progress in content.</li>
+    <li><strong>Seams / protocols: the <code>contracts/</code> base is built</strong> (CID, carrier, fold protocol, custody,
+      guarantee certificate, verdict schema, SHACL). The session <em>added to the protocol thinking</em> — STIX/TAXII as the
+      cyber-domain narrow-waist borrow (the distribution seam) and the layer/data-component axis — but those are design
+      additions, not built. The narrow-waist philosophy held: STIX/TAXII slotted in as "the cyber borrow," exactly as
+      PROV-O / in-toto / SHACL did.</li>
+  </ul>
+
+  <h2>What is now settled</h2>
+  <ul>
+    <li><strong>Detection sophistication is dead as the value prop.</strong> Confirmed again on OTRF: the attacker was
+      visible by <em>name</em> (<code>winx64_payload.exe</code>); the statistics drowned it under benign system shape. Cheap
+      beats sophisticated, on a third real corpus. The value is firmly <em>substrate + fidelity-checking + honest-NONE</em>,
+      and that is now shown on real data.</li>
+    <li><strong>The one genuine research problem is W→framework observable-vocabulary alignment</strong> — mapping a surfaced
+      anomaly's observables to the framework's data-components/techniques. Everything else is bounded engineering.</li>
+    <li><strong>The currently load-bearing core is narrow:</strong> the justified-verdict substrate + the fidelity-gap
+      demonstration. The rest is honest scaffolding awaiting data, infra, or build time.</li>
+  </ul>
+
+  <div class="note key">
+    <strong>Canon's position in one sentence.</strong> A coherent, mostly-designed architecture with a small but now-real
+    proven core (justified verdicts + demonstrated fidelity-checking on real data), several deliberately-inert folds
+    awaiting external wiring, one open research problem (alignment), and a design-to-build gap that the next phase should
+    close by <em>building</em> rather than designing.
+  </div>
+
+  <h2>The cleanest next move</h2>
+  <p>Not more architecture — wire the <strong>actual W→framework retrieval</strong>: battery surfaces a candidate → retrieve
+  the <em>real</em> local Sigma/CAR rule → fire it → Belnap-aggregate → justified verdict. That is the seam the whole
+  inversion rests on, the one thing the first cell faked, and the local content already exists
+  (<code>semantic-cyber/data/sigma-rules/</code>: 10 lsass rules, 15 tagged T1003.001; CAR analytics on disk in
+  <code>~/dev/csat</code>).</p>
+
+  <p class="stamp" style="margin-top:40px">Sources of truth: <code>~/canon/design/</code>, <code>~/canon/contracts/</code>,
+  <code>packages/detection/experiments/otrf_first_cell.py</code>, and the canon-memory store. This page is a point-in-time
+  readout, not a live document.</p>
+</div>
+</body>
+</html>
