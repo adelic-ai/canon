@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canon — OCSF / JSON vs RDF: the hybrid seam</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --ink:#e6e8ee; --muted:#9aa3b2;
+    --line:#2a2f3a; --accent:#7db4ff; --accent2:#c79bff;
+    --good:#6fcf97; --warn:#f2c94c; --gap:#eb6f6f;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1080px;margin:0 auto;padding:48px 28px 96px}
+  h1{font-size:30px;margin:0 0 6px;letter-spacing:-.01em}
+  .sub{color:var(--muted);margin:0 0 4px;font-size:18px}
+  .stamp{color:var(--muted);font:13px/1.5 var(--mono);margin:0 0 32px}
+  h2{font-size:21px;margin:48px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+  p{margin:10px 0}
+  code{font-family:var(--mono);font-size:.88em;background:#1e222b;padding:1px 5px;border-radius:4px}
+  pre{background:#10131a;border:1px solid var(--line);border-radius:8px;padding:14px 16px;
+    overflow-x:auto;font-family:var(--mono);font-size:13px;line-height:1.55;color:#d4d9e4}
+  .note{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:8px;padding:14px 18px;margin:18px 0}
+  .note.gap{border-left-color:var(--gap)}
+  .note.key{border-left-color:var(--accent2)}
+  .note.good{border-left-color:var(--good)}
+  .muted{color:var(--muted)}
+  ul{margin:10px 0;padding-left:22px}
+  li{margin:7px 0}
+  strong{color:#fff}
+  table{border-collapse:collapse;width:100%;margin:18px 0;font-size:14px;background:var(--panel);
+    border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  th,td{text-align:left;padding:10px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#1c212b;color:var(--muted);font-weight:600;font-size:12px;
+    text-transform:uppercase;letter-spacing:.04em}
+  tr:last-child td{border-bottom:none}
+  td.k{font-weight:600;white-space:nowrap;color:var(--accent)}
+  .good{color:var(--good)} .gap{color:var(--gap)} .warn{color:var(--warn)}
+  .lede{font-size:17px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>OCSF / JSON vs RDF — not either-or, a seam</h1>
+  <p class="sub">JSON at the edge, RDF at the join. Why canonmon uses both.</p>
+  <p class="stamp">canon · design decision · 2026-06-05 · <span class="muted">extends canonmon_multisource_unifier.html</span></p>
+
+  <p class="lede">If OCSF is JSON and JSON is better-tooled, why does canonmon reach for RDF at all? Because OCSF and
+  RDF are not competitors — they solve <em>different</em> problems. OCSF normalizes <strong>fields</strong> ("what is a
+  principal"); RDF supplies <strong>identity and relationships</strong> ("this principal <em>is</em> that one, across five
+  sources"). canonmon needs both, and the honest move is to cross between them at one deliberate seam.</p>
+
+  <h2>Tree vs graph — the actual difference</h2>
+  <p>JSON is a <strong>tree</strong>: each event is a self-contained record, and links between events are foreign keys
+  (IDs) you <em>re-join</em> later. RDF is a <strong>graph</strong>: a node is a global identifier, so the same user across
+  host + cloud + auth logs is automatically the <em>same node</em> — the graph merges by identity. That merge-by-identity
+  is canonmon's entire reason to exist (cross-source correlation = shared nodes). In JSON you write that join yourself.</p>
+
+  <h2>Where each wins — honestly</h2>
+  <table>
+    <thead><tr><th></th><th>JSON / OCSF</th><th>RDF (graph)</th></tr></thead>
+    <tbody>
+      <tr><td class="k">single-source, per-event</td><td class="good">wins — ubiquitous tooling (jq, pandas, every SIEM)</td><td class="muted">overkill</td></tr>
+      <tr><td class="k">field normalization</td><td class="good">OCSF's whole job</td><td>—</td></tr>
+      <tr><td class="k">global identity / merge across sources</td><td class="gap">DIY join</td><td class="good">free — same entity = same node</td></tr>
+      <tr><td class="k">path queries (lateral movement)</td><td class="gap">not a graph</td><td class="good">SPARQL traversal</td></tr>
+      <tr><td class="k">semantic vocabulary bridging</td><td class="gap">convention + code</td><td class="good">SKOS / OWL, machine-processable</td></tr>
+      <tr><td class="k">provenance / lineage</td><td class="gap">hand-rolled DAG</td><td class="good">PROV-O (the standard)</td></tr>
+      <tr><td class="k">join to the cyber frameworks</td><td class="gap">re-implement</td><td class="good">ATT&CK / D3FEND / CASE-UCO are already RDF</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note gap">
+    <strong>The honest catch: RDF's real competitor isn't JSON — it's property graphs (Neo4j/Cypher).</strong> For graph
+    work specifically, Neo4j has arguably better, more popular tooling than RDF, and the whole-system-provenance research
+    field (PIDS) mostly uses property graphs for performance at scale. If canonmon's priority were production detection
+    throughput, property-graph could win. RDF is a <em>fit-to-canon</em> choice, not a universal one.
+  </div>
+
+  <h2>Why RDF still fits <em>canon</em></h2>
+  <ul>
+    <li>canon's priority is <strong>justification + framework-grounding + interop</strong> — not raw throughput. That is
+      exactly RDF's strength (PROV-O, the already-RDF frameworks, standard vocabularies).</li>
+    <li>canon <strong>already speaks RDF</strong> — <code>semantic-core</code> is rdflib/SHACL/OWL, the substrate emits
+      PROV-O, Atlas is Turtle. RDF is the existing substrate, not a new dependency.</li>
+    <li>content-addressing maps cleanly to IRIs / CIDs (the one-hash-three-roles keystone).</li>
+  </ul>
+
+  <h2>The architecture: JSON at the edge, RDF at the join</h2>
+  <pre>raw log  ──(SKOS bridge)──►  OCSF normalized JSON  ──(lift)──►  content-addressed RDF graph
+  │                              │                                 │
+  edge: parse / normalize /      the wire format                   the JOIN: cross-source merge,
+  filter per-event               (tooling shines here)             provenance (PROV-O), framework query
+  └─ JSON tooling ──────────────┘                                 └─ RDF / SPARQL / PROV-O ──────────┘
+                                          cross the boundary ONCE, deliberately, where graph questions start</pre>
+  <p>Don't force every event through RDF — that's where its overhead bites and JSON's tooling is missed. <strong>Lift to
+  the graph at the seam</strong> where the graph questions begin (the join, the lineage, the framework grounding). Same
+  right-tool-per-joint / narrow-waist discipline canon uses everywhere: OCSF is the wire format, RDF is the graph layer,
+  and you cross once.</p>
+
+  <div class="note key">
+    <strong>The one-line answer.</strong> canonmon <em>should</em> use OCSF — as the JSON ingestion / normalization format —
+    and lift to RDF at the graph / provenance / framework seam. Not "JSON or RDF" but "JSON at the edge, RDF at the join."
+    Doing everything in JSON would mean re-solving the join, the provenance, and the framework grounding by hand — and
+    giving up the free join to ATT&CK / D3FEND / CASE-UCO, which is half of canonmon's value.
+  </div>
+
+  <p class="stamp" style="margin-top:40px">Companions: <code>canonmon_multisource_unifier.html</code>,
+  <code>process_provenance_graph.html</code>, <code>validation_fold_family.html</code>. Design readout, not a live document.</p>
+</div>
+</body>
+</html>
