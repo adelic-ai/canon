@@ -133,6 +133,64 @@ negative control                               no shared beacon → MI flags not
   ours by construction. Real-data MI validation stays deferred (no adequate real corpus yet — the leading
   lead is ICS coupling-collapse; see the guarantees ledger).
 
+### LSASS credential-dump — rule-coverage composition and the default-deny control (OTRF, real ATT&CK-labeled)
+
+`experiments/otrf_first_cell.py`, on OTRF/Security-Datasets `LSASS_campaign_03` (single host, 41,954
+events; named technique = metasploit `comsvcs` MiniDump → T1003.001). Detectors over the `EventID=10`
+reads of lsass memory (`GrantedAccess & PROCESS_VM_READ`):
+
+<<<
+detector                       verdict on the comsvcs rundll32 MiniDump
+1)  bottom-up IT/DT battery    MISSES — 1 access event, statistically invisible (ranked #12/26)
+2a) generic Sigma flag-rule    MISSES — proc_access_win_lsass_susp_access_flag path-trusts all of
+                                 system32; rundll32 lives there, so it is allowlisted away
+2b) DEDICATED comsvcs rule     CATCHES — proc_access_win_lsass_dump_comsvcs_dll: rundll32→lsass AND
+                                 CallTrace contains comsvcs.dll (verified: this data's CallTrace has it)
+3)  exact mechanism            CATCHES — VM_READ-to-lsass, no path trust (but no FP control)
+4)  default-deny allowlist     CATCHES — reader ∉ {legit lsass readers}, keyed on IDENTITY not path
+>>>
+
+- **The finding is coverage composition, not a Sigma blind spot** (corrected 2026-06-07; an earlier
+  version of this cell tested only rule 2a, never parsed `CallTrace`, and over-claimed "off-the-shelf
+  Sigma misses it" — wrong). SigmaHQ ships a *dedicated* process-access rule (2b) that catches this exact
+  technique on this exact telemetry. The risk is **which rules a deployment actually runs**: one running
+  only the generic flag-rule has a blind spot the dedicated rule closes. Canon's value is *measuring a
+  deployment's rule set against the mechanism* (3) and surfacing which rules are load-bearing — not
+  "catching what Sigma misses."
+- **Why the IT/DT battery can't take this one.** A single known-mechanism read is a *membership* question
+  (`reader ∉ authorized-set`), not a distributional one — wrong family for an anomaly battery. Entropy
+  doesn't rescue it: it's smooth in the event mass (one rare draw barely moves H), the LOLBin hides in a
+  *characteristically* high-entropy identity (rundll32 legitimately touches everything), and the signal
+  lives in the command line / CallTrace / access mask, not the identity's access distribution. The IT/DT
+  battery is the right family for the *dual* (spray, fleet-relative KL, broad-access campaigns) — not this.
+- **The default-deny fix is the key, not the exclusion.** Excluding legit readers is correct; the generic
+  flag-rule failed by keying exclusion on the **path** ("trust system32"). Default-deny keyed on the
+  **legit-reader identity** catches the LOLBin (rundll32 isn't a legitimate lsass reader) *and* clears
+  Defender/wininit that raw mechanism would false-positive. Default-deny = mechanism + identity-keyed FP
+  control; it dominates both the path-keyed allowlist (right FP control, wrong key) and raw mechanism
+  (right key, no FP control).
+- **This control should be native — the detector is its shadow.** Recorded verbatim, the framing that
+  governs detector 4:
+
+  > Yes — natively this is LSA Protection (RunAsPPL / Protected Process Light) plus Credential Guard (VBS
+  > isolating lsass secrets into VTL1). A default-deny "who may read lsass memory" policy is a preventive
+  > control that belongs at the OS boundary, and Microsoft already ships it. What we're adding to the cell
+  > is the detective/compensating version of the same policy, reconstructed from telemetry. You build it
+  > anyway because:
+  >
+  > - most environments don't enable PPL/CredGuard (compat, drivers);
+  > - they're bypassable (PPLdump, vulnerable-driver BYOVD) — so even when "native" is on, the detection is
+  >   the defense-in-depth backstop;
+  > - you want the forensic audit trail regardless.
+  >
+  > So the framing is: detection is the shadow of an absent or bypassable control. The allowlist detector is
+  > canon recovering, from logs, the policy the kernel should have enforced.
+
+- **Honest scope.** One host, one dataset; the legit-reader set is illustrative (calibrate per-environment);
+  the Sigma rules are hand-transcribed here (a real version executes them via pySigma and diffs the
+  mechanism automatically); deterministic mechanism ⇒ no natural FAR, so the verdict reports
+  `calibration = NONE`.
+
 ## Findings (surfaced by real data, both tested)
 
 1. **The grain is load-bearing, and guarded.** `bucket_fanout` materializes the time-bin partition,
