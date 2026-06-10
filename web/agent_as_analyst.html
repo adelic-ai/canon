@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canon — Does RDF/OWL help an AI act as an analyst?</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --ink:#e6e8ee; --muted:#9aa3b2;
+    --line:#2a2f3a; --accent:#7db4ff; --accent2:#c79bff;
+    --good:#6fcf97; --warn:#f2c94c; --gap:#eb6f6f;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1000px;margin:0 auto;padding:48px 28px 96px}
+  .backlink{font:13px/1.5 var(--mono);margin:0 0 22px}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  h1{font-size:29px;margin:0 0 6px;letter-spacing:-.01em}
+  .sub{color:var(--muted);margin:0 0 4px;font-size:17px}
+  .stamp{color:var(--muted);font:13px/1.5 var(--mono);margin:0 0 30px}
+  h2{font-size:21px;margin:46px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+  h3{font-size:16px;margin:24px 0 6px;color:var(--accent)}
+  p{margin:11px 0}
+  code{font-family:var(--mono);font-size:.88em;background:#1e222b;padding:1px 5px;border-radius:4px}
+  strong{color:#fff}
+  em{color:var(--ink)}
+  .lede{font-size:18px;line-height:1.55}
+  .note{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:8px;padding:14px 18px;margin:20px 0}
+  .note.key{border-left-color:var(--accent2)}
+  .note.gap{border-left-color:var(--gap)}
+  ul,ol{margin:12px 0;padding-left:22px}
+  li{margin:7px 0}
+  .twocol{display:flex;gap:20px;flex-wrap:wrap;margin:14px 0}
+  .twocol>div{flex:1;min-width:300px;background:var(--panel);border:1px solid var(--line);
+    border-radius:8px;padding:14px 18px}
+  .twocol h3{margin-top:4px}
+  .good{color:var(--good)} .gapc{color:var(--gap)}
+  .flow{font:13.5px/1.7 var(--mono);background:var(--panel);border:1px solid var(--line);
+    border-radius:8px;padding:16px 18px;margin:18px 0;white-space:pre-wrap;color:var(--muted)}
+  .flow b{color:var(--ink)}
+  footer{margin-top:60px;color:var(--muted);font-size:13px;border-top:1px solid var(--line);padding-top:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="backlink"><a href="index.html">← Canon index</a></p>
+
+  <h1>Does RDF/OWL help an AI act as an analyst?</h1>
+  <p class="sub">Capable — yes. Necessary — no. And the value sits somewhere other than where the semantic-web tradition claims.</p>
+  <p class="stamp">canon · design conversation · 2026-06-10 · reasoned from first principles, not tied to the current implementation</p>
+
+  <p class="lede">The short answer: a semantic layer helps an LLM analyst, but not by being its
+  knowledge or its reasoning. It helps by being its <strong>accountability</strong> — the external,
+  verifiable memory the fluent model gets checked against. It is the agent's <em>conscience</em>,
+  not its <em>imagination</em>.</p>
+
+  <h2>The cut that matters: the LLM already knows the domain</h2>
+  <p>The naive case is "the ontology grounds the agent in the domain." For an LLM that argument is
+  <strong>weak</strong>. The model is not ignorant of cyber — it is arguably <em>more</em> fluent in
+  the domain ontology, in fuzzy form, than any formal ontology encodes. It knows what credential
+  dumping is, knows <code>lsass</code>, knows <code>comsvcs</code> is a LOLBin, knows the ATT&amp;CK
+  technique names and how they relate. Dumping D3FEND into its context does not make it a better
+  analyst; it mostly already knows what D3FEND says.</p>
+  <p>So if the semantic layer's job were "teach the agent the domain," it would barely matter. That is
+  the version of the idea to discard.</p>
+
+  <h2>Where it matters: turning a <em>fluent</em> analyst into an <em>accountable</em> one</h2>
+  <p>The LLM's weakness is not knowledge — it is <strong>discipline</strong>. It will confidently
+  assert a join that isn't in the data, attribute a technique it never verified, and round "I didn't
+  see it" up to "it's clean." Those are exactly the failures a real analyst is trusted <em>not</em> to
+  make. A verifiable layer helps with precisely those, in four ways:</p>
+  <ol>
+    <li><strong>Verifiable joins / stable handles.</strong> "You claim host A talked to host B — prove
+      it." The agent pivots over entities (user → hosts → processes) deterministically, instead of
+      re-deriving the join by re-reading text each turn and sometimes hallucinating it.</li>
+    <li><strong>Confabulation-catching.</strong> The agent's "this is T1003.001" is a guess; checked
+      against a structured technique→artifact→telemetry model it becomes a claim that either grounds
+      or returns nothing. The ontology is the ground-truth lookup that catches the model where it is
+      fuzzy or fabricating (exact data-component requirements, a specific rule's specific allowlist,
+      the subclass relations it gets subtly wrong).</li>
+    <li><strong>Knowing what it didn't see.</strong> Technique T requires artifact A; do we
+      <em>collect</em> A? If not, the honest verdict is "unobservable," not "absent." A model left
+      alone almost never volunteers its own blind spots; a coverage model computes them.</li>
+    <li><strong>Auditable conclusions.</strong> A fluent paragraph is not a defensible analysis. A
+      conclusion that decomposes into provenance-backed assertions someone can replay is.</li>
+  </ol>
+  <div class="note key">
+    All four are <strong>accountability</strong> properties, not <strong>intelligence</strong>
+    properties. The LLM stays the hypothesis engine — analyst reasoning is abductive and statistical,
+    best-explanation-under-uncertainty, which description logic cannot do. The semantic layer is what
+    the hypotheses are <em>checked and joined against</em>.
+  </div>
+
+  <h2>So does it "not even matter"? Honestly — sometimes it doesn't.</h2>
+  <p>The sharp version: <strong>for a <em>plausible</em> analyst, RDF/OWL is irrelevant.</strong> An
+  LLM with tool access — query the SIEM, grep, run a detection, RAG over docs — produces
+  analyst-shaped output today with zero ontology, and that is what most people building SOC-analyst
+  agents actually do. The formal semantic layer is <em>not necessary</em>, and the market evidence
+  says so.</p>
+  <p>It becomes decisive only at the boundary between <strong class="gapc">plausible</strong> and
+  <strong class="good">accountable</strong> output. Want incident reports that read well? Skip it.
+  Want an agent whose "nothing else was compromised" you'd actually believe — stake a containment
+  decision on? The verifiable layer is the entire difference, and there is no way to get those four
+  properties from prompt-engineering alone, because they are about constraining the model against
+  ground truth, which has to live <em>outside</em> the model.</p>
+
+  <div class="twocol">
+    <div><h3 class="gapc">Plausible analyst</h3>
+      LLM + tools (SIEM query, grep, RAG). Fluent, fast, convincing. No ontology needed.
+      <em>Failure mode:</em> hallucinated joins, unverified attributions, silent blind spots,
+      conclusions you can't audit.</div>
+    <div><h3 class="good">Accountable analyst</h3>
+      LLM proposes; a verifiable layer checks joins, catches confabulation, computes coverage, and
+      records provenance. <em>Cost:</em> you must build and maintain the layer, and the model must be
+      held to it. <em>Payoff:</em> conclusions you'd act on.</div>
+  </div>
+
+  <h2>RDF/OWL specifically — vs the alternatives</h2>
+  <p>Two precisions, because "is RDF/OWL capable" is not the same as "is RDF/OWL the right form."</p>
+  <h3>Federation is RDF's unique justification — not the agent's working memory</h3>
+  <p>The verifiable-join and ground-truth-lookup properties above can be had from a property graph or
+  even a typed relational store; you do not need OWL for them. What RDF uniquely buys is letting
+  <strong>many heterogeneous published vocabularies coexist in one queryable space</strong> — D3FEND,
+  ATT&amp;CK, CASE/UCO, OCSF, your logs, all referencing shared identifiers. That federation problem
+  is genuinely present in cyber (the knowledge is spread across a dozen standards), and it is where RDF
+  earns its place over a property graph. OWL on top adds <em>mechanical closure / consistency</em>
+  (expand to all subtechniques; check no telemetry-required artifact is missing) — useful for
+  completeness the model does incompletely, but a narrow add, computed once, not a per-event engine.</p>
+  <h3>The agent does not think in triples</h3>
+  <p>LLMs are bad at consuming large RDF graphs and worse at writing correct SPARQL over rich
+  ontologies. So the semantic layer sits <strong>behind a tool boundary</strong>: the agent expresses
+  intent ("what could this pivot to," "is this join real," "what haven't I checked"), a tool
+  translates that into graph queries, and the agent gets back digestible, verifiable answers. The
+  ontology powers the agent's <em>tools</em>; it does not enlighten the agent by being in its context.
+  Anyone who thinks "give the agent the ontology" is the move has it backwards.</p>
+
+  <h2>The architecture this implies: propose-then-verify</h2>
+  <p>The agent is not the analyst <em>or</em> the substrate. It is the <strong>proposer in a
+  propose-then-verify loop</strong>, where the semantic layer is the verifier and the loop is what
+  produces accountable output. An untrusted fluent hypothesizer, plus a trusted narrow checker — a
+  different thing to build than either "smarter LLM" or "better knowledge graph."</p>
+  <div class="flow"><b>1. surface</b>   anomaly / alert / a question lands
+<b>2. propose</b>   LLM forms a hypothesis in natural language ("credential dumping on HOST-7")
+<b>3. ground</b>    verifier demands the join: which artifact? which event? show it
+              → answers deterministically, or returns <b>NONE</b> (not FALSE)
+<b>4. assert</b>    the grounded claim becomes a provenance-backed, replayable assertion
+<b>5. coverage</b>  "what would confirm/refute this that you haven't looked at?"
+              → technique→data-component query; names the blind spots
+<b>6. pivot</b>     the agent traverses stable handles to the next step
+<b>7. verdict</b>   a conclusion that carries its receipts — auditable, honestly scoped</div>
+  <div class="note">
+    The open design questions, for next time: what exactly is the agent <em>allowed</em> to propose;
+    what is the layer <em>forced</em> to return <code>NONE</code> on rather than guess; and where the
+    human sits in the loop (the escalation target for the <code>BOTH</code> / genuinely-novel cases).
+  </div>
+
+  <h2>Bottom line</h2>
+  <p>RDF/OWL is capable of helping an AI agent act as an analyst, but reframe <em>what</em> it helps
+  with: not the agent's knowledge (the LLM has that), not its reasoning (abductive and statistical —
+  the LLM's job), but its <strong>accountability</strong> — verifiable joins, confabulation-catching,
+  blind-spot awareness, auditable conclusions. The semantic perspective matters precisely to the
+  degree your bar is <em>defensible</em> rather than <em>plausible</em> analysis; below that bar it
+  does not matter at all. And of the semantic options, RDF specifically is justified by the
+  multi-vocabulary <em>federation</em> problem, with OWL as a thin mechanical-closure add — both living
+  behind a tool interface the agent calls, not in the agent's head.</p>
+
+  <footer>Canon · web/agent_as_analyst.html · reasoned 2026-06-10, deliberately not tied to the current implementation. Related: <a href="witness_and_check.html">Witness &amp; check</a> (where the proposer belongs), <a href="justified_verdict_substrate.html">the Justified-Verdict Substrate</a> (what "carries its receipts" means).</footer>
+
+</div>
+</body>
+</html>
