@@ -43,6 +43,14 @@ seams are free and the muscle is built behind them.
   every detector emits, tying the five folds (decision/confidence/W-grounding/guarantee/
   custody) to one content-addressed provenance node. The standard is the *schema*, not a
   fixed list of detectors.
+- `fidelity_attestation.schema.json` — the justified-verdict substrate applied to **a rule
+  itself** instead of an event: a content-addressed, reproducible claim about what a
+  specific detection rule *covers* and *structurally cannot*, grounded on a named corpus.
+  The canon-novel artifact of the detection inversion (Sigma/CAR carry only free-text
+  false-positive notes; this is machine-checkable). A required `scope` field forces the
+  claim to stay *"rule R, on corpus C, w.r.t. technique T"* — never universal — and a
+  non-trivial verdict must carry a structured `cause` + reproducible `evidence`, so it
+  cannot degrade to opinion-with-a-hash.
 
 ## Status discipline
 

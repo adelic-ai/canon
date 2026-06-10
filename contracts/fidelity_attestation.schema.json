@@ -1,0 +1,223 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://canon/contracts/fidelity_attestation.schema.json",
+  "title": "FidelityAttestation",
+  "description": "DRAFT 2026-06-10. The justified-verdict substrate (detection_verdict.schema.json) applied to A RULE ITSELF instead of an event. A FidelityAttestation is a content-addressed, reproducible, queryable claim about what a specific detection rule COVERS and what it structurally CANNOT, grounded on a named corpus. The canon-novel artifact of the detection inversion: Sigma/CAR carry only free-text 'falsepositives:' + human tags; this is a MACHINE-CHECKABLE, provenance-backed fidelity record that travels with the rule. THE LOAD-BEARING DISCIPLINE (made structural by the 2026-06-07 LSASS correction): the claim is ALWAYS scoped 'rule R, on corpus C, w.r.t. technique T' and NEVER universal ('Sigma misses T'). Generated without corpus-grounding + reproducible evidence + honest scope it is just opinion-with-a-hash; the schema forces all three. STIX/TAXII is the distribution binding (a custom SDO via extension-definition with an SRO to the attack-pattern), NOT the source of truth — this contract is. See ../design/self_validation_architecture.md, detection_verdict.schema.json, carrier.md, cid.md, guarantee_certificate.schema.json.",
+  "type": "object",
+  "$defs": {
+    "belnap": {
+      "type": "string",
+      "enum": [
+        "none",
+        "true",
+        "false",
+        "both"
+      ],
+      "description": "A carrier.md Belnap Four value as a string. none=(0,0) no info; true=(1,0); false=(0,1); both=(1,1) contradiction. NOT a bare bool — 'we did not evaluate this rule on this corpus' is 'none', never 'false' (absence of evidence != evidence of absence)."
+    },
+    "cid": {
+      "type": "string",
+      "minLength": 1,
+      "description": "A content address per cid.md (a node's recipe CID = its prov:Entity id). Justification is reachable by walking the provenance DAG from this id."
+    }
+  },
+  "properties": {
+    "rule": {
+      "type": "object",
+      "description": "Identity of the SPECIFIC rule evaluated — pinned to exact bytes. A rule is a moving target (SigmaHQ is a git repo); binding the attestation to a content address makes it reproducible and prevents 'this rule' from silently meaning a later, fixed version.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "rule identifier — Sigma rule id / CAR analytic id / title."
+        },
+        "source": {
+          "type": "string",
+          "description": "provenance of the rule text: 'SigmaHQ', 'MITRE CAR', a local path. Source-trust feeds the evaluation tier (a vendored snapshot vs upstream HEAD)."
+        },
+        "version_cid": {
+          "$ref": "#/$defs/cid",
+          "description": "CID of the EXACT rule text evaluated (one-hash-three-roles). The attestation is about this version and no other; a fixed rule gets a new CID and a new attestation."
+        }
+      },
+      "required": [
+        "id",
+        "version_cid"
+      ]
+    },
+    "corpus": {
+      "type": "object",
+      "description": "Identity of the dataset R was evaluated on — THE honest-scope binding. Every coverage claim is conditional on this corpus; the schema makes 'on corpus C' un-droppable.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "dataset name — e.g. 'OTRF/Security-Datasets LSASS_campaign_03'."
+        },
+        "cid": {
+          "$ref": "#/$defs/cid",
+          "description": "content address of the corpus (or the specific dataset file evaluated)."
+        },
+        "event_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "OPTIONAL scale context. Coverage measured on a tiny corpus is weak evidence (the n~=11 finite-sample floor); carry the scale so a reader weights the claim honestly."
+        }
+      },
+      "required": [
+        "id",
+        "cid"
+      ]
+    },
+    "technique": {
+      "type": "string",
+      "minLength": 1,
+      "description": "ATT&CK id (e.g. T1003.001) — the hypothesis the rule is measured against, itself a validatable label, never the bedrock."
+    },
+    "coverage": {
+      "$ref": "#/$defs/belnap",
+      "description": "Did R catch T on C? true=R fired on the ground-truth instances of T in C (caught). false=R MISSED ground-truth instances AND the ground truth is known (T occurred, R was silent). none=not evaluated, or ground truth unknown — a 'none' is NOT a faked 'false' ('we didn't establish ground truth' != 'R missed'). both=contradictory (fired on some instances, missed others; or two evaluations disagree — a soundness alarm)."
+    },
+    "cause": {
+      "type": "object",
+      "description": "WHY it missed — structured, not free text. REQUIRED when coverage in {false, both}. Distinguishes a real rule flaw (allowlist/coarse-proxy/logic-gap) from an OBSERVABILITY limit (missing-telemetry), which is honestly NONE-shaped, not a fault of the rule.",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "allowlist",
+            "coarse-proxy",
+            "logic-gap",
+            "missing-telemetry",
+            "other"
+          ],
+          "description": "allowlist=an FP-reduction filter waved the attack through (e.g. a path allowlist a LOLBin runs as). coarse-proxy=the rule's predicate is a loose proxy for the true mechanism (e.g. GrantedAccess|endswith '10' vs bitwise &0x10). logic-gap=the condition genuinely does not cover the procedure. missing-telemetry=the required data-component is absent → the technique is UNOBSERVABLE in C → this is NONE-shaped (not a rule flaw); a 'missing-telemetry' cause should pair with coverage='none', not 'false'. other=specify in detail."
+        },
+        "detail": {
+          "type": "string",
+          "minLength": 1,
+          "description": "the specifics — e.g. 'filter_generic allowlists C:\\Windows\\system32\\; comsvcs MiniDump abuses rundll32, a trusted signed system32 LOLBin, so the attack runs AS the allowlisted path'."
+        },
+        "locus": {
+          "type": "string",
+          "description": "OPTIONAL — the exact rule element responsible: 'filter_generic', 'GrantedAccess|endswith'. Localizes the flaw for an upstream fix/PR."
+        }
+      },
+      "required": [
+        "kind",
+        "detail"
+      ]
+    },
+    "evidence": {
+      "type": "object",
+      "description": "The reproducible artifact that DEMONSTRATES the coverage verdict — not opinion. REQUIRED when coverage in {false, both}. Without a CID-addressed, re-runnable evidence node this is opinion-with-a-hash; the schema forbids that for a non-trivial verdict.",
+      "properties": {
+        "method": {
+          "type": "string",
+          "minLength": 1,
+          "description": "how the verdict was established — e.g. 'allowlist-off exact-mechanism (GrantedAccess & 0x10) re-evaluation flagged the reader R suppressed'."
+        },
+        "flagged": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "what the corrected check caught that R suppressed — e.g. ['rundll32.exe comsvcs MiniDump on lsass, 1 event']. The concrete miss, carried."
+        },
+        "cid": {
+          "$ref": "#/$defs/cid",
+          "description": "content address of the evidence run (the experiment's output node) — reproducible: same corpus CID + same method → same evidence CID."
+        }
+      },
+      "required": [
+        "method",
+        "cid"
+      ]
+    },
+    "scope": {
+      "type": "object",
+      "description": "The honest-scoping GUARD — the explicit boundary that prevents over-generalization. Made a REQUIRED, structural field by the 2026-06-07 LSASS correction (the cell over-claimed 'off-the-shelf Sigma misses comsvcs'; a dedicated SigmaHQ rule catches it via CallTrace — the cell had tested only one generic rule and never parsed CallTrace). The attestation is a RULE-COVERAGE measurement, not a 'the framework is blind' claim.",
+      "properties": {
+        "claim": {
+          "type": "string",
+          "minLength": 1,
+          "description": "the precisely-scoped claim, always of the form 'rule R (version_cid), on corpus C (cid), w.r.t. technique T'. Never universal."
+        },
+        "not_claimed": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "explicit NEGATIVE scope — what this attestation does NOT assert. E.g. 'does NOT claim SigmaHQ misses T1003.001 — proc_creation_win_lolbin_comsvcs (CallTrace) catches comsvcs; only the generic process_access rule tested here was evaluated.'"
+        },
+        "rules_not_evaluated": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "OPTIONAL — named related rules that EXIST but were not tested. The coverage-measurement honesty: we measured ONE rule's coverage, not the rule corpus's. A reader knows the denominator was not exhausted."
+        }
+      },
+      "required": [
+        "claim",
+        "not_claimed"
+      ]
+    },
+    "evaluation": {
+      "type": "object",
+      "description": "The tier THIS ATTESTATION earned — the guarantee fold applied to the attestation's own epistemic standing (parallel to guarantee_certificate.schema.json, which tiers a detection's numeric rigor; this tiers an attestation's reproducibility). The floor the design note warns against ('opinion-with-a-hash') is the 'asserted' tier.",
+      "properties": {
+        "tier": {
+          "type": "string",
+          "enum": [
+            "reproducible",
+            "asserted",
+            "absent"
+          ],
+          "description": "reproducible=corpus-grounded AND the evidence run reproduces from the recorded CIDs (the earned tier). asserted=claimed but not mechanically reproduced (opinion-with-a-hash — honest, but the floor). absent=no evaluation ran (recorded absence, not a silent blank)."
+        },
+        "custody": {
+          "$ref": "#/$defs/belnap",
+          "description": "the corpus's custody at ingest (detection_verdict custody semantics): true=signed+digest-matched, none=unsigned/silent. Test corpora (OTRF/flaws) are custody=none and the attestation says so rather than faking a chain."
+        }
+      },
+      "required": [
+        "tier"
+      ]
+    },
+    "provenance": {
+      "$ref": "#/$defs/cid",
+      "description": "CID of this attestation's own provenance DAG node — full justification on demand (rule bytes, corpus, evidence run, all reachable). Justification IS the result, not a side-log."
+    }
+  },
+  "required": [
+    "rule",
+    "corpus",
+    "technique",
+    "coverage",
+    "scope",
+    "evaluation",
+    "provenance"
+  ],
+  "allOf": [
+    {
+      "$comment": "A non-trivial coverage verdict (false/both) must carry both a structured cause and reproducible evidence — the discipline that keeps an attestation from being opinion-with-a-hash.",
+      "if": {
+        "properties": {
+          "coverage": {
+            "enum": [
+              "false",
+              "both"
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "cause",
+          "evidence"
+        ]
+      }
+    }
+  ]
+}
