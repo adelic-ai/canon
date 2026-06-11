@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canon — Ground ⇄ Stitch ⇄ Test: the abduction loop</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --ink:#e6e8ee; --muted:#9aa3b2;
+    --line:#2a2f3a; --accent:#7db4ff; --accent2:#c79bff;
+    --good:#6fcf97; --warn:#f2c94c; --gap:#eb6f6f;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1000px;margin:0 auto;padding:48px 28px 96px}
+  .backlink{font:13px/1.5 var(--mono);margin:0 0 22px}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  h1{font-size:29px;margin:0 0 6px;letter-spacing:-.01em}
+  .sub{color:var(--muted);margin:0 0 4px;font-size:17px}
+  .stamp{color:var(--muted);font:13px/1.5 var(--mono);margin:0 0 30px}
+  h2{font-size:21px;margin:46px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+  h3{font-size:16px;margin:24px 0 6px;color:var(--accent)}
+  p{margin:11px 0}
+  code{font-family:var(--mono);font-size:.88em;background:#1e222b;padding:1px 5px;border-radius:4px}
+  strong{color:#fff}
+  .lede{font-size:18px;line-height:1.55}
+  .note{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:8px;padding:14px 18px;margin:20px 0}
+  .note.key{border-left-color:var(--accent2)}
+  .note.gap{border-left-color:var(--gap)}
+  .note.fwd{border-left-color:var(--warn)}
+  ul,ol{margin:12px 0;padding-left:22px}
+  li{margin:7px 0}
+  .flow{font:13.5px/1.7 var(--mono);background:var(--panel);border:1px solid var(--line);
+    border-radius:8px;padding:18px;margin:18px 0;white-space:pre-wrap;color:var(--muted);overflow-x:auto}
+  .flow b{color:var(--ink)} .flow .g{color:var(--good)} .flow .v{color:var(--accent)}
+  .flow .a{color:var(--accent2)} .flow .n{color:var(--warn)}
+  .twocol{display:flex;gap:20px;flex-wrap:wrap;margin:14px 0}
+  .twocol>div{flex:1;min-width:270px;background:var(--panel);border:1px solid var(--line);
+    border-radius:8px;padding:14px 18px}
+  .role{font:12px/1.4 var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  footer{margin-top:60px;color:var(--muted);font-size:13px;border-top:1px solid var(--line);padding-top:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="backlink"><a href="index.html">← Canon index</a></p>
+
+  <h1>Ground ⇄ Stitch ⇄ Test: the abduction loop</h1>
+  <p class="sub">How a Splunk Notable becomes a grounded narrative — and where the LLM is irreducible vs where it must not go.</p>
+  <p class="stamp">canon · design conversation · 2026-06-10 · the investigation-DAG loop, re-derived from proposer/verifier · designed, not built</p>
+
+  <p class="lede">Start from "LLM proposes, verifier grades" and push on it, and it does not collapse
+  into "the verifier does everything." It collapses into a <strong>loop</strong>, and the hinge is one
+  distinction: <strong>verification</strong> (deductive, a query) vs <strong>abduction</strong>
+  (generative, inference to the best explanation). The verifier owns the first completely. Only the
+  second is the LLM's, and it must be kept small.</p>
+
+  <h2>Two acts, and only one of them is the LLM's</h2>
+  <div class="twocol">
+    <div><p class="role">verification — deductive</p>
+      Does a <em>stated</em> claim hold? "Did rundll32 access lsass?" "Is this really T1003.001?" This
+      is a query against data + ontology + primitives, returning a Belnap value. <strong>No LLM
+      needed</strong> — including to grade the SIEM's own MITRE tag, which is just another stated
+      claim. The verifier can do the whole of this.</div>
+    <div><p class="role">abduction — generative</p>
+      Which of 10,000 grounded-true facts <em>cohere into a story</em>, and what does that story imply?
+      There is no <em>query</em> for "the best explanation" — the space of explanations is open.
+      <strong>This is the LLM's irreducible job</strong>, and the one thing the verifier genuinely
+      cannot do.</div>
+  </div>
+
+  <h2>Why you can't just "find all the valid proposals" — two walls</h2>
+  <p>The tempting inversion is: enumerate every grounded triple first, then let the LLM stitch a
+  narrative out of them. It breaks on two walls:</p>
+  <ol>
+    <li><strong>The interpretive space is unbounded.</strong> The atomic <em>facts</em> in a log are
+      finite. The valid <em>proposals</em> — typings, attributions, technique-relevances — are every
+      entity × every class it might be × every technique that might apply. That is combinatorial; you
+      cannot materialize it. Enumeration needs a <strong>frontier</strong>, and a frontier needs a
+      hypothesis to scope it.</li>
+    <li><strong>TRUE ≠ relevant. Facts aren't a story.</strong> A host has thousands of grounded-true
+      facts; almost all are benign. The verifier confirms each, but confirmation isn't relevance. The
+      narrative <em>is</em> the selection of which facts cohere — and that selection is a hypothesis.</li>
+  </ol>
+  <div class="note key">
+    So you don't remove the hypothesis step — you <strong>move</strong> it, from "propose facts" (where
+    the LLM hallucinates) to "select-and-connect grounded facts" (where it's safe, because it's only
+    ever handed truths). That move is the whole win.
+  </div>
+
+  <h2>The loop</h2>
+  <p>Neither proposer-first nor enumerate-first. The recursion is the engine: the hypothesis scopes the
+  grounding, the grounding feeds the stitch, the stitch's gaps drive the next grounding.</p>
+  <div class="flow"><span class="g">GROUND</span>  (in the current frontier)
+        verifier surfaces the grounded atoms in scope            <span class="v">[deductive · no LLM]</span>
+        e.g. proc:rundll32@HOST-7 <b>rdf:type</b> d3f:Process = TRUE
+   │
+   ▼
+<span class="a">STITCH</span>  LLM assembles a candidate narrative from those atoms,    <span class="a">[abductive · LLM]</span>
+        and <b>names what is missing</b>
+        "comsvcs LOLBin dumped lsass on HOST-7, creds reused outward"
+   │
+   ▼
+<span class="v">TEST</span>    the narrative IMPLIES new atomic claims not yet grounded
+        "if cred-dump → lateral movement, expect auth HOST-7 → HOST-9"
+        → those become the next grounding queries
+   │
+   ▼
+<span class="g">EXPAND</span>  ground the implied claims → loop
+        ── until ──
+        ✓ fully grounded            (the story holds)
+        <span class="n">~ remaining gaps are honest NONE</span>  (out of telemetry — unobservable, not absent)
+        $ cost budget spent          (stop, report what's open)
+        ! a BOTH appears             (data contradicts the story → escalate)</div>
+  <p>The narrative's <strong>gaps drive the enumeration</strong> — which is why you never ground
+  everything up front: you only pay to verify what some candidate story actually needs.</p>
+
+  <h2>Division of labor — keep the LLM surface minimal</h2>
+  <p>Three actors, and the LLM is the smallest:</p>
+  <ul>
+    <li><strong class="role" style="color:var(--accent)">verifier</strong> — verification. Query over
+      data / ontology / primitives → Belnap. The whole of "does this hold."</li>
+    <li><strong class="role" style="color:var(--accent)">framework graph</strong> — known progression.
+      The kill-chain / Attack-Flow graph <em>encodes</em> the transitions (cred-access → expect
+      lateral-movement). So the <code>TEST</code> step's "what should follow" is mostly a
+      <strong>graph traversal, not the LLM</strong>.</li>
+    <li><strong class="role" style="color:var(--accent2)">LLM</strong> — abduction only: which grounded
+      atoms cohere into what story, the <em>novel</em> connective leaps the graph doesn't encode, and
+      rendering the result in language. Nothing else rides on the fluent-but-untrusted component.</li>
+  </ul>
+  <div class="note">
+    The narrative is the loop's <strong>output</strong>, not an input to be graded. It is grounded into
+    existence atom by atom, then tested as a whole — so it never gets further than its weakest
+    sub-claim. A confident story with a <code>NONE</code> in its spine stays a story with a hole, named.
+  </div>
+
+  <h2>Two failure modes to design against</h2>
+  <div class="twocol">
+    <div><p class="role" style="color:var(--gap)">propose-facts-then-check</p>
+      Letting the LLM assert the atomic facts and checking after. It hallucinates atoms and the verifier
+      spends its time refuting. <em>Fix:</em> hand the LLM only grounded atoms — it composes, it does not
+      assert.</div>
+    <div><p class="role" style="color:var(--gap)">ground-everything-then-stitch</p>
+      Verifying the whole log before stitching. Burns verification on thousands of irrelevant truths.
+      <em>Fix:</em> let the hypothesis scope the grounding — enumerate lazily, guided by the narrative's
+      gaps.</div>
+  </div>
+
+  <h2>This is the investigation-DAG, from the other side</h2>
+  <p>The ground ⇄ stitch ⇄ test loop is the same structure canon's design notes reach by a different
+  road: the dynamic <strong>investigation DAG</strong> (nodes = whole findings, edges = "finding F
+  triggered check M"), the cost-aware <strong>firing-order search</strong>, forward-progression +
+  backward-walk, the reachable-<code>NONE</code> frontier (blast radius). Two derivations, one shape —
+  which is the encouraging part: it means the architecture has one engine, not several. Designed in the
+  notes; not built in the code.</p>
+
+  <div class="note fwd">
+    <strong>Open directions (forward — not yet designed).</strong> The loop is the cell; the rest is
+    fan-out and priority over the same cell.
+    <ul style="margin:8px 0 0">
+      <li><strong>Entry points.</strong> Canon attaches anywhere there is a claim to verify or a surface
+        to ground against — a SIEM Notable, raw logs, a detection-rule corpus (grade the rules), an
+        asset/environment graph, a TTP feed. Many places to "enter"; the loop is the same.</li>
+      <li><strong>Dynamic attention.</strong> What to check first, and what's worth the cost, is a
+        priority = risk × information ÷ cost, conditioned on the environment. Hand-coded cost-ordered
+        greedy is the strong baseline; a <em>learned</em> attention earns its place only where
+        non-greedy lookahead exists (expensive-A unlocks cheap-decisive-B).</li>
+      <li><strong>Many agents, one graph.</strong> Independent devices/nodes investigate in parallel —
+        the loop fanned out over the reachable frontier, per budget/intelligence. Parallel where
+        independent, sequential only on the surface→verify→escalate spine. The natural scale-out — and
+        the easiest place to over-engineer before the single cell is real.</li>
+    </ul>
+  </div>
+
+  <footer>Canon · web/abduction_loop.html · 2026-06-10. Related:
+    <a href="agent_as_analyst.html">Does RDF/OWL help an AI act as an analyst?</a> ·
+    <a href="witness_and_check.html">Witness &amp; check</a> ·
+    <a href="justified_verdict_substrate.html">the Justified-Verdict Substrate</a></footer>
+
+</div>
+</body>
+</html>
