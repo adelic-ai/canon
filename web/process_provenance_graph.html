@@ -68,6 +68,36 @@
     </tbody>
   </table>
 
+  <h2>Each eventID is a typed motif; the graph is interlocking motifs</h2>
+  <p>The mapping above is one eventID. Generalize it: <strong>an eventID type defines the <em>shape</em> of a
+  neighborhood — a graph motif</strong> (which node-roles and edge-types are present), and each <strong>record
+  is a concrete subgraph</strong> that instantiates it. <span class="muted">(added 2026-06-12)</span></p>
+  <pre>EID1  process create   {process} ─wasInformedBy→ {parent}  ├─wasAssociatedWith→ {user}  └─used→ {image binary}
+EID3  network          {process} ─→ {src endpoint} ─→ {dst endpoint}
+EID10 process access   {source process} ─accesses→ {target process}   (+ GrantedAccess mask)
+EID11 file create      {process} ─→ {file}</pre>
+  <p>These per-event subgraphs <strong>do not stay separate — they stitch into the global graph at shared,
+  content-addressed nodes.</strong> A parent in one EID1 is the <em>same node</em> as the subject of an earlier
+  EID1; a process is shared across its EID1 / EID3 / EID10 / EID11 motifs (joined by <code>ProcessGuid</code> /
+  CID); a binary hash is shared wherever it runs. So the provenance graph isn't authored top-down — it is
+  <strong>assembled bottom-up, one typed motif at a time</strong>, the motifs interlocking at shared identities.
+  An entity accumulates a <em>richer</em> neighborhood from every eventID that touches it — and that accumulated
+  neighborhood <em>is</em> the "context" a detection validates.</p>
+
+  <div class="note key">
+    <strong>A multi-eventID detection is a subgraph pattern spanning motifs.</strong> The lsass case:
+    <pre>EID1  motif :  rundll32 ─used→ comsvcs.dll cmdline      (the spawn)
+EID10 motif :  rundll32 ─accesses(VM_READ)→ lsass       (the read)
+                    └────────── joined at the shared rundll32 node (ProcessGuid / CID) ──────────┘
+   = ONE pattern across TWO motifs  =  the detection</pre>
+    So detection scales as a hierarchy of neighborhood size — <strong>field → motif (1 EID) → multi-motif
+    (multi-EID) → multi-entity (campaign, multi-host)</strong> — and a detection is a pattern-match at the right
+    scale. Bigger pattern = richer neighborhood, with two consequences: it is <strong>more
+    completeness-sensitive</strong> (every constituent EID must be present — missing EID10 ⇒ the pattern can't
+    close ⇒ <code>NONE</code>, not clean), and it depends on <strong>cross-EID entity resolution</strong> (the
+    <code>ProcessGuid</code> / CID join is what assembles the bigger neighborhood from the separate motifs).
+  </div>
+
   <h2>Run on real data — OTRF LSASS_campaign_03</h2>
   <pre>process executions (Activities):        127
 distinct binaries by HASH (Entities):    28   &lt;- 127 runs collapse to 28 content-addressed nodes (free dedup, Merkle)
