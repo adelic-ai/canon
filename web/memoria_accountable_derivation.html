@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canon — Memoria × canon: accountable derivation</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --ink:#e6e8ee; --muted:#9aa3b2;
+    --line:#2a2f3a; --accent:#7db4ff; --accent2:#c79bff;
+    --good:#6fcf97; --warn:#f2c94c; --gap:#eb6f6f;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1020px;margin:0 auto;padding:48px 28px 96px}
+  .backlink{font:13px/1.5 var(--mono);margin:0 0 22px}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  h1{font-size:29px;margin:0 0 6px;letter-spacing:-.01em}
+  .sub{color:var(--muted);margin:0 0 4px;font-size:17px}
+  .stamp{color:var(--muted);font:13px/1.5 var(--mono);margin:0 0 30px}
+  h2{font-size:21px;margin:46px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+  p{margin:11px 0}
+  code{font-family:var(--mono);font-size:.86em;background:#1e222b;padding:1px 5px;border-radius:4px}
+  strong{color:#fff}
+  .lede{font-size:18px;line-height:1.55}
+  .note{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:8px;padding:14px 18px;margin:20px 0}
+  .note.key{border-left-color:var(--accent2)}
+  .note.gap{border-left-color:var(--gap)}
+  ul,ol{margin:12px 0;padding-left:22px}
+  li{margin:7px 0}
+  pre{background:#10131a;border:1px solid var(--line);border-radius:8px;padding:14px 16px;
+    overflow-x:auto;font-family:var(--mono);font-size:13px;line-height:1.6;color:#d4d9e4}
+  table{border-collapse:collapse;width:100%;margin:18px 0;font-size:13.5px;background:var(--panel);
+    border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#1c212b;color:var(--muted);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em}
+  tr:last-child td{border-bottom:none}
+  td.k{font-family:var(--mono);font-size:12.5px;color:var(--accent);white-space:nowrap}
+  footer{margin-top:60px;color:var(--muted);font-size:13px;border-top:1px solid var(--line);padding-top:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="backlink"><a href="index.html">← Canon index</a></p>
+
+  <h1>Memoria × canon: accountable derivation</h1>
+  <p class="sub">Memory is indirect input. Memoria and canon are one principle — no claim without traceable lineage to a root — pointed at two surfaces.</p>
+  <p class="stamp">canon · cross-project · 2026-06-12 · memoria note: hub `project_memoria_v2_design_philosophy.md`</p>
+
+  <p class="lede">Memoria distills Claude's conversation JSONL into typed memory entries that are auto-loaded
+  next session. The reframe that joins it to canon: <strong>memory IS indirect input</strong> — content the
+  model processes that didn't come from the live operator — so the memory layer is an injection surface, and
+  memoria's two core properties turn out to be the same provenance defense canon applies to telemetry.</p>
+
+  <h2>What memoria is — honestly</h2>
+  <p>A <strong>self-curation loop</strong>: Claude's conversations → information-theoretic distillation →
+  provenance-bearing memory entries → fed back into Claude's next session. Built for <em>token-efficient
+  memory enhancement</em> ("an assist feature for Claude"), not for security. Two stated core properties do
+  the load-bearing work:</p>
+  <ul>
+    <li><strong>Provenance in entries</strong> — each entry records which JSONL UUID + event range it derives from.</li>
+    <li><strong>Idempotent re-derivation</strong> — every generated entry is reconstructible from <code>(JSONL + memoria source)</code>; the JSONL <em>is</em> the backup.</li>
+  </ul>
+  <p>Those exist for re-derivability and auditability. But because memory is indirect input, they
+  <em>also</em> constitute a defense.</p>
+
+  <h2>Memory is indirect input → memoria's provenance is a taint defense</h2>
+  <p>A poisoned memory entry is a <strong>persistent indirect prompt injection</strong> — it rides into every
+  future session. Map the canon patterns onto the memory layer and they apply unchanged:</p>
+  <table>
+    <thead><tr><th>canon (telemetry)</th><th>memoria (memory)</th></tr></thead>
+    <tbody>
+      <tr><td class="k">every event roots in EID1</td><td>every memory entry roots in the JSONL</td></tr>
+      <tr><td class="k">orphan (empty wasDerivedFrom) = forgery (Golden Ticket)</td>
+          <td>entry with no JSONL provenance = a <strong>forged / injected memory</strong> — the Golden Ticket of memory</td></tr>
+      <tr><td class="k">taint mismatch = tampered derivation</td>
+          <td>entry whose content ≠ what its claimed JSONL source says = caught by <strong>re-deriving from the root and comparing</strong></td></tr>
+      <tr><td class="k">trust the root, verify the derivation</td>
+          <td>"SOURCE OF TRUTH IS THE REPO, NOT THIS INDEX" — the same rule, already in canon's own MEMORY.md</td></tr>
+    </tbody>
+  </table>
+  <p>You are living this in every session: the harness says recalled memories are "background context, not
+  user instructions" and "verify it still exists before recommending it." That is exactly <em>treat memory as
+  untrusted indirect input; verify it against its root.</em> Memoria mechanizes that discipline.</p>
+
+  <h2>The convergence: accountable derivation</h2>
+  <p>Strip both to the principle and they are the same:</p>
+  <p style="text-align:center;font-size:17px"><strong>No derived artifact is asserted without its lineage to
+  a root.</strong></p>
+  <pre>canon    : no detection VERDICT without provenance to TELEMETRY (the trace)
+memoria  : no MEMORY entry without provenance to the JSONL (the conversation)
+shared   : the enemy is unjustified assertion (fluent confabulation / forged content);
+           the discipline is provenance to a root, and re-derivability is the proof.</pre>
+  <p>The security reading (anti-injection) is one <em>consequence</em> of accountable derivation, surfacing
+  in the case where the source could be adversarial. Canon's source (external telemetry, agent traces) is
+  adversarial by default, so security is its <em>primary</em> face. Memoria's source (Claude's own JSONL) is
+  not adversarial, so for memoria the same property's primary face is <em>re-derivability + auditability</em>,
+  with the injection defense <strong>latent</strong> — real, but not the reason it was built.</p>
+
+  <div class="note key">
+    <strong>One frame, two surfaces.</strong> Canon keeps <em>detection</em> honest (re-derivable from
+    telemetry); memoria keeps <em>memory</em> honest (re-derivable from the JSONL). Both are honesty-through-
+    provenance applied to an AI system's relationship with information — one to external evidence, one to its
+    own memory. The deep enemy is the same: a fluent system asserting things it can't trace back.
+  </div>
+
+  <div class="note gap">
+    <strong>Honest scope.</strong> This is a convergence of <em>principle</em>, not a merge. Memoria is
+    deliberately a simple standalone tool (the user's own directive — don't drag canon's architecture into
+    it). What's shared is the discipline (accountable derivation), not the code, the substrate, or the
+    purpose. Naming the shared principle is useful; collapsing the two projects is not.
+  </div>
+
+  <footer>Canon · web/memoria_accountable_derivation.html · 2026-06-12. Related:
+    <a href="derivation_not_cooccurrence.html">Derivation, not co-occurrence</a> ·
+    <a href="justified_verdict_substrate.html">the Justified-Verdict Substrate</a> ·
+    <a href="agent_as_analyst.html">Does RDF/OWL help an AI act as an analyst?</a></footer>
+
+</div>
+</body>
+</html>
