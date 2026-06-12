@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canon — The completeness channel: missing fields as a third axis</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --ink:#e6e8ee; --muted:#9aa3b2;
+    --line:#2a2f3a; --accent:#7db4ff; --accent2:#c79bff;
+    --good:#6fcf97; --warn:#f2c94c; --gap:#eb6f6f;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1020px;margin:0 auto;padding:48px 28px 96px}
+  .backlink{font:13px/1.5 var(--mono);margin:0 0 22px}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  h1{font-size:28px;margin:0 0 6px;letter-spacing:-.01em}
+  .sub{color:var(--muted);margin:0 0 4px;font-size:17px}
+  .stamp{color:var(--muted);font:13px/1.5 var(--mono);margin:0 0 30px}
+  h2{font-size:21px;margin:46px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+  h3{font-size:16px;margin:24px 0 6px;color:var(--accent)}
+  p{margin:11px 0}
+  code{font-family:var(--mono);font-size:.86em;background:#1e222b;padding:1px 5px;border-radius:4px}
+  strong{color:#fff}
+  .lede{font-size:18px;line-height:1.55}
+  .note{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:8px;padding:14px 18px;margin:20px 0}
+  .note.key{border-left-color:var(--accent2)}
+  .note.gap{border-left-color:var(--gap)}
+  .note.fwd{border-left-color:var(--warn)}
+  ul,ol{margin:12px 0;padding-left:22px}
+  li{margin:7px 0}
+  pre{background:#10131a;border:1px solid var(--line);border-radius:8px;padding:14px 16px;
+    overflow-x:auto;font-family:var(--mono);font-size:13px;line-height:1.6;color:#d4d9e4}
+  pre .g{color:var(--good)} pre .n{color:var(--warn)} pre .b{color:var(--gap)} pre .m{color:var(--muted)}
+  .twocol{display:flex;gap:20px;flex-wrap:wrap;margin:14px 0}
+  .twocol>div{flex:1;min-width:280px;background:var(--panel);border:1px solid var(--line);
+    border-radius:8px;padding:14px 18px}
+  .role{font:12px/1.4 var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  table{border-collapse:collapse;width:100%;margin:18px 0;font-size:13.5px;background:var(--panel);
+    border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#1c212b;color:var(--muted);font-weight:600;font-size:11.5px;
+    text-transform:uppercase;letter-spacing:.04em}
+  tr:last-child td{border-bottom:none}
+  td.k{font-family:var(--mono);font-size:12.5px;white-space:nowrap}
+  footer{margin-top:60px;color:var(--muted);font-size:13px;border-top:1px solid var(--line);padding-top:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="backlink"><a href="index.html">← Canon index</a></p>
+
+  <h1>The completeness channel — missing fields as a third axis</h1>
+  <p class="sub">An absence is two claims, not one: does it break the detection, and — separately — why is it gone?</p>
+  <p class="stamp">canon · design conversation · 2026-06-12 · extends the validity fold · designed, not built</p>
+
+  <p class="lede">Beyond "is this event malicious" and "what's the detection-relevant context," there is a third
+  axis hiding in every log: <strong>telemetry completeness.</strong> A missing field raises a question that
+  is mostly <em>not</em> a security question — and the discipline is to keep the two questions on separate
+  channels so neither contaminates the other.</p>
+
+  <h2>An absence is two independent readings</h2>
+  <p>For any absent field, ask two things — and never conflate them:</p>
+  <div class="twocol">
+    <div><p class="role" style="color:var(--accent)">1 · does it affect THIS detection?</p>
+      Only if the field is on this event-type's benignity checklist. If yes → the ∀-validation can't close →
+      the verdict is capped at <code>NONE</code> ("can't confirm context correct"). If no → <strong>the
+      detection is simply unaffected.</strong> Most missing fields fall here.</div>
+    <div><p class="role" style="color:var(--accent2)">2 · why is it absent?</p>
+      A <em>separate</em> verdict, on a benign↔problematic spectrum, and usually an <strong>ops / pipeline
+      concern, not a security one.</strong> It has its own value and its own owner — and it's orthogonal to
+      the detection.</div>
+  </div>
+  <p>A field can be detection-irrelevant yet its absence still worth explaining; a field can be
+  detection-relevant <em>and</em> its absence both cap the verdict <em>and</em> demand the "why." Two axes.</p>
+
+  <h2>Validity splits — and the split is detection-<em>relative</em></h2>
+  <p>Canon's <strong>validity (well-formedness)</strong> fold currently treats a malformed-or-missing field as
+  one thing. In the detection-finding context it should <strong>bifurcate by relevance to the finding being
+  computed:</strong></p>
+  <table>
+    <thead><tr><th>validity outcome</th><th>where it goes</th></tr></thead>
+    <tbody>
+      <tr><td class="k" style="color:var(--accent)">necessary for this finding</td>
+        <td>a <strong>security-relevant</strong> input failure → caps the detection ∀ → carried <em>in the verdict</em> as the reason for <code>NONE</code>.</td></tr>
+      <tr><td class="k" style="color:var(--accent2)">not necessary for this finding</td>
+        <td>a <strong>data-quality</strong> signal → the health / ops channel, never the security verdict.</td></tr>
+    </tbody>
+  </table>
+  <div class="note key">
+    The split is not absolute — <strong>necessity is detection-relative.</strong> The same field is
+    "necessary" for one detection and "not necessary" for another. So validity isn't partitioned once; it is
+    <em>projected through each finding's input-checklist</em> into two streams. The checklist is set by the
+    event type (which is why <a href="sysmon_ocsf_mapping.html">the eventID leads</a> — it defines what
+    "complete enough" means here).
+  </div>
+
+  <h2>The "why" spectrum — mostly ops, occasionally security</h2>
+  <p>This is the validity fold's own honesty extended from <em>malformed</em> to <em>missing</em>: the same
+  three indistinguishable causes (innocent / pipeline / the anomaly itself), spread on a spectrum.</p>
+  <pre><span class="g">transient · benign</span>      network noise, a dropped event, a collection buffer overrun     <span class="m">→ ops noise</span>
+<span class="g">persistent · benign</span>     this sensor / OS / config never populates this field            <span class="m">→ known gap, baseline it</span>
+<span class="n">problematic · unrelated</span>  a misconfigured forwarder, failing disk, clock skew             <span class="m">→ an IT/ops problem — flag it, but not THIS attack</span>
+<span class="b">problematic · relevant</span>   attacker cleared the log / disabled the sensor / the gap IS       <span class="m">→ now the absence is security evidence</span>
+                        the technique's footprint</pre>
+  <p>Only the last row (and sometimes the third, via correlation) feeds back into the security verdict. The
+  rest belong to the parallel health stream.</p>
+
+  <h2>The verdict carries its own gaps (analyst awareness)</h2>
+  <p>"NONE carries what was missing" applied to the human-facing output: a finding should <strong>carry a
+  completeness manifest</strong> — not because an analyst couldn't look at the log themselves, but so the gap
+  is <strong>explicit and unmissable</strong>, and nobody silently assumes the context was complete.</p>
+  <pre>completeness manifest  <span class="m">(per finding)</span>
+  expected   : <span class="m">[ fields this event-type × source should carry ]</span>
+  present    : <span class="m">[ … ]</span>
+  absent
+    <span class="n">necessary</span>     : GrantedAccess   <span class="m">→ capped verdict to NONE; would have closed "lsass read benign?"</span>
+    <span class="g">not-necessary</span> : IntegrityLevel, Hashes.MD5   <span class="m">→ health channel (see routing below)</span></pre>
+  <p>When a finding is elevated to a human, the manifest travels with it: <em>here is what we could not see,
+  and here is what it would have told us.</em> The deterministic field→clause renderer already does this for
+  the other folds; the absent-necessary list is just one more honest clause.</p>
+
+  <h2>Routing the non-relevant gaps — an ops W→route, node-dependent</h2>
+  <p>The detection-irrelevant absences are real work for <em>someone</em> — just not the security analyst.
+  Which team owns a gap is a function of <strong>(cause × node)</strong>:</p>
+  <table>
+    <thead><tr><th>cause</th><th>owner</th></tr></thead>
+    <tbody>
+      <tr><td>misconfigured forwarder / normalization bug</td><td class="k">platform / detection-engineering</td></tr>
+      <tr><td>sensor broken on a specific host</td><td class="k">endpoint / EDR team or host owner</td></tr>
+      <tr><td>network drops</td><td class="k">network / infra</td></tr>
+    </tbody>
+  </table>
+  <div class="note fwd">
+    <strong>Deferred component (forward).</strong> This is the same shape as detection's <code>W→technique</code>
+    routing, pointed at <em>ops</em>: route <code>(cause, node) → responsible team</code>, the way detection
+    routes <code>(W, type) → verifier</code>. The <strong>node-dependence</strong> is the key wrinkle the user
+    flagged — the same missing field routes differently on a domain controller, a workstation, a cloud asset —
+    so the router's input is the <strong>asset / ownership graph</strong> (the environment graph from
+    <a href="scaling_the_loop.html">scaling the loop</a>). Same machinery, ops target. Not built.
+  </div>
+
+  <h2>What the completeness fold needs</h2>
+  <ul>
+    <li><strong>An expected-completeness model</strong>, per <code>(event-type × source × config)</code> —
+      "what fields <em>should</em> this event carry here?" Without it you can't tell expected-absent (legit)
+      from unexpectedly-absent (worth explaining). OCSF's required / recommended / optional markings give a
+      class-level floor; the rest is an environment baseline, learned like the behavioral one.</li>
+    <li><strong>Aggregation, not per-event alerting</strong>, on the health channel. Most absences are
+      benign-transient → roll them up ("forwarder X dropped 3% of EID1 fields this hour"), don't fire per
+      event. This also defends the second-order attack: an adversary inducing benign-looking gaps to
+      manufacture noise and hide the one gap that matters. Baselined benign absences make the anomalous one
+      <em>stand out</em> instead of hide.</li>
+    <li><strong>Correlation breaks the tie.</strong> Distinguishing benign-transient from attacker-induced is
+      often impossible per-event — hold as <code>NONE</code> / escalate; let correlation decide (a lone dropped
+      field is noise; a cluster of drops around a credential-access window on the implicated host is evidence).</li>
+  </ul>
+
+  <div class="note gap">
+    <strong>The one-line statement.</strong> An absence is two claims, not one — "does it break my ∀"
+    (security, occasional, into the verdict) and "why is it gone" (health, usual, its own benign↔problematic
+    spectrum, its own owner) — riding separate channels that join only when correlation promotes a health-gap
+    into security evidence.
+  </div>
+
+  <footer>Canon · web/completeness_channel.html · 2026-06-12. Related:
+    <a href="sysmon_ocsf_mapping.html">Sysmon EID1 → OCSF (verify the context)</a> ·
+    <a href="validation_fold_family.html">the validation fold family</a> ·
+    <a href="justified_verdict_substrate.html">the Justified-Verdict Substrate</a> ·
+    <a href="abduction_loop.html">the abduction loop</a></footer>
+
+</div>
+</body>
+</html>
