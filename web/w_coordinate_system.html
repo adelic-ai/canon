@@ -81,6 +81,35 @@ how   = command / params                                — the action taken</pr
     </tbody>
   </table>
 
+  <h2>The same coordinate, reached from the raw event</h2>
+  <p>The lens above arrives top-down, from the framework. It also arrives <strong>bottom-up, from the raw log</strong> — and
+  getting there sharpens two of the precisions. A Sysmon <code>EventID=1</code> record is a <strong>named tuple</strong> —
+  <code>{Image, CommandLine, ProcessId, User, ParentImage, Hashes, UtcTime, …}</code>. Each field is an axis, its value is the
+  position on that axis, the record is the coordinate. The <em>same</em> point as the W-record, located from the data side
+  instead of the framework side. <span class="muted">(added 2026-06-11)</span></p>
+
+  <p><strong>1 · The value is a position <em>within</em> an axis-ontology — so distance is subsumption, not arithmetic.</strong>
+  <code>what = KerberosTicket</code> is <em>near</em> <code>Credential</code> because <code>KerberosTicket ⊑ Credential</code>
+  (one <code>subClassOf+</code> hop). Nearness on the what-axis is a <strong>walk through the artifact taxonomy</strong>, not
+  <code>|a − b|</code>. This is what the "axes are structured ontologies" precision <em>buys</em>: the categorical-keys
+  precision said there is no numeric distance — the axis-ontology gives you a <strong>structural</strong> one in its place.</p>
+
+  <p><strong>2 · A record locates a <em>neighborhood</em>, not a single point.</strong> One <code>EventID=1</code> names several
+  individuals at once — the process, its parent, the user, the binary. So it doesn't drop one dot; it pins a small subgraph
+  (<code>process —wasInformedBy→ parent</code>, <code>—wasAssociatedWith→ user</code>, <code>—used→ binary</code>). That is the
+  deeper reason the space is a <strong>graph and not a tensor row</strong>: the "coordinate" is the coordinate of a region.</p>
+
+  <p>And the bottom-up view makes the role of normalization exact — it is a <strong>change of axes</strong>:</p>
+  <pre>Sysmon EventID=1   =  a coordinate in the SOURCE-NATIVE axes  (~20 Sysmon fields)
+   │  project onto the canonical axes
+W-record           =  the same point on the 5 shared axes      (who / what / when / where / how)
+   │  re-express in a shared vocabulary
+OCSF / CASE-UCO    =  the coordinate in axes EVERY source shares → cross-source comparable</pre>
+  <p>So "what does normalization buy," in coordinate terms: it re-expresses each source's <em>native</em> coordinate in
+  <strong>shared</strong> axes, so a Sysmon point and a CloudTrail point live in one space — and the content hash makes
+  <em>same entity across sources = same coordinate</em>, structurally rather than by fuzzy match. The artifact <em>type</em>
+  (<code>d3f:Process</code>) is itself the value on the "what-kind" axis; PROV edges are the neighborhood's structure.</p>
+
   <div class="note key">
     <strong>The unification.</strong> If the W's are coordinates, then <strong>the framework <em>is</em> the coordinate
     system.</strong>
