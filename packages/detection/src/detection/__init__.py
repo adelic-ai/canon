@@ -69,8 +69,12 @@ from detection.cross_check import (
     spray_signature,
 )
 from detection.registry import REGISTRY, Detector, corpus_fields, run_applicable
+from detection.killchain import build_model, forward_nexts
 
 __all__ = [
+    # kill-chain transition model — learned tactic→tactic search priors (the orchestrator's prior)
+    "build_model",
+    "forward_nexts",
     # registry — enumerate proper's detectors + observability-gated dispatch (the orchestrator's seam)
     "Detector",
     "REGISTRY",
