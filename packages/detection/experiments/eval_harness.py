@@ -24,6 +24,7 @@ import json
 import re
 from pathlib import Path
 
+from kerberos_behavior_detectors import enc_downgrade, kerberoasting, off_hours, password_spray
 from kerberos_orphan_real import load as load_kerberos
 from lsass_subgraph_detection import load as load_otrf
 from registry import _kerberos_forged
@@ -73,6 +74,41 @@ def eval_kerberos() -> None:
           f"{len(fp_wrong_type)} fires on other-attack accounts {sorted(fp_wrong_type) or '∅'}")
     print(f"  honest read: it catches the targeted technique and does NOT fire on kerberoasting/spray/"
           f"off-hours (correctly — it isn't built for them, and they keep a legit TGT so aren't orphans).\n")
+
+
+def eval_behaviors() -> None:
+    """The other 4 labeled attack types — structural detectors scored against the truth file."""
+    rows = load_kerberos()
+    truth = json.loads((Path.home() / "data/faker-kerberos/v1/export.truth.json").read_text())
+
+    def accts(prefix):
+        return {m.group(0) for t in truth if t["type"].startswith(prefix)
+                for m in [re.search(r"[a-z]+\.[a-z]+", t["type"])] if m}
+
+    def ips(prefix):
+        return {m.group(1) for t in truth if t["type"].startswith(prefix)
+                for m in [re.search(r"(\d+\.\d+\.\d+\.\d+)", t["type"])] if m}
+
+    all_attack = {m.group(0) for t in truth for m in [re.search(r"[a-z]+\.[a-z]+", t["type"])] if m}
+    accounts = {r.get("Account_Name") for r in rows} - {None, ""}
+    client_ips = {r.get("Client_Address", "").replace("::ffff:", "") for r in rows} - {""}
+    benign_accts = len(accounts - all_attack)
+    benign_ips = len(client_ips - ips("password-spray"))
+
+    def score(name, fired, truth_set, denom):
+        tp = len(fired & truth_set)
+        _pr(name, tp, len(fired - truth_set), len(truth_set - fired), denom)
+
+    print(f"=== the other 4 labeled attack types — structural detectors vs truth ({len(accounts)} accounts) ===")
+    score("kerberoasting", kerberoasting(rows), accts("kerberoasting"), benign_accts)
+    score("enc_downgrade", enc_downgrade(rows), accts("enc-downgrade"), benign_accts)
+    spray_fired = {ip.replace("::ffff:", "") for ip in password_spray(rows)}
+    score("password_spray", spray_fired, ips("password-spray"), benign_ips)
+    score("off_hours", off_hours(rows), accts("off-hours"), benign_accts)
+    print(f"  honest read: kerberoasting/enc-downgrade/spray are exact (clean structural signatures: rare RC4,")
+    print(f"  RC4-without-fanout, IP→many-failed-accounts). off-hours-alone is WEAK (~5% precision, misses 1/2):")
+    print(f"  day-shift accounts work the occasional late hour, and a temporal baseline can't separate that")
+    print(f"  from the labeled anomaly — off-hours needs WHAT was done off-hours, not just THAT it happened.\n")
 
 
 # --------------------------------------------------------------------------- #
@@ -126,6 +162,7 @@ def eval_otrf() -> None:
 def main() -> None:
     print("PRECISION / RECALL / FP-RATE vs INDEPENDENT GROUND TRUTH — the credibility numbers we lacked.\n")
     eval_kerberos()
+    eval_behaviors()
     eval_otrf()
     print("Honest scope: two corpora, attacks known by construction/documentation. Not a claim of")
     print("field generalization — that needs labeled enterprise data (deferred: BOTS is Splunk-format + unlabeled).")
