@@ -61,8 +61,21 @@ from detection.offhours import (
     offhours_verdicts,
     run_offhours,
 )
+from detection.cross_check import (
+    cross_check_verdicts,
+    kerberoast_signature,
+    load_kerberos_rows,
+    ptt_signature,
+    spray_signature,
+)
 
 __all__ = [
+    # cross-check (independent structural ∧ statistical → the cross_check axis, cross-paradigm)
+    "cross_check_verdicts",
+    "kerberoast_signature",
+    "ptt_signature",
+    "spray_signature",
+    "load_kerberos_rows",
     # fan-out family (hard anomaly)
     "FanoutCell",
     "FanoutDetection",
