@@ -70,8 +70,12 @@ from detection.cross_check import (
 )
 from detection.registry import REGISTRY, Detector, corpus_fields, run_applicable
 from detection.killchain import build_model, forward_nexts
+from detection.orchestrator import TECH_TACTIC, orchestrate
 
 __all__ = [
+    # orchestrator — fire registry → map to tactic → project forward frontier from the learned model
+    "orchestrate",
+    "TECH_TACTIC",
     # kill-chain transition model — learned tactic→tactic search priors (the orchestrator's prior)
     "build_model",
     "forward_nexts",
