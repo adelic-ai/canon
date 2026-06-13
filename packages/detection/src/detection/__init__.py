@@ -68,8 +68,14 @@ from detection.cross_check import (
     ptt_signature,
     spray_signature,
 )
+from detection.registry import REGISTRY, Detector, corpus_fields, run_applicable
 
 __all__ = [
+    # registry — enumerate proper's detectors + observability-gated dispatch (the orchestrator's seam)
+    "Detector",
+    "REGISTRY",
+    "run_applicable",
+    "corpus_fields",
     # cross-check (independent structural ∧ statistical → the cross_check axis, cross-paradigm)
     "cross_check_verdicts",
     "kerberoast_signature",
