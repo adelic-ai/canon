@@ -67,13 +67,13 @@ def _downstream_actions(action: dict, by_id: dict[str, dict]) -> list[dict]:
     return actions
 
 
-def main() -> None:
-    files = sorted(CORPUS.rglob("*.json"))
-    files = [f for f in files if f.name != "manifest.json"]
+def build_model() -> tuple[collections.Counter, collections.Counter, int, int]:
+    """Parse the corpus → (tactic→tactic transition counts, start-tactic counts, flows_parsed, n_files).
+    Importable so the orchestrator (P3) can drive the search off the same learned model."""
+    files = [f for f in sorted(CORPUS.rglob("*.json")) if f.name != "manifest.json"]
     transitions: collections.Counter = collections.Counter()
     starts: collections.Counter = collections.Counter()
     flows_parsed = 0
-
     for f in files:
         try:
             objs = json.loads(f.read_text()).get("objects", [])
@@ -98,8 +98,20 @@ def main() -> None:
                 tb = _tactic(nxt)
                 if ta and tb and ta != tb:           # tactic-level transition (skip self-loops)
                     transitions[(ta, tb)] += 1
+    return transitions, starts, flows_parsed, len(files)
 
-    print(f"parsed {flows_parsed}/{len(files)} real attack-flow incidents\n")
+
+def forward_nexts(transitions: collections.Counter) -> dict[str, list[tuple[str, float]]]:
+    """{tactic: [(next_tactic, prob), ...] desc} — the HMM transition rows / forward search priors."""
+    nexts: dict[str, collections.Counter] = collections.defaultdict(collections.Counter)
+    for (a, b), n in transitions.items():
+        nexts[a][b] += n
+    return {a: [(b, n / sum(c.values())) for b, n in c.most_common()] for a, c in nexts.items()}
+
+
+def main() -> None:
+    transitions, starts, flows_parsed, n_files = build_model()
+    print(f"parsed {flows_parsed}/{n_files} real attack-flow incidents\n")
 
     print("=== ENTRY PRIORS — which tactic an attack STARTS at (the left of ATT&CK) ===")
     total_starts = sum(starts.values()) or 1
@@ -110,15 +122,11 @@ def main() -> None:
     for (a, b), n in transitions.most_common(15):
         print(f"  {a:18} → {b:18} {n:3}")
 
-    # forward-progression: from each tactic, its most likely next (the Markov row)
-    nexts: dict[str, collections.Counter] = collections.defaultdict(collections.Counter)
-    for (a, b), n in transitions.items():
-        nexts[a][b] += n
+    nexts = forward_nexts(transitions)
     print("\n=== FORWARD-PROGRESSION — given a milestone, the most likely next (HMM transition row) ===")
     for a in ("initial-access", "execution", "credential-access", "discovery", "lateral-movement"):
         if a in nexts:
-            tot = sum(nexts[a].values())
-            top = ", ".join(f"{b} {c/tot:.0%}" for b, c in nexts[a].most_common(3))
+            top = ", ".join(f"{b} {p:.0%}" for b, p in nexts[a][:3])
             print(f"  {a:18} → {top}")
 
     print("\nThis is the HMM transition matrix / search priors / forward-progression model, learned")
