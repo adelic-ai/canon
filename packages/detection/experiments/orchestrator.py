@@ -35,6 +35,9 @@ from sigma_panel import corroboration, lsass_comsvcs_event
 TECH_TACTIC = {
     "T1003.001": "credential-access",   # OS Credential Dumping: LSASS Memory
     "T1558.001": "credential-access",   # Steal or Forge Kerberos Tickets: Golden Ticket
+    "T1558.003": "credential-access",   # Kerberoasting
+    "T1558": "credential-access",       # enc-downgrade (RC4) — credential-access flavor
+    "T1110.003": "credential-access",   # Brute Force: Password Spraying
     "T1550.003": "lateral-movement",    # Use Alternate Auth Material: Pass the Ticket
     "T1041": "exfiltration",            # Exfiltration Over C2 Channel
 }
@@ -125,7 +128,7 @@ def main() -> None:
 
     print("\nThe engine: fire → map to milestone → consult the LEARNED transition model → point the next")
     print("detector at the highest-probability next move. On OTRF the dump is confirmed but lateral-movement")
-    print("is reported HONESTLY as an unverifiable gap. On faker-kerberos the SAME credential-access →")
+    print("is reported as an unverifiable gap (NONE, not a clear). On faker-kerberos the SAME credential-access →")
     print("lateral-movement edge (the model's 43% prior) is CONFIRMED end-to-end — the chained walk on real data.")
 
 

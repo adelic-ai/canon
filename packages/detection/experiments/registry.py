@@ -18,6 +18,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from flow_orphan_patterns import DerivationRule, FlowPattern, OrphanPattern, match_flow, match_orphan
+from kerberos_behavior_detectors import enc_downgrade, kerberoasting, password_spray
 from lsass_subgraph_detection import cid, load
 from subgraph_matcher import LSASS_DUMP, LSASS_READ_ANY, match_pattern
 
@@ -116,6 +117,20 @@ def _kerb_ptt(events: list[dict]) -> list[Finding]:      # the USE across servic
     return out
 
 
+# Kerberos behavior detectors (telemetry-grounded; off-hours is PARKED — needs an out-of-band
+# baseline, resolves to NONE, so it's intentionally NOT registered). Entities, not events → CID the entity.
+def _kerberoast(events: list[dict]) -> list[Finding]:
+    return [Finding("kerberoasting", "T1558.003", "true", (cid({"account": a}),)) for a in kerberoasting(events)]
+
+
+def _enc_downgrade(events: list[dict]) -> list[Finding]:
+    return [Finding("enc_downgrade", "T1558", "true", (cid({"account": a}),)) for a in enc_downgrade(events)]
+
+
+def _spray(events: list[dict]) -> list[Finding]:
+    return [Finding("password_spray", "T1110.003", "true", (cid({"ip": ip}),)) for ip in password_spray(events)]
+
+
 # --- the registry ---------------------------------------------------------- #
 REGISTRY: list[Detector] = [
     Detector("lsass_dump_subgraph", "T1003.001", frozenset({"1", "10"}), _subgraph(LSASS_DUMP, "lsass_dump_subgraph")),
@@ -124,6 +139,9 @@ REGISTRY: list[Detector] = [
     Detector("exfil_taint_flow", "T1041", frozenset({"tool"}), _flow),
     Detector("kerberos_golden_ticket", "T1558.001", frozenset({"4769"}), _kerb_golden),
     Detector("kerberos_pass_the_ticket", "T1550.003", frozenset({"4769"}), _kerb_ptt),
+    Detector("kerberoasting", "T1558.003", frozenset({"4769"}), _kerberoast),
+    Detector("enc_downgrade", "T1558", frozenset({"4769"}), _enc_downgrade),
+    Detector("password_spray", "T1110.003", frozenset({"4771"}), _spray),
 ]
 
 

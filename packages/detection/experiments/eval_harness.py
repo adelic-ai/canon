@@ -72,7 +72,7 @@ def eval_kerberos() -> None:
     _pr("kerberos_pass_the_ticket", tp, fp, fn, len(benign))
     print(f"  → recall {tp}/{len(ptt)} pass-the-ticket; {fp} fires on benign accounts; "
           f"{len(fp_wrong_type)} fires on other-attack accounts {sorted(fp_wrong_type) or '∅'}")
-    print(f"  honest read: it catches the targeted technique and does NOT fire on kerberoasting/spray/"
+    print(f"  read: it catches the targeted technique and does NOT fire on kerberoasting/spray/"
           f"off-hours (correctly — it isn't built for them, and they keep a legit TGT so aren't orphans).\n")
 
 
@@ -105,7 +105,7 @@ def eval_behaviors() -> None:
     spray_fired = {ip.replace("::ffff:", "") for ip in password_spray(rows)}
     score("password_spray", spray_fired, ips("password-spray"), benign_ips)
     score("off_hours", off_hours(rows), accts("off-hours"), benign_accts)
-    print(f"  honest read: kerberoasting/enc-downgrade/spray are exact (clean structural signatures: rare RC4,")
+    print(f"  read: kerberoasting/enc-downgrade/spray are exact (clean structural signatures: rare RC4,")
     print(f"  RC4-without-fanout, IP→many-failed-accounts). off-hours-alone is WEAK (~5% precision, misses 1/2):")
     print(f"  day-shift accounts work the occasional late hour, and a temporal baseline can't separate that")
     print(f"  from the labeled anomaly — off-hours needs WHAT was done off-hours, not just THAT it happened.\n")
