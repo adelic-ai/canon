@@ -29,6 +29,7 @@ from kerberos_orphan_real import load as load_kerberos
 from killchain_transitions import build_model, forward_nexts
 from lsass_subgraph_detection import load as load_otrf
 from registry import REGISTRY, run_applicable
+from sigma_panel import corroboration, lsass_comsvcs_event
 
 # technique → ATT&CK tactic, for the registered detectors (the kill-chain milestone each confirms)
 TECH_TACTIC = {
@@ -97,9 +98,27 @@ def _report(name: str, events: list[dict]) -> None:
         print(f"  reachable-NONE frontier (expected, not verifiable here): {[f'{nt} {p:.0%}' for nt, p in gaps]}")
 
 
+def _corroborate_otrf(events: list[dict]) -> None:
+    """STEP 5 — independent verifiers: corroborate the confirmed T1003.001 finding with the
+    FCA-deduped Sigma panel (the verifier half of P3). canon's cell is canon's word; a deduped
+    external vote makes it defensible."""
+    event = lsass_comsvcs_event(events)
+    if not event:
+        return
+    r = corroboration("T1003.001", event, "process_access")
+    print("\nSTEP 5 — independent corroboration (FCA-deduped Sigma-verifier panel):")
+    print(f"    T1003.001: {r['relevant']} process_access rules → {r['classes']} deduped classes "
+          f"({r['evaluated']} evaluable, {len(r['skipped'])} NONE)")
+    print(f"    {r['verdict']}")
+    if r["fired"]:
+        print(f"    corroborating rule(s): {[n for n, _, _ in r['fired']]}")
+
+
 def main() -> None:
     # OTRF: credential-access confirmed, but lateral-movement is a coverage gap here (honest NONE).
-    _report("OTRF LSASS_campaign_03", load_otrf())
+    otrf = load_otrf()
+    _report("OTRF LSASS_campaign_03", otrf)
+    _corroborate_otrf(otrf)
     # faker-kerberos: the SAME engine chains credential-access → lateral-movement on real data,
     # because a Golden Ticket forges the TGT (cred-access) AND fans it out across services (lateral).
     _report("faker-kerberos v1", load_kerberos())
