@@ -69,12 +69,61 @@ def _flow(events: list[dict]) -> list[Finding]:
             for f in match_flow(_EXFIL, events)]
 
 
+# --- Kerberos (faker-kerberos CSV format: EventCode + Ticket_Hash join) ----- #
+# A Golden Ticket is BOTH milestones, split into two detectors so the orchestrator
+# can chain them: forging the TGT = credential-access; using it across many services
+# = lateral-movement (pass-the-ticket). Same evidence, two kill-chain steps.
+from datetime import datetime  # noqa: E402
+
+_KFMT = "%Y-%m-%d %H:%M:%S.%f"
+TGT_LIFETIME_H = 10.0          # a mid-window orphan (first seen > a TGT lifetime in) can't be a pre-window TGT
+FANOUT_MIN = 3                 # a forged ticket used across >=3 distinct services = lateral access
+
+
+def _kerberos_forged(events: list[dict]) -> dict[str, list[dict]]:
+    """Forged TGTs: 4769s whose Ticket_Hash has no issuing 4768 AND first seen mid-window
+    (too late to be a benign pre-window TGT). Returns {ticket_hash: [4769 rows]}."""
+    e4769 = [r for r in events if r.get("EventCode") == "4769"]
+    times = [r["_time"] for r in events if r.get("_time")]
+    if not e4769 or not times:
+        return {}
+    issued = {r["Ticket_Hash"] for r in events if r.get("EventCode") == "4768" and r.get("Ticket_Hash")}
+    t0 = datetime.strptime(min(times), _KFMT)
+    by_hash: dict[str, list[dict]] = {}
+    for r in e4769:
+        h = r.get("Ticket_Hash")
+        if h and h not in issued:
+            by_hash.setdefault(h, []).append(r)
+    forged = {}
+    for h, rs in by_hash.items():
+        first = datetime.strptime(min(r["_time"] for r in rs), _KFMT)
+        if (first - t0).total_seconds() / 3600 > TGT_LIFETIME_H:   # mid-window orphan = forged
+            forged[h] = rs
+    return forged
+
+
+def _kerb_golden(events: list[dict]) -> list[Finding]:   # the FORGE = credential-access
+    return [Finding("kerberos_golden_ticket", "T1558.001", "true", (cid({"ticket_hash": h}),))
+            for h in _kerberos_forged(events)]
+
+
+def _kerb_ptt(events: list[dict]) -> list[Finding]:      # the USE across services = lateral-movement
+    out = []
+    for h, rs in _kerberos_forged(events).items():
+        services = {r["Service_Name"] for r in rs if r.get("Service_Name")}
+        if len(services) >= FANOUT_MIN:
+            out.append(Finding("kerberos_pass_the_ticket", "T1550.003", "true", (cid({"ticket_hash": h}),)))
+    return out
+
+
 # --- the registry ---------------------------------------------------------- #
 REGISTRY: list[Detector] = [
     Detector("lsass_dump_subgraph", "T1003.001", frozenset({"1", "10"}), _subgraph(LSASS_DUMP, "lsass_dump_subgraph")),
     Detector("lsass_vm_read_surfacer", "T1003.001", frozenset({"10"}), _subgraph(LSASS_READ_ANY, "lsass_vm_read_surfacer")),
     Detector("golden_ticket_orphan", "T1558.001", frozenset({"4768", "4769"}), _orphan),
     Detector("exfil_taint_flow", "T1041", frozenset({"tool"}), _flow),
+    Detector("kerberos_golden_ticket", "T1558.001", frozenset({"4769"}), _kerb_golden),
+    Detector("kerberos_pass_the_ticket", "T1550.003", frozenset({"4769"}), _kerb_ptt),
 ]
 
 

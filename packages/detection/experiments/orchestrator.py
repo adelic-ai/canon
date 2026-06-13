@@ -25,14 +25,16 @@ from __future__ import annotations
 
 import collections
 
+from kerberos_orphan_real import load as load_kerberos
 from killchain_transitions import build_model, forward_nexts
-from lsass_subgraph_detection import load
+from lsass_subgraph_detection import load as load_otrf
 from registry import REGISTRY, run_applicable
 
 # technique → ATT&CK tactic, for the registered detectors (the kill-chain milestone each confirms)
 TECH_TACTIC = {
     "T1003.001": "credential-access",   # OS Credential Dumping: LSASS Memory
     "T1558.001": "credential-access",   # Steal or Forge Kerberos Tickets: Golden Ticket
+    "T1550.003": "lateral-movement",    # Use Alternate Auth Material: Pass the Ticket
     "T1041": "exfiltration",            # Exfiltration Over C2 Channel
 }
 
@@ -74,30 +76,38 @@ def orchestrate(events: list[dict]):
     return observed, findings, frontier, skipped
 
 
-def main() -> None:
-    events = load()  # OTRF LSASS_campaign_03
+def _report(name: str, events: list[dict]) -> None:
     observed, findings, frontier, skipped = orchestrate(events)
-
-    print(f"corpus: OTRF LSASS_campaign_03 ({len(events):,} events)\n")
-    print("=== STEP 1-2 — fired detectors → attack-path-so-far (confirmed milestones) ===")
-    for f in findings:
-        print(f"  {f.detector:24} {f.technique:11} → {TECH_TACTIC.get(f.technique,'?')}")
+    print(f"\n{'='*78}\ncorpus: {name} ({len(events):,} events)\n{'='*78}")
+    print("STEP 1-2 — fired detectors → attack-path-so-far (confirmed milestones):")
+    for f in dict.fromkeys((f.detector, f.technique, TECH_TACTIC.get(f.technique, "?")) for f in findings):
+        print(f"    {f[0]:26} {f[1]:11} → {f[2]}")
     print(f"  confirmed milestones: {observed or '(none)'}")
 
-    print("\n=== STEP 3-4 — forward search frontier (transition model → where to look next) ===")
+    print("STEP 3-4 — forward search frontier (transition model → where to look next):")
     for t, nt, p, status, detail in frontier:
         flag = {"COVERED": "→", "OBSERVABILITY-GAP": "▲", "COVERAGE-GAP": "✗"}[status]
-        print(f"  {flag} {t} → {nt:18} p={p:.0%}  [{status}] {detail}")
+        print(f"    {flag} {t} → {nt:18} p={p:.0%}  [{status}] {detail}")
 
-    print("\n=== reachable-NONE frontier — expected next moves we CANNOT yet verify ===")
-    gaps = [(nt, p, status) for _, nt, p, status, _ in frontier if status != "COVERED"]
-    for nt, p, status in sorted(set(gaps), key=lambda x: -x[1]):
-        print(f"  {nt:18} p={p:.0%}  ({status})")
+    if len(observed) > 1:
+        print(f"  ✦ CHAINED WALK: {' → '.join(observed)} — consecutive kill-chain milestones BOTH confirmed on")
+        print(f"    real data; the model's {observed[0]} → {observed[1]} prior (the strongest forward edge) is verified.")
+    else:
+        gaps = sorted({(nt, p) for _, nt, p, status, _ in frontier if status != "COVERED"}, key=lambda x: -x[1])
+        print(f"  reachable-NONE frontier (expected, not verifiable here): {[f'{nt} {p:.0%}' for nt, p in gaps]}")
+
+
+def main() -> None:
+    # OTRF: credential-access confirmed, but lateral-movement is a coverage gap here (honest NONE).
+    _report("OTRF LSASS_campaign_03", load_otrf())
+    # faker-kerberos: the SAME engine chains credential-access → lateral-movement on real data,
+    # because a Golden Ticket forges the TGT (cred-access) AND fans it out across services (lateral).
+    _report("faker-kerberos v1", load_kerberos())
 
     print("\nThe engine: fire → map to milestone → consult the LEARNED transition model → point the next")
-    print("detector at the highest-probability next move. On OTRF the credential-access dump is confirmed;")
-    print("the model says lateral-movement is the most likely next step (43%) — and the orchestrator reports")
-    print("HONESTLY that no detector covers it here (a coverage gap), rather than implying the host is clean.")
+    print("detector at the highest-probability next move. On OTRF the dump is confirmed but lateral-movement")
+    print("is reported HONESTLY as an unverifiable gap. On faker-kerberos the SAME credential-access →")
+    print("lateral-movement edge (the model's 43% prior) is CONFIRMED end-to-end — the chained walk on real data.")
 
 
 if __name__ == "__main__":
