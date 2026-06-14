@@ -74,8 +74,12 @@ from detection.cross_check import (
 from detection.registry import REGISTRY, Detector, corpus_fields, run_applicable
 from detection.killchain import build_model, forward_nexts
 from detection.orchestrator import TECH_TACTIC, orchestrate
+from detection.rarity import cloud_account_manipulation_verdicts, rare_actors
 
 __all__ = [
+    # rarity — flag the rare ACTOR for a sensitive action family (cred-access: rare doer, not breadth)
+    "rare_actors",
+    "cloud_account_manipulation_verdicts",
     # orchestrator — fire registry → map to tactic → project forward frontier from the learned model
     "orchestrate",
     "TECH_TACTIC",

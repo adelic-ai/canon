@@ -40,6 +40,7 @@ from detection.fanout import (
     run_binding,
 )
 from detection.offhours import offhours_verdicts, run_offhours
+from detection.rarity import cloud_account_manipulation_verdicts
 
 
 @dataclass(frozen=True)
@@ -72,6 +73,8 @@ REGISTRY: list[Detector] = [
              lambda p: fanout_verdicts(run_binding(p, CLOUDTRAIL_REGION_SWEEP, loader=load_cloudtrail_events))),
     Detector("cloudtrail_enumeration", "T1580", frozenset({"userIdentity", "eventName"}),
              lambda p: fanout_verdicts(run_binding(p, CLOUDTRAIL_ENUMERATION, loader=load_discovery_events))),
+    Detector("cloud_account_manipulation", "T1098", frozenset({"userIdentity", "eventName"}),
+             cloud_account_manipulation_verdicts),
 ]
 
 

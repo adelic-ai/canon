@@ -75,17 +75,16 @@ DISCOVERY_APIS = frozenset({
     "ListAttachedUserPolicies", "GetUser", "GetRole", "GetAccountAuthorizationDetails",
     "GetCallerIdentity", "GenerateCredentialReport",
 })
-# NOTE: a credential/IAM fan-out (entropy over CREDENTIAL_APIS diversity) was BUILT and TESTED on
-# flaws, and it MISFIRED — it flagged the legit account owner (`root`: CreateUser/CreateRole/
-# AttachUserPolicy/CreateAccessKey = administration), because diverse IAM activity is exactly what an
-# admin does. Diversity is the right question for enumeration, the WRONG one for credential-access.
-# That empirically vindicates CSAT's choice of RARITY (a rare ACTOR for the action) over entropy here.
-# The family is retained for that future rarity-based detector; no entropy fan-out is shipped over it.
-CREDENTIAL_APIS = frozenset({
-    "AssumeRole", "GetSessionToken", "GetFederationToken", "AssumeRoleWithSAML",
-    "AssumeRoleWithWebIdentity", "CreateAccessKey", "AttachUserPolicy", "AttachRolePolicy",
-    "PutUserPolicy", "PutRolePolicy", "UpdateAssumeRolePolicy", "AddUserToGroup",
-    "CreateUser", "CreateRole",
+#: The privilege-GRANT / account-manipulation subset (ATT&CK T1098), watched by the RARITY detector
+#: (:mod:`detection.rarity`). FINDING: an entropy fan-out over a broad credential family was built and
+#: tested on flaws and MISFIRED — it flagged the legit account owner `root` (CreateUser/CreateRole/
+#: AttachUserPolicy = administration), because diverse IAM activity is exactly what an admin does.
+#: Diversity is the right question for enumeration, the WRONG one for credential-access. So cred-access
+#: uses RARITY (a rare ACTOR for the action — e.g. a stolen EC2-instance role) over this family, not
+#: entropy. (This empirically vindicates CSAT's rarity choice.)
+MANIPULATION_APIS = frozenset({
+    "AttachUserPolicy", "AttachRolePolicy", "PutUserPolicy", "PutRolePolicy",
+    "UpdateAssumeRolePolicy", "AddUserToGroup", "CreateAccessKey", "CreateUser", "CreateRole",
 })
 
 
