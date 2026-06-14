@@ -6,6 +6,12 @@ of attack-action nodes (carrying ``tactic_id``) joined through attack-condition/
 ``*_refs`` edges; we hop over the non-action nodes to recover action→action transitions and aggregate
 them to tactic→tactic counts across all incidents.
 
+Precisely, this is a first-order **Markov** transition matrix over *observed* tactics — ``P(next |
+current)`` estimated by counting. It is NOT an HMM: there are no hidden states, no emission model, and
+no Viterbi. (A detector fires ⇒ the tactic is observed directly.) The HMM is the upgrade — treat
+tactics as hidden, detector findings as emissions ``P(finding | tactic)``, and run Viterbi to infer
+an *unobserved* milestone path from partial/noisy findings; this matrix would be its transition half.
+
 Promoted from experiments with the corpus path parameterized (no hardcoded location). The forward
 rows (:func:`forward_nexts`) are the orchestrator's "where to look next" priors; the entry-prior
 counts (the ``starts`` return) are indicative only — the no-incoming-edge heuristic over-counts
@@ -97,7 +103,8 @@ def build_model(corpus: str | Path) -> tuple[collections.Counter, collections.Co
 
 
 def forward_nexts(transitions: collections.Counter) -> dict[str, list[tuple[str, float]]]:
-    """``{tactic: [(next_tactic, prob), ...] desc}`` — the forward search priors / HMM transition rows."""
+    """``{tactic: [(next_tactic, prob), ...] desc}`` — the forward search priors / first-order Markov
+    transition rows (observed states; an HMM with emissions + Viterbi over hidden states is the upgrade)."""
     nexts: dict[str, collections.Counter] = collections.defaultdict(collections.Counter)
     for (a, b), n in transitions.items():
         nexts[a][b] += n
