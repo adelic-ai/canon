@@ -22,8 +22,11 @@ general ``Binding`` is therefore met — but generalization stays *deliberately 
 only if the three shapes actually rhyme (concrete-first), not because a counter hit three.
 """
 from detection.cloudtrail import (
+    CLOUDTRAIL_ENUMERATION,
     CLOUDTRAIL_REGION_SWEEP,
+    DISCOVERY_APIS,
     load_cloudtrail_events,
+    load_discovery_events,
 )
 from detection.coordination import (
     BEACON_COORDINATION,
@@ -107,7 +110,10 @@ __all__ = [
     "detect_by_distinct_count",
     # fan-out, third binding — a new telemetry domain (AWS CloudTrail) for the same detector
     "CLOUDTRAIL_REGION_SWEEP",
+    "CLOUDTRAIL_ENUMERATION",
+    "DISCOVERY_APIS",
     "load_cloudtrail_events",
+    "load_discovery_events",
     # coordination family (third detector family — MI over entity PAIRS; constructive existence-proof)
     "CoordinationBinding",
     "CoordinationDetection",

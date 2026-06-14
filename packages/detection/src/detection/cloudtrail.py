@@ -40,6 +40,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+from functools import partial
 
 from detection.fanout import FanoutBinding
 
@@ -62,11 +63,38 @@ def _field(record: dict, field: str) -> str:
     return _identity(record) if field == "userIdentity" else str(record.get(field, "-"))
 
 
+# CloudTrail API families (curated from CSAT's hand-built cloud detectors, ~/dev/CSAT/detections.py).
+# DISCOVERY = read-only recon APIs whose *diversity* per principal is the enumeration signal (T1580
+# Cloud Infrastructure Discovery + T1087.004 Cloud Account Discovery). CREDENTIAL = credential
+# acquisition + IAM privilege manipulation (T1078.004 / T1550 / T1098). A principal fanning across many
+# distinct APIs within a family in a short window (high entropy) is enumerating / abusing credentials.
+DISCOVERY_APIS = frozenset({
+    "DescribeInstances", "DescribeSecurityGroups", "DescribeSnapshots", "DescribeSubnets",
+    "DescribeVpcs", "DescribeVolumes", "DescribeTrails", "DescribeRegions", "DescribeImages",
+    "ListBuckets", "ListUsers", "ListRoles", "ListPolicies", "ListGroupsForUser",
+    "ListAttachedUserPolicies", "GetUser", "GetRole", "GetAccountAuthorizationDetails",
+    "GetCallerIdentity", "GenerateCredentialReport",
+})
+# NOTE: a credential/IAM fan-out (entropy over CREDENTIAL_APIS diversity) was BUILT and TESTED on
+# flaws, and it MISFIRED — it flagged the legit account owner (`root`: CreateUser/CreateRole/
+# AttachUserPolicy/CreateAccessKey = administration), because diverse IAM activity is exactly what an
+# admin does. Diversity is the right question for enumeration, the WRONG one for credential-access.
+# That empirically vindicates CSAT's choice of RARITY (a rare ACTOR for the action) over entropy here.
+# The family is retained for that future rarity-based detector; no entropy fan-out is shipped over it.
+CREDENTIAL_APIS = frozenset({
+    "AssumeRole", "GetSessionToken", "GetFederationToken", "AssumeRoleWithSAML",
+    "AssumeRoleWithWebIdentity", "CreateAccessKey", "AttachUserPolicy", "AttachRolePolicy",
+    "PutUserPolicy", "PutRolePolicy", "UpdateAssumeRolePolicy", "AddUserToGroup",
+    "CreateUser", "CreateRole",
+})
+
+
 def load_cloudtrail_events(
     path: str,
     *,
     entity_field: str = "userIdentity",
     value_field: str = "awsRegion",
+    event_names: "frozenset[str] | None" = None,
 ) -> "list[tuple[float, str, str]]":
     """Load an AWS CloudTrail export (``{"Records": [...]}``) into ``(seconds, entity, value)`` events
     — the **concrete, inline** telemetry binding for this corpus, the mirror of
@@ -76,14 +104,26 @@ def load_cloudtrail_events(
     *same* fan-out detector over it (pass ``loader=load_cloudtrail_events``). ``eventTime`` is ISO-8601
     UTC (``...Z``); time is seconds since the fixed naive epoch so bin boundaries are reproducible.
     Defaults bind the region-sweep fan-out (entity = acting credential, value = AWS region).
+
+    ``event_names`` optionally restricts to one API FAMILY (e.g. :data:`DISCOVERY_APIS`) — so the
+    fan-out measures diversity *within* that family. Diversity over discovery APIs is the enumeration
+    signal; diversity over the API name in general is not (it inverts on mode-collapsed attacks like
+    the region sweep — see the module docstring). Family restriction is what makes the entropy axis
+    meaningful per technique.
     """
     with open(path) as f:
         records = json.load(f)["Records"]
     out: list[tuple[float, str, str]] = []
     for e in records:
+        if event_names is not None and e.get("eventName") not in event_names:
+            continue
         t = (dt.datetime.strptime(e["eventTime"], "%Y-%m-%dT%H:%M:%SZ") - _EPOCH).total_seconds()
         out.append((t, _field(e, entity_field), _field(e, value_field)))
     return out
+
+
+#: Family-restricted loader for the enumeration fan-out (see CLOUDTRAIL_ENUMERATION below).
+load_discovery_events = partial(load_cloudtrail_events, event_names=DISCOVERY_APIS)
 
 
 #: Acting credential → many AWS regions in an hour. ATT&CK T1496 (Resource Hijacking) on a
@@ -96,4 +136,18 @@ CLOUDTRAIL_REGION_SWEEP = FanoutBinding(
     value_field="awsRegion",
     grain_seconds=3600,
     technique="T1496",
+)
+
+#: Principal → many distinct DISCOVERY APIs in a short window. ATT&CK T1580 (Cloud Infrastructure
+#: Discovery) / T1087.004 (Cloud Account Discovery) — the enumeration/recon stage. Run with
+#: ``loader=load_discovery_events`` so the fan-out is over the discovery family only: HIGH entropy =
+#: a principal sweeping the environment's read APIs. This is CSAT's entropy-over-recon-channels
+#: detector, here gaining the conformal FAR bound CSAT's hand-threshold lacked. 5-minute grain matches
+#: CSAT's rapid-enumeration window.
+CLOUDTRAIL_ENUMERATION = FanoutBinding(
+    name="cloudtrail-enumeration",
+    entity_field="userIdentity",
+    value_field="eventName",
+    grain_seconds=300,
+    technique="T1580",
 )
