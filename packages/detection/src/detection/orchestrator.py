@@ -34,6 +34,8 @@ TECH_TACTIC = {
     "T1558.003": "credential-access",   # Kerberoasting
     "T1550.003": "lateral-movement",    # Use Alternate Auth Material: Pass the Ticket
     "T1078": "persistence",             # Valid Accounts (multi-tactic)
+    "T1580": "discovery",               # Cloud Infrastructure Discovery (enumeration)
+    "T1098": "priv-esc",                # Account Manipulation (IAM privilege grant)
     "T1496": "impact",                  # Resource Hijacking
 }
 
