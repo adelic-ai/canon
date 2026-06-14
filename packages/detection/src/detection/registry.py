@@ -26,7 +26,12 @@ from pathlib import Path
 
 from forge_core import DetectionVerdict
 
-from detection.cloudtrail import CLOUDTRAIL_REGION_SWEEP, load_cloudtrail_events
+from detection.cloudtrail import (
+    CLOUDTRAIL_ENUMERATION,
+    CLOUDTRAIL_REGION_SWEEP,
+    load_cloudtrail_events,
+    load_discovery_events,
+)
 from detection.cross_check import cross_check_verdicts, kerberoast_signature, ptt_signature
 from detection.fanout import (
     PASSWORD_SPRAY,
@@ -65,6 +70,8 @@ REGISTRY: list[Detector] = [
                                             signature=ptt_signature, technique="T1550.003")),
     Detector("cloudtrail_region_sweep", "T1496", frozenset({"userIdentity", "awsRegion"}),
              lambda p: fanout_verdicts(run_binding(p, CLOUDTRAIL_REGION_SWEEP, loader=load_cloudtrail_events))),
+    Detector("cloudtrail_enumeration", "T1580", frozenset({"userIdentity", "eventName"}),
+             lambda p: fanout_verdicts(run_binding(p, CLOUDTRAIL_ENUMERATION, loader=load_discovery_events))),
 ]
 
 
