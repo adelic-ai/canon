@@ -37,6 +37,11 @@ Derived-field reproducibility guardrail: every derived verdict     forge_core/ve
   field recomputes from the emitted primitives (CI-checked)        test_verdict.py::test_trustworthiness_is_reproducible_from_emitted_primitives
 One-hash-three-roles keystone: source.id == evidence_digest ==     provenance/entity.py, custody.py ·
   in-toto product digest == root prov:Entity id                    test_custody.py
+Detection guarantee tier is SHACL-EARNED, not asserted:            detection/_verdict.py ·
+  well_formed iff validate(root).conforms in emit (else ABSENT);   test_guarantee_earned.py
+  tier follows the validator — drops on non-conformance.
+  [FIXED 2026-06-14: emit had hardcoded tier=WELL_FORMED, no
+  validate() in the path — asserted, not earned.]
 >>>
 
 ## ASSUMED — the tier stands only if a precondition holds (else it demotes)
@@ -170,8 +175,10 @@ Detailed record + the exact assertions: `packages/detection/README.md` (the vali
 
 - **F\*/Coq machine-checked proofs** (the polyglot path) — the only thing that lifts a decode/kernel to
   `machine_checked`. §4 of the architecture.
-- **SHACL shapes** — `contracts/shapes/` is still README-only; the well-formedness fold is built but not
-  domain-enforced.
+- **SHACL shapes** — the GENERIC well-formedness check is now ENFORCED in the detection emit path
+  (2026-06-14): `emit_detection_verdict` runs `validate(root)` (provenance `well_formed_shapes`) and the
+  guarantee tier follows `.conforms` — see PROVEN. Still deferred: DOMAIN-specific shapes
+  (`contracts/shapes/` is README-only), which would enforce per-technique structure beyond generic PROV-O.
 - **Multi-scale** — the divisibility lattice (`forge_core/lattice.py`) is built but unused by the
   detectors; the grain-divisibility discipline beyond a single window, with the materialized-bucket
   guard, is future work. Earns its keep first at multi-scale MI (coordination cadence).

@@ -33,13 +33,24 @@ def build_detection_root(ref: str, params: dict) -> Entity:
     return derive("detection", lambda _p: None, (src,), params)  # structural; the folds never evaluate it
 
 
+def _earned_well_formed(root: Entity) -> Tier:
+    """EARN the well_formed tier by SHACL-validating the root's PROV-O — not assert it. ``conforms`` →
+    ``WELL_FORMED``; structurally malformed → ``ABSENT`` (no guarantee); the ``[rdf]`` extra absent →
+    ``ABSENT`` (can't run the check ⇒ can't earn it — honest, never a silent pass)."""
+    try:
+        from provenance import validate
+    except ImportError:
+        return Tier.ABSENT
+    return Tier.WELL_FORMED if validate(root).conforms else Tier.ABSENT
+
+
 def emit_detection_verdict(
     ref: str,
     *,
     technique: str,
     pvalue: float,
     params: dict,
-    tier: Tier = Tier.WELL_FORMED,
+    tier: Tier | None = None,
     who: Four = TRUE,
     when: Four = NONE,
     what: Four | None = None,
@@ -61,13 +72,19 @@ def emit_detection_verdict(
     that is honest, not a regression. (``who`` defaults ``TRUE`` because every current producer identifies
     its entity; ``what`` defaults to the ∃-detect; ``where``/``how`` default ``NONE``.) All are parameters
     so a detector that grounds more — or earns a higher tier — can say so honestly.
+
+    **The guarantee tier is EARNED, not asserted.** With ``tier=None`` (default) it is the SHACL
+    conformance of the verdict's PROV-O root: ``well_formed`` iff ``validate(root).conforms``, else
+    ``ABSENT`` (and ``ABSENT`` if the ``[rdf]`` extra is absent — can't check ⇒ can't earn). A caller
+    passes an explicit ``tier`` only with independent evidence for a higher one.
     """
-    root = build_detection_root(ref, params)  # the verdict's provenance root (SHACL-checkable)
+    root = build_detection_root(ref, params)  # the verdict's provenance root (SHACL-validated below)
+    earned = tier if tier is not None else _earned_well_formed(root)  # EARN the tier via SHACL, not assert
     return assemble_verdict(
         root,
         technique=technique,
         confidence_evidence={root.id: Confidence.from_detector(True, pd=_PD, pfa=pvalue)},
-        claims={root.id: tier},
+        claims={root.id: earned},
         who=who,
         when=when,
         what=what,
