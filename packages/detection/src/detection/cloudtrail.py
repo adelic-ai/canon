@@ -39,6 +39,7 @@ detections are :class:`~detection.fanout.FanoutDetection`, and verdict-emission 
 from __future__ import annotations
 
 import datetime as dt
+import gzip
 import json
 from functools import partial
 
@@ -110,7 +111,8 @@ def load_cloudtrail_events(
     the region sweep — see the module docstring). Family restriction is what makes the entropy axis
     meaningful per technique.
     """
-    with open(path) as f:
+    opener = gzip.open if str(path).endswith(".gz") else open
+    with opener(path, "rt") as f:        # transparently reads .json or .json.gz
         records = json.load(f)["Records"]
     out: list[tuple[float, str, str]] = []
     for e in records:
