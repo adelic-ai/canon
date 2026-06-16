@@ -41,6 +41,7 @@ from detection.fanout import (
 )
 from detection.offhours import offhours_verdicts, run_offhours
 from detection.rarity import cloud_account_manipulation_verdicts
+from detection.subgraph import lsass_dump_verdicts
 
 
 @dataclass(frozen=True)
@@ -75,17 +76,34 @@ REGISTRY: list[Detector] = [
              lambda p: fanout_verdicts(run_binding(p, CLOUDTRAIL_ENUMERATION, loader=load_discovery_events))),
     Detector("cloud_account_manipulation", "T1098", frozenset({"userIdentity", "eventName"}),
              cloud_account_manipulation_verdicts),
+    Detector("lsass_dump_subgraph", "T1003.001", frozenset({"EventID", "TargetImage", "GrantedAccess"}),
+             lsass_dump_verdicts),
 ]
 
 
 def corpus_fields(path: str) -> set[str]:
     """The field set available in a corpus — the observability surface the gate checks against.
-    CSV → header columns; JSON → keys of the first record (bare list or a ``Records`` envelope)."""
+    CSV → header columns; JSON → keys of the first record; JSONL (heterogeneous Sysmon) → the UNION of
+    keys across ALL lines. The union is whole-file, not a prefix sample: in a Sysmon log the per-EventID
+    fields a detector gates on (e.g. GrantedAccess on EID10) may first appear thousands of lines in, so a
+    prefix sample would wrongly report the field absent and skip an applicable detector."""
     p = Path(path)
     if p.suffix == ".csv":
         with p.open(newline="") as f:
             return set(next(csv.reader(f)))
-    data = json.loads(p.read_text())
+    text = p.read_text()
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        fields: set[str] = set()
+        for line in text.splitlines():              # JSONL — union keys across the whole file
+            line = line.strip()
+            if line:
+                try:
+                    fields |= set(json.loads(line).keys())
+                except json.JSONDecodeError:
+                    pass
+        return fields
     recs = data if isinstance(data, list) else data.get("Records") or []
     return set(recs[0].keys()) if recs else set()
 

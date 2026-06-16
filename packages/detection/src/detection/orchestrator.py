@@ -30,6 +30,7 @@ from detection.registry import REGISTRY, corpus_fields, run_applicable
 # T1078 (Valid Accounts) is multi-tactic; persistence taken as the dominant reading for an off-hours
 # valid-account anomaly. Upgrade path: derive from enterprise-attack.json.
 TECH_TACTIC = {
+    "T1003.001": "credential-access",   # OS Credential Dumping: LSASS Memory
     "T1110.003": "credential-access",   # Brute Force: Password Spraying
     "T1558.003": "credential-access",   # Kerberoasting
     "T1550.003": "lateral-movement",    # Use Alternate Auth Material: Pass the Ticket

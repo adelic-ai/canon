@@ -76,8 +76,25 @@ from detection.killchain import build_model, forward_nexts
 from detection.hmm import decode, emission_model, viterbi
 from detection.orchestrator import TECH_TACTIC, orchestrate
 from detection.rarity import cloud_account_manipulation_verdicts, rare_actors
+from detection.subgraph import (
+    LSASS_DUMP,
+    LSASS_READ_ANY,
+    MotifSpec,
+    PatternSpec,
+    lsass_dump_verdicts,
+    match_pattern,
+    pattern_verdicts,
+)
 
 __all__ = [
+    # subgraph — structural multi-EID pattern detection (the structural paradigm; emits canonical verdicts)
+    "MotifSpec",
+    "PatternSpec",
+    "match_pattern",
+    "pattern_verdicts",
+    "LSASS_DUMP",
+    "LSASS_READ_ANY",
+    "lsass_dump_verdicts",
     # rarity — flag the rare ACTOR for a sensitive action family (cred-access: rare doer, not breadth)
     "rare_actors",
     "cloud_account_manipulation_verdicts",
