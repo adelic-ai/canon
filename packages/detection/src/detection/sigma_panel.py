@@ -22,6 +22,15 @@ Belnap: the panel emits TRUE (≥1 deduped class fires) or NONE (nothing evaluab
 fired). It structurally never emits FALSE — a Sigma rule not firing is a coverage gap in that rule, not
 evidence the attack is absent. Non-firing cannot refute; it can only fail to corroborate.
 
+Generalized beyond the first (process_access) cell: rules are selected by a ``logsource`` selector that
+is a bare category string *or* a category/product/service subset (e.g. ``{"product": "aws", "service":
+"cloudtrail"}`` for cloud detectors). And the panel scores a *set* of events (a class fires if its
+representative fires on ANY of them) — entity-level corroboration, for detectors that flag an entity over
+a distribution (fan-out / rarity) rather than a single structural event. Honest spectrum on the real
+corpus: T1003.001 and T1580 corroborate (a community class fires); T1098 evaluates but is UNCORROBORATED
+(SigmaHQ's account-manipulation rules cover different IAM ops than our family); T1558.003 has same-
+logsource rules but a field-name impedance (raw-Windows vs Splunk-CIM) — a mapping layer, deferred.
+
 Data: ``packages/semantic-cyber/data/sigma-rules/`` (real SigmaHQ corpus).
 """
 
@@ -71,11 +80,30 @@ def signature(r: dict) -> tuple:
     return (_logsource(r), _fields(r["detection"].get("selection")))
 
 
-def panel(technique: str, event: dict, category: str, *, root: Path = SIGMA) -> dict:
-    """Run the deduped panel for ``technique`` against ``event`` over rules of logsource ``category``.
-    Returns ``{tagged, relevant, classes, evaluated, fired, skipped}``."""
+def _ls_match(r: dict, sel: dict) -> bool:
+    """Does rule ``r``'s logsource match every key given in ``sel`` (a subset of category/product/
+    service)? Empty ``sel`` matches all."""
+    cat, prod, svc = _logsource(r)
+    got = {"category": cat, "product": prod, "service": svc}
+    return all(got.get(k) == v for k, v in sel.items())
+
+
+def _as_selector(logsource) -> dict:
+    """A ``logsource`` arg is either a bare category string (back-compat) or a subset dict of
+    category/product/service (e.g. ``{"product": "aws", "service": "cloudtrail"}``)."""
+    return {"category": logsource} if isinstance(logsource, str) else dict(logsource)
+
+
+def panel(technique: str, events, logsource="process_access", *, root: Path = SIGMA) -> dict:
+    """Run the deduped panel for ``technique`` against ``events`` over rules whose logsource matches
+    ``logsource`` (a category string, or a category/product/service subset dict). ``events`` is a single
+    event dict or a list; a deduped class fires if its representative fires on ANY event (entity-level
+    corroboration — the flagged entity did *something* a community rule recognizes). Returns
+    ``{tagged, relevant, classes, evaluated, fired, skipped}``."""
+    evs = [events] if isinstance(events, dict) else list(events)
+    sel = _as_selector(logsource)
     rules = gather(technique, root=root)
-    relevant = [(p, r) for p, r in rules if _logsource(r)[0] == category]
+    relevant = [(p, r) for p, r in rules if _ls_match(r, sel)]
 
     classes: dict[tuple, list] = collections.defaultdict(list)
     for p, r in relevant:
@@ -88,17 +116,17 @@ def panel(technique: str, event: dict, category: str, *, root: Path = SIGMA) -> 
             skipped.append((sig, len(members)))
             continue
         evaluated += 1
-        if rule_fires(rep_r, event):
+        if any(rule_fires(rep_r, e) for e in evs):
             fired.append((rep_p.name, sorted(sig[1]), len(members)))
     return {"tagged": len(rules), "relevant": len(relevant), "classes": len(classes),
             "evaluated": evaluated, "fired": fired, "skipped": skipped}
 
 
-def corroborate(technique: str, event: dict, category: str = "process_access",
+def corroborate(technique: str, events, logsource="process_access",
                 *, root: Path = SIGMA) -> dict:
     """Belnap-style corroboration of a canon finding by the deduped external panel. Adds ``votes``,
     ``belnap`` (TRUE | NONE — never FALSE), and a human ``verdict`` to the :func:`panel` result."""
-    res = panel(technique, event, category, root=root)
+    res = panel(technique, events, logsource, root=root)
     votes = len(res["fired"])
     if votes > 0:
         belnap, verdict = TRUE, f"CORROBORATED-true ({votes} independent deduped vote(s))"
