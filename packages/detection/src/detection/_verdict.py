@@ -16,10 +16,14 @@ from the rare conformal p-value). No faked attestation to inflate trust.
 
 from __future__ import annotations
 
+import functools
+from pathlib import Path
+
 from forge_core import Calibration, DetectionVerdict, assemble_verdict
 from provenance import NONE, TRUE, Confidence, Entity, Four, Tier, derive, source
 
 _PD = 0.9  # nominal detection probability for the confidence leaf (no calibrated Pd per detector)
+_DOMAIN_SHAPES = Path(__file__).parents[4] / "contracts" / "shapes" / "detection.shapes.ttl"
 
 
 def build_detection_root(ref: str, params: dict) -> Entity:
@@ -33,15 +37,28 @@ def build_detection_root(ref: str, params: dict) -> Entity:
     return derive("detection", lambda _p: None, (src,), params)  # structural; the folds never evaluate it
 
 
+@functools.lru_cache(maxsize=1)
+def _well_formed_shapes():
+    """Generic PROV-O well-formedness (provenance) + canon's DETECTION-DOMAIN shapes, merged once.
+    The domain shape (``contracts/shapes/detection.shapes.ttl``) requires the op-plan to record its
+    params — so the earned tier now checks per-op structure, not just generic PROV-O."""
+    from provenance import well_formed_shapes
+    g = well_formed_shapes()
+    if _DOMAIN_SHAPES.exists():
+        g.parse(_DOMAIN_SHAPES, format="turtle")
+    return g
+
+
 def _earned_well_formed(root: Entity) -> Tier:
-    """EARN the well_formed tier by SHACL-validating the root's PROV-O — not assert it. ``conforms`` →
-    ``WELL_FORMED``; structurally malformed → ``ABSENT`` (no guarantee); the ``[rdf]`` extra absent →
-    ``ABSENT`` (can't run the check ⇒ can't earn it — honest, never a silent pass)."""
+    """EARN the well_formed tier by SHACL-validating the root's PROV-O against the GENERIC + detection-DOMAIN
+    shapes — not assert it. ``conforms`` (both) → ``WELL_FORMED``; malformed (generic OR domain) → ``ABSENT``
+    (no guarantee); the ``[rdf]`` extra absent → ``ABSENT`` (can't check ⇒ can't earn — honest, never a
+    silent pass)."""
     try:
-        from provenance import validate
+        from provenance import to_prov, validate_graph
     except ImportError:
         return Tier.ABSENT
-    return Tier.WELL_FORMED if validate(root).conforms else Tier.ABSENT
+    return Tier.WELL_FORMED if validate_graph(to_prov(root), _well_formed_shapes()).conforms else Tier.ABSENT
 
 
 def emit_detection_verdict(

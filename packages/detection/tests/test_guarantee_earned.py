@@ -26,9 +26,9 @@ def test_tier_drops_to_absent_when_validation_fails(monkeypatch):
     class _FailReport:
         conforms = False
 
-    monkeypatch.setattr(provenance, "validate", lambda r: _FailReport())
-    # the tier FOLLOWS the validator's verdict — non-conformance ⇒ ABSENT. If the tier were asserted
-    # (hardcoded WELL_FORMED) this would still be WELL_FORMED. It isn't ⇒ earned.
+    monkeypatch.setattr(provenance, "validate_graph", lambda data, shapes: _FailReport())
+    # the tier FOLLOWS the validator's verdict — non-conformance (generic OR domain shapes) ⇒ ABSENT.
+    # If the tier were asserted (hardcoded WELL_FORMED) this would still be WELL_FORMED. It isn't ⇒ earned.
     assert _earned_well_formed(root) == Tier.ABSENT
 
 
