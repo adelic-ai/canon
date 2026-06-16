@@ -77,6 +77,11 @@ from detection.registry import REGISTRY, Detector, corpus_fields, run_applicable
 from detection.killchain import build_model, forward_nexts
 from detection.hmm import decode, emission_model, viterbi
 from detection.orchestrator import TECH_TACTIC, orchestrate
+from detection.cross_model import (
+    cross_model_kerberoast,
+    slice_entity_window,
+    synthesize_kerberoast_corpus,
+)
 from detection.rarity import cloud_account_manipulation_verdicts, rare_actors
 from detection.subgraph import (
     LSASS_DUMP,
@@ -142,6 +147,10 @@ __all__ = [
     "cross_check_verdicts",
     "lsass_dump_corroborated",   # structural lsass-dump + Sigma corroboration recorded as a provenance edge
     "sigma_corroborator",        # the dependency-injected Sigma corroboration witness for pattern_verdicts
+    # cross-model join — behavioral detector + tool-artifact rule corroborate at the entity+window grain
+    "cross_model_kerberoast",
+    "slice_entity_window",
+    "synthesize_kerberoast_corpus",
     "kerberoast_signature",
     "ptt_signature",
     "spray_signature",

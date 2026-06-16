@@ -186,19 +186,27 @@ Detailed record + the exact assertions: `packages/detection/README.md` (the vali
 
 ## DEFERRED — named, not built
 
-- **Entity/incident-grain cross-model corroboration.** Kerberoasting leaves **two traces**: the
-  technique-intrinsic **4769 RC4 ticket fan-out** (always present, tool-agnostic — our behavioral detector)
-  and a **tool-incidental artifact** (Rubeus registering its `User32LogonProcesss` logon provider, EID
-  **4611** — the Sigma rule; conditional, only on Rubeus ops needing `SeTcbPrivilege`). These are
-  **complementary, not ranked**: "lower on the pyramid of pain" means cheaper for the attacker to **evade**
-  (recompile), *not* lower detection **value** — commodity Rubeus is widespread in the wild, so the tool
-  rule is **high value-now**, while the behavioral signal is **evasion-resistant**. They corroborate only
-  at the **entity + window grain** (the same actor triggering both), not by scoring one detector's single
-  event against the other's rule (different telemetry → no fire). Because Rubeus is common, real intrusions
-  usually emit *both* from one actor, so this join is **high-yield in practice** — worth building. It needs
-  the actor's full multi-EID stream **and** a corpus where the tool was used (no OTRF/flaws record contains
-  a Rubeus 4611). The coverage map's T1558.003 `no-overlap` is this grain gap, **not** a model deficiency
-  and **not** a verdict on the tool rule's worth. `design/sigma_corroboration_coverage.md`.
+- **Entity/incident-grain cross-model corroboration — CONSTRUCTIVE existence-proof BUILT (2026-06-16);
+  real-data validation deferred.** A behavioral detector and an external rule that read *different events*
+  corroborate only at the **entity + window grain** (the same actor's full multi-EID stream in the flagged
+  window), not by scoring one's single event against the other's rule (different telemetry → no fire).
+  Built in `detection/cross_model.py` + `test_cross_model.py`: the 4769 RC4 ticket fan-out (T1558.003)
+  flags an account, then the deduped windows/security Sigma panel runs over that account's full window
+  stream; firing rule-classes land as the provenance edge. On a **mechanism-modelled** corpus with a
+  **negative control**: the Rubeus actor (4769 fan-out + the EID-4611 `User32LogonProcesss` artifact) is
+  corroborated by **two** witnesses — `win_security_kerberoasting_activity` (behavioral, 4769 RC4) *and*
+  `..._register_new_logon_process_by_rubeus` (tool); the **non-Rubeus actor (Impacket)** flags identically
+  and is corroborated by the **behavioral rule only**, the Rubeus artifact honestly **absent (NONE, never
+  FALSE)** — Kerberoasting is a *technique, not a tool*, so Rubeus is ONE witness, not the definition. A
+  normal account also trips the per-event community rule but is **not behaviorally flagged** (the fan-out
+  adds the discrimination the per-event rule lacks). Belnap/CID check: the rubeus verdict's provenance CID
+  equals the root rebuilt WITH the corroboration and differs from the one without — the edge is genuinely
+  on the verdict. **Deferred:** real-data validation — no held corpus carries both traces (OTRF is
+  process_access only; faker-kerberos is 4769-only; bots-v3 has no kerberoasting). Two traces: the 4769 RC4
+  fan-out is technique-intrinsic (every tool leaves it); the 4611 artifact is Rubeus-incidental (only on
+  ops needing `SeTcbPrivilege`). Complementary, not ranked — "lower on the pyramid of pain" = cheaper to
+  **evade**, not lower **value** (commodity Rubeus is widespread → the tool rule is high value-now; the
+  behavioral signal is evasion-resistant). `design/sigma_corroboration_coverage.md`.
 - **F\*/Coq machine-checked proofs** (the polyglot path) — the only thing that lifts a decode/kernel to
   `machine_checked`. §4 of the architecture.
 - **SHACL shapes** — the GENERIC well-formedness check is now ENFORCED in the detection emit path
