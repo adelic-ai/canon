@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canon — ATLAS-semex / KINAITICS: MITRE ATLAS as OWL</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --ink:#e6e8ee; --muted:#9aa3b2;
+    --line:#2a2f3a; --accent:#7db4ff; --accent2:#c79bff;
+    --good:#6fcf97; --warn:#f2c94c; --gap:#eb6f6f;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1000px;margin:0 auto;padding:48px 28px 96px}
+  .backlink{font:13px/1.5 var(--mono);margin:0 0 22px}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  h1{font-size:29px;margin:0 0 6px;letter-spacing:-.01em}
+  .sub{color:var(--muted);margin:0 0 4px;font-size:17px}
+  .stamp{color:var(--muted);font:13px/1.5 var(--mono);margin:0 0 30px}
+  h2{font-size:21px;margin:46px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+  h3{font-size:16px;margin:24px 0 6px;color:var(--accent)}
+  p{margin:11px 0}
+  code{font-family:var(--mono);font-size:.88em;background:#1e222b;padding:1px 5px;border-radius:4px}
+  strong{color:#fff}
+  .lede{font-size:18px;line-height:1.55}
+  .note{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:8px;padding:14px 18px;margin:20px 0}
+  .note.key{border-left-color:var(--accent2)}
+  .note.gap{border-left-color:var(--gap)}
+  .note.out{border-left-color:var(--good)}
+  ul,ol{margin:12px 0;padding-left:22px}
+  li{margin:7px 0}
+  pre{background:#0c0e13;border:1px solid var(--line);border-radius:8px;padding:14px 16px;
+    overflow-x:auto;font:13px/1.55 var(--mono);margin:14px 0}
+  pre .c{color:var(--muted)}
+  pre .k{color:var(--accent2)}
+  pre .s{color:var(--good)}
+  pre .o{color:var(--ink)}
+  table{border-collapse:collapse;margin:14px 0;font-size:14px;width:100%}
+  th,td{border:1px solid var(--line);padding:6px 11px;text-align:left;vertical-align:top}
+  th{color:var(--muted);font-weight:600}
+  .tag{font:11px/1.4 var(--mono);padding:1px 7px;border-radius:10px;border:1px solid var(--line)}
+  .v{color:var(--good)}   /* verified by me */
+  .r{color:var(--warn)}   /* reported, unverified */
+  .x{color:var(--gap)}    /* contradicted / caveat */
+  footer{margin-top:60px;color:var(--muted);font-size:13px;border-top:1px solid var(--line);padding-top:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="backlink"><a href="index.html">← Canon index</a></p>
+
+  <h1>ATLAS-semex / KINAITICS</h1>
+  <p class="sub"><em>MITRE ATLAS rendered as a queryable OWL knowledge base — what it is, what it actually contains, and where (and where not) it fits canon.</em></p>
+  <p class="stamp">canon · reference / scope · 2026-06-15 · <strong>revised 2026-06-16</strong> (§8: AI-as-application-class, the join synthesis, consolidation) · verified against the live <code>atlas-semex.ttl</code></p>
+
+  <p class="lede">A Horizon-Europe project (KINAITICS, KU Leuven / DistriNet) published the
+  MITRE ATLAS adversarial-ML framework as an OWL/Turtle ontology you can run a description-logic
+  reasoner over. The shape is exactly the move canon makes for the conventional-intrusion frameworks
+  (D3FEND, ATT&amp;CK) — <strong>a framework rendered as a logical artifact, queried for entailments a
+  flat YAML can't answer</strong> — but in the AI-threat domain. That is the reason it's worth scoping.
+  This page separates what is <span class="v">verified</span> from what is <span class="r">reported but
+  unconfirmed</span>, then states honestly where it lands relative to the canon spine.</p>
+
+  <div class="note key">
+    <strong>Naming collision — read first.</strong> Two unrelated "Atlas" live in this orbit.
+    <strong>MITRE ATLAS</strong> = <em>Adversarial Threat Landscape for AI Systems</em> (attacks <em>on</em>
+    ML systems) — the subject of this page. Canon's <strong><code>~/atlas</code></strong> = your standalone
+    SKOS/RDF library of <em>analytical primitives</em> (information theory, detection theory) — a completely
+    different thing. They share a word and nothing else. Do not let any downstream reader conflate them.
+  </div>
+
+  <h2>1 · What it is — the artifact</h2>
+
+  <p>Source paper: Preuveneers, D.; Joosen, W., <em>"An Ontology-Based Cybersecurity Framework for
+  AI-Enabled Systems and Applications,"</em> <strong>Future Internet 2024, 16(3), 69</strong>. Authors are
+  DistriNet, KU Leuven; the work is positioned under the KINAITICS project. <span class="v">Paper, authors,
+  journal, and project all verified.</span></p>
+
+  <p>The generated knowledge bases are hosted under the author's namespace
+  <code>people.cs.kuleuven.be/~davy.preuveneers/ns/cti/</code>:</p>
+
+  <table>
+    <tr><th>File</th><th>Domain</th><th>Status</th></tr>
+    <tr><td><code>atlas-semex.ttl</code></td><td>MITRE ATLAS (adversarial ML)</td><td><span class="v">verified — 335&nbsp;KB, 5346 lines, fetched &amp; parsed</span></td></tr>
+    <tr><td><code>atlas-attack-semex-enterprise.ttl</code></td><td>MITRE ATT&amp;CK Enterprise (companion)</td><td><span class="v">verified — exists; ATT&amp;CK spec 3.1.0; large</span></td></tr>
+  </table>
+
+  <div class="note gap">
+    <strong>Correction to the secondhand account.</strong> The summary that prompted this scope listed
+    files <code>atlas-semex.ttl</code> / <code>attack-semex.ttl</code> / <code>.rdf</code> variants and an
+    "OASIS Threat Actor Context (TAC) ontology" base. Checked against the live file: <code>atlas-semex.ttl</code>
+    <span class="v">is real</span>; the ATT&amp;CK companion is actually named
+    <code>atlas-attack-semex-enterprise.ttl</code>, not <code>attack-semex.ttl</code>; and <span class="x">there is
+    no <code>tac:</code> namespace in the published Turtle</span> — it imports <code>stix-semex</code> and
+    <code>attack-semex</code>, not a TAC ontology. The TAC claim is either from an earlier draft or wrong.
+    Treat the "<span class="r">v4.5.1 mapping</span>", "<span class="r">HermiT/ELK</span>",
+    "<span class="r">Manchester-syntax queries</span>" and "<span class="r">Spring Boot PoC</span>" specifics
+    as reported-from-the-paper, not independently confirmed.
+  </div>
+
+  <h2>2 · What the ontology actually contains</h2>
+
+  <p>This is the load-bearing technical fact, and it's not what the prose summary implies. ATLAS-semex is
+  <strong>STIX 2.1 reified into OWL named individuals</strong> — not a hand-built domain TBox of rich class
+  restrictions. The ontology header imports the STIX-as-OWL base and the ATT&amp;CK extension, then lists
+  every ATLAS object as an <code>owl:NamedIndividual</code> typed with a STIX class:</p>
+
+  <pre><span class="c"># ontology header — verified verbatim</span>
+&lt;…/atlas-semex&gt; rdf:type owl:Ontology ;
+    owl:imports &lt;…/ns/cti/stix-semex&gt; ,
+                &lt;…/ns/cti/attack-semex&gt; .
+
+<span class="c"># one ATLAS technique, as it actually appears</span>
+:attack-pattern--92c8… rdf:type owl:NamedIndividual , <span class="k">stix:AttackPattern</span> ;
+    cti:name <span class="s">"Search for Victim's Publicly Available Research Materials"</span> ;
+    cti:description <span class="s">"""Adversaries may search publicly available research…"""</span> ;
+    stix:kill_chain_phases :kill_chain_phases--c8ad… ;     <span class="c"># → tactic</span>
+    cti:external_references :external_reference--8474… ;   <span class="c"># → AML.Txxxx id</span>
+    attack-semex:x_mitre_platforms <span class="s">"ATLAS"</span> .</pre>
+
+  <p><span class="v">Verified class distribution</span> across the 666 named individuals:</p>
+
+  <table>
+    <tr><th>STIX class</th><th>Count</th><th>ATLAS meaning</th></tr>
+    <tr><td><code>stix:AttackPattern</code></td><td>82</td><td>techniques (incl. sub-techniques)</td></tr>
+    <tr><td><code>attack-semex:Tactic</code></td><td>14</td><td>tactics</td></tr>
+    <tr><td><code>stix:CourseOfAction</code></td><td>20</td><td>mitigations</td></tr>
+    <tr><td><code>stix:Relationship</code></td><td>107</td><td>technique↔tactic↔mitigation links</td></tr>
+    <tr><td><code>core:KillChainPhase</code></td><td>100</td><td>kill-chain placement</td></tr>
+    <tr><td><code>cti:ExternalReference</code></td><td>117</td><td>AML ids, citations</td></tr>
+    <tr><td><code>attack-semex:Matrix / Collection</code></td><td>1 / 1</td><td>the ATLAS matrix bundle</td></tr>
+  </table>
+
+  <div class="note">
+    <strong>Where the query power actually lives.</strong> Because the techniques are thin STIX individuals,
+    the DL-reasoning leverage comes from the <strong>107 <code>Relationship</code> objects + kill-chain
+    phases</strong> and from the class/property axioms in the <em>imported</em> <code>stix-semex</code> /
+    <code>attack-semex</code> TBoxes — not from deep restrictions on the techniques themselves. The reported
+    queries ("which mitigation is circumvented by which technique") are reachable <em>if</em> those relationship
+    objects carry the mitigates/revoked-by edges; the modality query ("image-vs-tabular models") is
+    <span class="r">unconfirmed</span> — I saw no modality datatype property in the sample, only
+    <code>x_mitre_platforms "ATLAS"</code>.
+  </div>
+
+  <div class="note key">
+    <strong>This is the ABox/TBox distinction you already documented.</strong> Canon's
+    <a href="d3fend_tbox_vs_log_abox.html">d3fend_tbox_vs_log_abox</a> page draws exactly this line. D3FEND
+    is a rich <em>TBox</em> (OWL restrictions: "T1003.001 <code>accesses</code> a <code>Process</code>") that
+    canon reasons over for defensive-offensive artifact joins. ATLAS-semex is mostly <em>ABox</em> — STIX
+    instances with relationship edges. Same serialization (OWL/Turtle), very different reasoning depth. Any
+    canon integration must treat them differently: D3FEND earns subsumption entailments; ATLAS-semex earns
+    graph-relationship traversal.
+  </div>
+
+  <h2>3 · Why this matches what you were imagining</h2>
+
+  <p>The architectural pattern is one-for-one with canon's existing semantic-cyber stance, transposed to the
+  AI-threat domain:</p>
+  <ul>
+    <li><strong>Framework → logical artifact.</strong> A flat MITRE YAML becomes an OWL graph a reasoner can
+    answer entailment questions over — the same reason canon loads D3FEND as 45K triples instead of calling an API.</li>
+    <li><strong>Reasoner as the deductive verifier.</strong> A DL reasoner (HermiT/ELK, <span class="r">reported</span>)
+    in the verifier seat is precisely the role canon assigns to deduction in the
+    <a href="abduction_loop.html">abduction loop</a>: the sound check, no LLM, returns entailment or nothing.</li>
+    <li><strong>Cross-framework join, built in.</strong> <code>atlas-semex</code> imports <code>attack-semex</code>
+    and reuses its <code>x_mitre_*</code> vocabulary — so ATLAS and ATT&amp;CK techniques live in one federated
+    namespace, queryable together. That is the <a href="w_coordinate_system.html">W→route</a> join idea, already
+    wired for the AI side.</li>
+  </ul>
+
+  <p>So the instinct is right that this resembles the canon design — but resemblance is at the
+  <strong>methodology</strong> level (how you render and query a framework), not at the content level. The
+  content is a different threat universe, and that distinction is the whole scope question.</p>
+
+  <h2>4 · Where it plugs into canon</h2>
+
+  <p>Canon already owns every part of the machinery this needs — confirmed in the repo:</p>
+  <table>
+    <tr><th>Need</th><th>Canon already has</th></tr>
+    <tr><td>Load OWL/Turtle, SPARQL it</td><td><code>semantic-core</code> Graph (rdflib); <code>semantic-cyber</code> loads D3FEND.ttl the same way</td></tr>
+    <tr><td>DL reasoning (subsumption, entailment)</td><td><code>semantic-core/reasoning.py</code> — owlready2 wrapper, <code>hermit</code>/<code>pellet</code></td></tr>
+    <tr><td>Graph well-formedness</td><td><code>semantic-core/validation.py</code> — pySHACL</td></tr>
+    <tr><td>Cross-framework SKOS bridges</td><td><code>semantic-cyber/bridge.py</code> — Sigma↔D3FEND, OCSF↔ATT&amp;CK pattern</td></tr>
+    <tr><td>Lineage of what was ingested</td><td><code>provenance</code> — PROV-O imported directly</td></tr>
+  </table>
+
+  <p>The cheapest concrete move: <strong>add <code>atlas-semex.ttl</code> as a third corpus in
+  <code>semantic-cyber</code></strong>, next to D3FEND and ATT&amp;CK. It already imports the
+  <code>attack-semex</code> namespace canon would also be loading, so a federated "ATLAS technique ↔ ATT&amp;CK
+  technique ↔ D3FEND countermeasure" query is a small, demonstrable artifact. That alone is a real capability:
+  navigate AI-threat TTPs against the conventional defensive graph.</p>
+
+  <h2>5 · Where it does NOT fit — caveats that bound the value</h2>
+
+  <div class="note gap">
+    <ul style="margin:0">
+      <li><strong>Different threat domain — canon has zero detectors here.</strong> The detection battery
+      (Kerberos fan-out, CloudTrail, off-hours, coordination) surfaces <em>conventional intrusion telemetry</em>.
+      MITRE ATLAS is <em>adversarial ML</em>: evasion, poisoning, model extraction, prompt injection. There is no
+      telemetry detector in canon that grounds an ATLAS technique. So this is a <strong>semantic corpus you can
+      query</strong>, not a corpus the battery verifies against. Treating it as the latter would over-claim.</li>
+      <li><strong>The published artifact is stale.</strong> The individuals are dated <code>2024-01-12</code> →
+      an early-2024 ATLAS snapshot: <span class="v">82 techniques / 14 tactics / 20 mitigations</span>. Current
+      ATLAS is <strong>v5.1.0 (Nov 2025): 16 tactics, 84 techniques, 56 sub-techniques, 32 mitigations, 42 case
+      studies</strong> (<span class="r">per MITRE</span>). The entire Spring-2025 GenAI/LLM expansion — RAG
+      poisoning, prompt-injection, AI supply-chain — is <strong>absent</strong> from the .ttl. The mapping
+      pipeline is reusable; the shipped graph is ~18 months behind.</li>
+      <li><strong>No case studies as individuals.</strong> ATLAS's 42 real-world case studies are arguably its
+      richest content; I found no <code>stix:Report</code>/sighting objects carrying them in the .ttl. The graph
+      is TTP-structure, not incident-grounded.</li>
+      <li><strong>ABox-shallow reasoning.</strong> Per §2 — don't expect D3FEND-grade artifact-restriction
+      entailments. The reasoning is relationship traversal over STIX instances.</li>
+      <li><strong>Epistemic stance still binds.</strong> Per the guarantees ledger — <em>frameworks are
+      validatable hypotheses; bedrock is logic + empirical reality.</em> A reasoner returns the deductive
+      consequences of what the ontology <em>asserts</em>; ATLAS-semex asserts, it does not validate. It is a
+      hypothesis graph to query, not ground truth.</li>
+    </ul>
+  </div>
+
+  <h2>6 · What canon could actually do with it — options, scoped</h2>
+
+  <ol>
+    <li><strong>Reference / methodology study (smallest).</strong> Read the .ttl as a worked example of
+    STIX→OWL framework rendering. Value: confirms canon's approach; costs ~nothing. <em>Recommended baseline.</em></li>
+    <li><strong>Third semantic-cyber corpus (small, demonstrable).</strong> Ingest <code>atlas-semex.ttl</code>,
+    federate with ATT&amp;CK/D3FEND, ship one cross-framework query (AI TTP → enterprise technique → countermeasure).
+    Value: a real capability, honestly an AI-threat <em>navigation</em> tool, not detection. <em>Recommended if you
+    want a concrete artifact.</em></li>
+    <li><strong>Re-mint from current ATLAS (medium).</strong> The shipped graph is stale; canon could run its own
+    YAML/STIX→OWL pass against ATLAS v5.1.0 to get the GenAI techniques. Only worth it if option 2 proves useful.</li>
+    <li><strong>Open an adversarial-ML detection front (large — a program decision).</strong> Build actual detectors
+    for ATLAS techniques (e.g. model-extraction query patterns, poisoning signals) and wire ATLAS-semex as their
+    verifier framework, mirroring the battery↔framework inversion. This is a new threat domain for canon, not an
+    afternoon. Flag it as such; don't drift into it by accident.</li>
+  </ol>
+
+  <div class="note out">
+    <strong>Recommendation.</strong> File this as <strong>methodology reference + candidate 3rd corpus</strong>,
+    not "the AI version of canon." The pattern-match to your vision is real and worth capturing — but the value is
+    in the <em>rendering/querying methodology</em> (which canon already independently has) and in optional AI-threat
+    <em>navigation</em>. Calling it "everything I imagined, in AI" is true for the architecture and false for the
+    content: canon's edge is <em>empirically-grounded, self-validating detection</em>, and this artifact is an
+    asserted, un-grounded, stale TTP catalog. The honest framing is the load-bearing one.
+  </div>
+
+  <h2>7 · Open questions (unverified — resolve from source before relying)</h2>
+  <ul>
+    <li>The exact Manchester-syntax queries the paper demonstrates, and whether the "data modality" query is real
+    or paraphrase (<span class="r">no modality property seen in the .ttl</span>).</li>
+    <li>Whether <code>stix:Relationship</code> edges actually carry <code>mitigates</code> / technique-circumvents-mitigation
+    semantics, or only technique↔tactic placement (determines if the headline DL query works).</li>
+    <li>The reasoner/PoC stack (HermiT/ELK, Spring Boot) — reported from the paper, not inspected.</li>
+    <li>License / reuse terms on the KU Leuven-hosted .ttl before canon redistributes or derives from it.</li>
+  </ul>
+
+  <h2>8 · Revised view — canon, 2026-06-16</h2>
+  <p>After working the join model and the threat-domain question, three refinements to §4–6.</p>
+
+  <h3>AI is an application class, not a parallel domain</h3>
+  <p>MITRE ATLAS isn't a universe beside traditional cyber — it's a new <strong>application class layered on
+  conventional infrastructure</strong> (as web-apps + OWASP sit on infra + ATT&amp;CK). AI attack chains
+  <strong>compose with</strong> conventional ones: poison a model → first breach the training data-store
+  (ATT&amp;CK), <em>then</em> poison (ATLAS); extract a model → API cred-access (ATT&amp;CK), <em>then</em>
+  extraction queries (ATLAS). That is <strong>why <code>atlas-semex</code> imports <code>attack-semex</code></strong>
+  — the ontology federates them because the threats do. So canon is <strong>not</strong> zero-relevant here: it
+  already grounds the <em>conventional rungs</em> of an AI kill chain; the gap is the <em>model-layer</em> rungs.</p>
+
+  <table>
+    <tr><th>ATLAS tactic</th><th>canon coverage</th></tr>
+    <tr><td>Reconnaissance · Resource Development</td><td><span class="x">none</span> — OSINT / attacker-side, not victim telemetry</td></tr>
+    <tr><td>Initial Access · Execution · Persistence · Priv-Esc · Defense-Evasion · Credential-Access · Discovery</td><td><span class="v">COVERED</span> — these <em>are</em> the ATT&amp;CK rungs canon's detectors fire on (enumeration→discovery, account-manip→priv-esc, region-sweep→impact)</td></tr>
+    <tr><td>ML Model Access · Collection · Exfiltration · Impact</td><td><span class="r">PARTIAL</span> — the <em>cyber</em> half is covered (API auth, data access, cyber-exfil, cost/DoS); the model half is gap</td></tr>
+    <tr><td>ML Attack Staging (poison / craft / backdoor) · model-evasion · inference-API extraction</td><td><span class="x">GAP</span> — model-layer telemetry canon doesn't have</td></tr>
+  </table>
+  <p>canon owns the conventional middle of the AI kill chain today; the AI-specific bookends + staging are a
+  <strong>telemetry gap</strong>, not a whole new framework universe. ATLAS-as-corpus's real use is to mark exactly
+  <em>where</em> canon's coverage ends and the model-layer begins.</p>
+
+  <h3>The join model — code-join vs graph-join</h3>
+  <p>Checked <code>semantic-cyber/bridge.py</code> directly: <strong>no SKOS pairwise mappings</strong> — it already
+  federates by a <strong>shared key</strong> (the ATT&amp;CK technique id), folding D3FEND + ATT&amp;CK + Sigma + UKC
+  into a provenance-tracked coverage report. So canon does <em>code-join</em>; KINAITICS does <em>graph-join</em>
+  (one RDF graph, <code>owl:imports</code>, reasoner federates). They trade exactly against each other:</p>
+  <table>
+    <tr><th>dimension</th><th>canon (code-join)</th><th>KINAITICS (graph-join)</th></tr>
+    <tr><td>new framework</td><td>a bridge fn per fw</td><td>owl:imports + shared vocab, no code</td></tr>
+    <tr><td>cross-framework entailment</td><td>only what's coded</td><td>reasoner derives multi-hop free</td></tr>
+    <tr><td>speed</td><td><span class="v">fast (lookup)</span></td><td>slow (DL reasoner)</td></tr>
+    <tr><td>provenance of the join</td><td><span class="v">explicit (PROV-O)</span></td><td>not inherent</td></tr>
+    <tr><td>discrimination</td><td><span class="v">reasons only where it pays (D3FEND TBox)</span></td><td>reasons over everything</td></tr>
+  </table>
+  <p><strong>Keep both</strong> — "graph substrate, code-join hot path, reasoner on demand": a shared upper vocab
+  (STIX/UCO) so frameworks federate by IRI (cheap federation); the fast provenance-tracked join stays in the
+  detection hot path (speed + grounding); the reasoner is an opt-in layer for entailment <em>queries</em>
+  (navigation/analyst), never in the hot path.</p>
+
+  <div class="note key">
+    <strong>Consolidation intent.</strong> The goal is to consolidate cyber knowledge in the best structure —
+    rich + a flexible mechanism to consume more (<em>comprehensive ≠ complete</em>). That structure is the
+    shared-upper-vocab (STIX/UCO) substrate above: an open-world graph you keep adding frameworks to
+    (ATLAS, OCSF, CAPEC, CWE, CVE, Engage, NIST…), never a fixed schema to finish. It is the natural home for
+    <strong>vulnerability</strong> specifically — vuln chains by its own ids (CVE→CWE→CAPEC→ATT&amp;CK), which
+    shared-IRI federation handles where an ATT&amp;CK-id code-join would not. The core already supports this
+    (graph-load + reasoning + SHACL + PROV-O lineage); the guardrail to keep the path open is just: keep
+    frameworks loadable as graphs and don't hard-code the ATT&amp;CK technique-id as a universal join key
+    (canon already complies). <strong>Harden the core now; the shared-vocab federation is the layer the core
+    grows into, not a rewrite.</strong>
+  </div>
+
+  <div class="note out">
+    <strong>Revised recommendation.</strong> Still: methodology reference + candidate navigation corpus, gated on
+    license + whether the <code>Relationship</code> edges carry mitigates/circumvents semantics. But the
+    AI-as-application-class reframe upgrades the framing — canon is <em>partially relevant to AI threats today</em>
+    (it grounds the conventional rungs of the AI kill chain); ATLAS's value is to mark where that coverage meets the
+    model-layer gap. The corpus pays off <em>most</em> once the shared-vocab federation exists — which is itself the
+    consolidation layer the core is being hardened to grow into.
+  </div>
+
+  <footer>Canon · web/atlas_semex_kinaitics.html · 2026-06-15, revised 2026-06-16. Related:
+    <a href="d3fend_tbox_vs_log_abox.html">D3FEND TBox vs log ABox</a> ·
+    <a href="querying_owl_manually.html">Querying OWL manually</a> ·
+    <a href="abduction_loop.html">Abduction loop</a> ·
+    <a href="w_coordinate_system.html">W coordinate system</a></footer>
+</div>
+</body>
+</html>
