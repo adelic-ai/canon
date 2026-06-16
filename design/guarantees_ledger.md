@@ -72,6 +72,19 @@ Detailed record + the exact assertions: `packages/detection/README.md` (the vali
   cleanly separated from every other identity (≤ 1.2 bits). **Signal validated, exact ground truth.**
   Detector reuse validated: only `load_cloudtrail_events` is new. `test_cloudtrail.py`. **But the standing
   conformal sweep does NOT fire — see CAPPED.**
+- **Sigma corroboration panel — independent external confirmation, deduped, on real rules (2026-06-16).**
+  A SECOND, external witness (`detection/sigma_panel.py`): FCA-deduped community rules (logsource +
+  field-set = one concept = one vote) corroborate a canon finding, so the verdict is more than canon's own
+  word and is not inflated by counting near-duplicate rules. **Belnap ONE-SIDED by construction** — `TRUE`
+  (≥1 deduped class fires) or `NONE` (silent); never `FALSE`, because a community rule *not* firing is a
+  coverage gap, not evidence of absence. Recorded as a **PROVENANCE EDGE** on the verdict root (a
+  `sigma_corroboration` derivation `prov:used` one entity per fired rule-class), **not** overloaded onto
+  `cross_check` (which stays a within-evidence redundant-measure check; the two are different epistemic
+  axes). Validated on the real SigmaHQ corpus (3748 rules) + OTRF/flaws: T1003.001 (comsvcs CallTrace) and
+  T1580 (`aws_enum_buckets` on a native `ListBuckets`) corroborate. The per-detector **coverage map**
+  (`design/sigma_corroboration_coverage.md`) records the honest spectrum — **2/7 corroborated, 5 named
+  gaps** (`no-overlap` / `no-same-logsource`), negatives as data not silence. `test_sigma_panel.py`,
+  `test_sigma_panel_general.py`, `test_cross_check_sigma.py`, `test_coverage.py`.
 
 ## CAPPED — honest recorded absence (the floor, because more is not backed)
 
@@ -173,6 +186,15 @@ Detailed record + the exact assertions: `packages/detection/README.md` (the vali
 
 ## DEFERRED — named, not built
 
+- **Entity/incident-grain cross-model corroboration.** A behavioral TTP detector (our 4769 RC4 fan-out)
+  and a tool-artifact IOC rule (Sigma's Rubeus `User32LogonProcesss` / EID-4611 logon-provider rule) are
+  **complementary** witnesses at different pyramid-of-pain rungs — *not* to be flattened into one. They
+  corroborate only at the **entity + window grain** (the same actor triggering both), not by scoring one
+  detector's single triggering event against the other's rule (different telemetry → no fire). The current
+  panel scores an event *set*; a faithful cross-model join needs the actor's full multi-EID stream **and**
+  a corpus where the tool was actually used (no OTRF/flaws record contains a Rubeus 4611). The coverage
+  map's T1558.003 `no-overlap` is this grain gap, **not** a model deficiency — recorded so it is not
+  mistaken for "the detectors should agree and don't." `design/sigma_corroboration_coverage.md`.
 - **F\*/Coq machine-checked proofs** (the polyglot path) — the only thing that lifts a decode/kernel to
   `machine_checked`. §4 of the architecture.
 - **SHACL shapes** — the GENERIC well-formedness check is now ENFORCED in the detection emit path

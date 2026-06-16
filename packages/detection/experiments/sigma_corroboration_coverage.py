@@ -52,8 +52,12 @@ def build_specs() -> list[dict]:
         {"technique": "T1496", "logsource": AWS, "events": region,
          "note": "region-sweep — SigmaHQ's T1496 rules are azure/zeek, none aws/cloudtrail"},
         {"technique": "T1558.003", "logsource": SEC, "events": krb_4769,
-         "note": "the evaluable security rules target tooling artifacts (Rubeus EID 4611), not the "
-                 "behavioral 4769 RC4 fan-out our detector flags — a detection-model gap, not just naming"},
+         "note": "GRAIN mismatch, not a model deficiency: the evaluable security rule is a tool-artifact "
+                 "IOC (Rubeus' custom logon provider, EID 4611), while our detector is a behavioral TTP "
+                 "(4769 RC4 fan-out) — complementary witnesses on the pyramid of pain. They corroborate "
+                 "at the ENTITY/incident grain (same actor+window triggering both), not by scoring one "
+                 "detector's single event against the other's rule. This representative is one 4769 event "
+                 "(no Rubeus 4611 in the corpus), so the right-grained join correctly returns nothing here"},
         {"technique": "T1550.003", "logsource": SEC, "events": krb_4769,
          "note": "pass-the-ticket — no evaluable windows/security rule (SigmaHQ's are process_creation)"},
         {"technique": "T1110.003", "logsource": SEC, "events": {"EventID": 4625},
