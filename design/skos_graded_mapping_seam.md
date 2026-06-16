@@ -55,12 +55,24 @@ not flatten it. The mapping layer becomes a **tracked tier**, not an assumed-fai
 
 ### Load-bearing is the judgment; the grade only informs it
 
-Crucially, the grade does **not** dictate a blanket demotion. A `closeMatch` matters *only if the
-detection's logic is load-bearing on the dimension that differs.* If a rule keys on `EventID` (an
-`exactMatch`) and the only `closeMatch` is on `ServiceName`, which the rule never reads, the difference is
-**inert** — no demotion. If the rule keys *exactly* on the mismatched field, the difference is **load-
-bearing** — and the grade should bite. So the demotion is a **join**: `(mapping grade) × (does this
-detection depend on the differing dimension?)`.
+Separate two things that must not be conflated:
+
+- **The grade + its reasons are ALWAYS stored** on the mapping edge — computed once, intrinsic to the
+  edge, independent of any detection. *Every* grade points to its reasons, full stop (the `.why()`
+  principle); this never depends on load-bearingness. The edge for `windows:ServiceName ≈ cim:Service_Name`
+  carries its `closeMatch` + sub-scores + definitional pointers whether or not any rule uses the field.
+- **The demotion *consequence* on a particular verdict is what load-bearingness gates.** A `closeMatch`
+  on a field a given rule never reads should **not** drag that rule's tier down. If a rule keys on
+  `EventID` (an `exactMatch`) and the only `closeMatch` is on an unread `ServiceName`, the difference is
+  **inert for that verdict** — no demotion. If the rule keys *exactly* on the mismatched field, it is
+  **load-bearing** and the grade takes effect. So the demotion is a **join**:
+  `(mapping grade) × (does this detection depend on the differing dimension?)`.
+
+"Takes effect" = a **recorded tier demotion** in the verdict's guarantee (shown on demand, demotable) —
+mechanical, not a manual gate; surfacing a demoted verdict for analyst review is a downstream consequence,
+not the mechanism. And **inert ≠ unrecorded**: even when the difference doesn't apply, the verdict still
+carries "field X is a `closeMatch`, here's why, but this detection doesn't depend on X → no demotion." The
+*non*-demotion is itself a shown-on-demand decision; nothing is ever silently dropped.
 
 This is the whole point of making the grade justified and per-dimension: the transparent sub-scores +
 definitional pointers exist **so the user (or an agent) can reason for themselves whether the difference
@@ -68,8 +80,8 @@ is load-bearing on *this* detection event** — rather than the system applying 
 demotion. Part of that judgment is mechanically checkable (does the detection's predicate reference the
 differing field?); part is semantic (does a value-encoding `closeMatch` change the truth of the predicate?
 e.g. `0x17` vs `RC4-HMAC` is inert if normalized, load-bearing if compared literally). The seam supplies
-the evidence; the load-bearing call is the analyst's — or a verifier's, where it reduces to "is the
-differing dimension in the rule's support set?"
+the evidence — always, fully justified; the load-bearing call is the analyst's, or a verifier's where it
+reduces to "is the differing dimension in the rule's support set?"
 
 ## The grade must be JUSTIFIED and CALLABLE, not a flat label
 
