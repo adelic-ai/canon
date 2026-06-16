@@ -169,6 +169,52 @@ drop; a `closeMatch` is graded-TRUE, not full-TRUE.
 - **Who validates the grade** — the mapping edge should be checkable (a wrong `exactMatch` is a soundness
   hole), so the seam wants its own validation, the same way detections earn their tier.
 
+## The edges as a living, contested commons (peer review + reviewer credibility)
+
+A mapping edge's grade is not a one-time static assignment — it is a **contestable claim that accrues
+review over time**, and the reviews are themselves canon-native objects. The edges become a living layer
+that sharpens as evidence accumulates (and, where the platform boundary is genuinely fuzzy, *stays*
+contested — which is itself honest signal, not noise to resolve away).
+
+Where verdicts are emitted (e.g. evaluating a Splunk notable), the verdict artifact is ephemeral — a tmp
+file tagged with the notable id as metadata; **retention is the customer's SIEM policy**, not canon's, and
+the verdict is anyway *reconstructable from the content-addressed inputs* (re-derivable from the retained
+notable + the deterministic DAG). But the **platform-difference edges warrant peer review**, almost like
+academic review — and that review machinery is established, not invented:
+
+- **Reviewers grade edges; reviewers are themselves graded.** This is crowd-labeling with *latent
+  annotator reliability* — the canonical model is **Dawid–Skene** (EM estimating the true grade AND each
+  reviewer's reliability jointly from disagreeing labels). "Some reviewers are more reliable" is the latent
+  parameter that model already recovers; inter-rater agreement (Krippendorff's α) measures how contestable
+  an edge actually is. Reviewer-reliability is a legitimate **telemetry candidate**.
+- **Reviewer reliability over time = credibility theory** (Bühlmann) — the actuarial per-entity-baseline
+  thread, pointed at reviewers instead of accounts. A reviewer is an entity; their grading track record is
+  their baseline; their next grade is credibility-weighted by it. Recursive: verdicts about mappings,
+  verdicts about reviewers, same machinery.
+- **A review is an ARGUMENT, not a vote.** Because the grade is justified (sub-scores, definitional
+  pointers), a review carries its *reasons*, so it is weighted by justification quality + track record, not
+  raw count. This is the canon differentiator and the defense against the failure mode — **majority ≠
+  correct**, especially for expert schema judgments. Closer to an argumentation framework (claims
+  adjudicated by support/attack structure) than to voting.
+
+**Even agreement is contestable.** An `exactMatch` is a claim with provenance, not a fact; an AI or human
+can contest it. A credible contestation does not silently flip the edge — it enters a **recorded contested
+state** (Belnap-`BOTH`-flavored: agreement + credible dissent = a soundness flag), cataloged and analyzed.
+Contestations and their outcomes are data.
+
+**Layer separation.** Canon *core* needs only that the edge be a justified, contestable verdict with
+provenance — reviews and reviewer-reliability are just more such verdicts. The *ecosystem* layer (the "whole
+other business") — contribution/governance/attribution: opt-in, open-source, named-or-anonymous reviewers,
+recognition/attribution if desired — is separable and undecided; the core works with one reviewer and scales
+to a crowd unchanged.
+
+**Known failure modes (do not hand-wave).** Reputation systems get gamed — collusion, sockpuppets,
+majority-tyranny, cold-start (a new edge has no reviews). Dawid–Skene + credibility-weighting down-weight
+unreliable/colluding raters but do not immunize; the justification-weighting (a graded argument is
+auditable, a vote is not) is the real mitigation. Convergence of edges is *likely but not guaranteed* — the
+non-convergent edges are the interesting ones (genuine platform ambiguity); represent the contestation,
+don't force a single grade.
+
 ## Connections
 
 - Builds on the FCA/SKOS dedup already in `detection/sigma_panel.py` (subsumption on field-sets).
