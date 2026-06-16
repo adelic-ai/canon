@@ -70,7 +70,7 @@ from detection.cross_check import (
     load_kerberos_rows,
     lsass_dump_corroborated,
     ptt_signature,
-    sigma_enrich,
+    sigma_corroborator,
     spray_signature,
 )
 from detection.registry import REGISTRY, Detector, corpus_fields, run_applicable
@@ -130,8 +130,8 @@ __all__ = [
     "corpus_fields",
     # cross-check (independent structural ∧ statistical → the cross_check axis, cross-paradigm)
     "cross_check_verdicts",
-    "lsass_dump_corroborated",   # structural lsass-dump enriched with the external Sigma panel witness
-    "sigma_enrich",              # the dependency-injected Sigma corroboration witness for pattern_verdicts
+    "lsass_dump_corroborated",   # structural lsass-dump + Sigma corroboration recorded as a provenance edge
+    "sigma_corroborator",        # the dependency-injected Sigma corroboration witness for pattern_verdicts
     "kerberoast_signature",
     "ptt_signature",
     "spray_signature",

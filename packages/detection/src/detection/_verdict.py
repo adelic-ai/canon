@@ -20,21 +20,38 @@ import functools
 from pathlib import Path
 
 from forge_core import Calibration, DetectionVerdict, assemble_verdict
-from provenance import NONE, TRUE, Confidence, Entity, Four, Tier, derive, source
+from provenance import NONE, TRUE, Confidence, Entity, Four, Tier, derive, lineage, source
 
 _PD = 0.9  # nominal detection probability for the confidence leaf (no calibrated Pd per detector)
 _DOMAIN_SHAPES = Path(__file__).parents[4] / "contracts" / "shapes" / "detection.shapes.ttl"
 
 
-def build_detection_root(ref: str, params: dict) -> Entity:
+def build_detection_root(ref: str, params: dict, corroboration: dict | None = None) -> Entity:
     """The detection layer's verdict **provenance root**: a by-reference source (unattested telemetry ⇒
     carries no integrity) + a structural ``detection`` derivation recording the recipe ``params``. The
     folds never *evaluate* it; it is the content-addressed node the verdict justifies. Named (not inlined)
     so its **well-formedness is mechanically checkable** — ``validate(build_detection_root(...)).conforms``
     runs the self-falsifying SHACL shapes over its PROV-O, earning the ``well_formed`` claim instead of
-    asserting it. The same root :func:`emit_detection_verdict` builds, so the check never drifts from use."""
+    asserting it. The same root :func:`emit_detection_verdict` builds, so the check never drifts from use.
+
+    **Corroboration is a provenance EDGE, not a verdict field.** When an independent external witness (the
+    deduped Sigma panel) corroborates, ``corroboration={"rules": [...], "votes": N, ...}`` wraps the
+    detection root in a ``sigma_corroboration`` derivation that ``prov:used`` one entity per fired
+    rule-class. The corroboration is then a relation to other artifacts in the lineage graph —
+    ``to_prov``-able and queryable on demand — *not* overloaded onto the ``cross_check`` axis (which is a
+    within-evidence redundant-measure check, a different epistemic relation). This is the representation
+    that scales to N witnesses / M sources without amending the verdict contract."""
     src = source(ref, name=ref)  # by-reference identity — carries NO integrity (unattested log)
-    return derive("detection", lambda _p: None, (src,), params)  # structural; the folds never evaluate it
+    root = derive("detection", lambda _p: None, (src,), params)  # structural; the folds never evaluate it
+    if corroboration and corroboration.get("rules"):
+        # the external witnesses, as related artifacts the corroboration `used` (a real PROV-O edge)
+        rule_ents = [source(f"sigma-rule:{n}", name=f"sigma-rule:{n}", kind="sigma-rule")
+                     for n in corroboration["rules"]]
+        root = derive("sigma_corroboration", lambda _p: None, (root, *rule_ents),
+                      {"votes": corroboration["votes"], "classes": corroboration.get("classes"),
+                       "technique": corroboration.get("technique"),
+                       "logsource": corroboration.get("logsource")})
+    return root
 
 
 @functools.lru_cache(maxsize=1)
@@ -75,6 +92,7 @@ def emit_detection_verdict(
     how: Four = NONE,
     check: Four | None = None,
     calibration: Calibration | None = None,
+    corroboration: dict | None = None,
 ) -> DetectionVerdict:
     """Project a detection into the canonical :class:`~forge_core.DetectionVerdict`.
 
@@ -94,14 +112,23 @@ def emit_detection_verdict(
     conformance of the verdict's PROV-O root: ``well_formed`` iff ``validate(root).conforms``, else
     ``ABSENT`` (and ``ABSENT`` if the ``[rdf]`` extra is absent — can't check ⇒ can't earn). A caller
     passes an explicit ``tier`` only with independent evidence for a higher one.
+
+    ``corroboration`` (an independent external witness, e.g. the Sigma panel) is recorded as a PROVENANCE
+    EDGE on the root, **not** on ``check`` — see :func:`build_detection_root`. ``check`` is reserved for a
+    within-evidence redundant-measure cross-check (BOTH on disagreement); corroboration is one-sided and a
+    relation to other artifacts, so it lives in the lineage graph.
     """
-    root = build_detection_root(ref, params)  # the verdict's provenance root (SHACL-validated below)
+    root = build_detection_root(ref, params, corroboration)  # root (+ corroboration edge), SHACL-validated below
     earned = tier if tier is not None else _earned_well_formed(root)  # EARN the tier via SHACL, not assert
+    # The SHACL conformance is a property of the WHOLE graph, so every derived node earns the tier; the
+    # guarantee fold meets claims across the DAG, so claim each derived node (not just root) — otherwise
+    # the corroboration-wrapped inner `detection` node is unclaimed and meets the tier down to ABSENT.
+    claims = {e.id: earned for e in lineage(root) if e.producer is not None}
     return assemble_verdict(
         root,
         technique=technique,
         confidence_evidence={root.id: Confidence.from_detector(True, pd=_PD, pfa=pvalue)},
-        claims={root.id: earned},
+        claims=claims,
         who=who,
         when=when,
         what=what,

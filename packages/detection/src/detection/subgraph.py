@@ -113,30 +113,31 @@ def pattern_verdicts(
     pattern: PatternSpec,
     events: list[dict],
     *,
-    enrich: Callable[[dict], tuple[Four | None, dict]] | None = None,
+    corroborate: Callable[[dict], dict | None] | None = None,
 ) -> list[DetectionVerdict]:
     """Run a subgraph ``pattern`` over ``events`` → canonical verdicts. Structural exact match ⇒ no
     calibrated FAR (``calibration=None``); ``what``/``how`` TRUE (the predicate matched the artifact/
     mechanism); ``who``/``where`` grounded from the events; ``when`` from the temporal fold.
 
-    ``enrich`` is an optional dependency-injected witness: given a match (``role -> event``), it returns
-    ``(check, extra_params)`` — a ``Four`` (or ``None``) for the verdict's cross_check axis plus extra
-    provenance params. This keeps the structural module ignorant of *who* corroborates (e.g. the Sigma
-    panel is wired in by :mod:`detection.cross_check`, not imported here)."""
+    ``corroborate`` is an optional dependency-injected external witness: given a match (``role -> event``),
+    it returns a corroboration dict (``{rules, votes, ...}``) or ``None``. The corroboration is recorded as
+    a PROVENANCE EDGE on the verdict's root (not on ``cross_check``) — see
+    :func:`detection._verdict.build_detection_root`. This keeps the structural module ignorant of *who*
+    corroborates (the Sigma panel is wired in by :mod:`detection.cross_check`, not imported here)."""
     out = []
     for match in match_pattern(pattern, events):
         evs = list(match.values())
         who = TRUE if any(e.get(f) for e in evs for f in ("User", "SourceUser", "TargetUser")) else NONE
         where = TRUE if any(e.get("Hostname") for e in evs) else NONE
         join = evs[0].get(pattern.motifs[0].join_field, "?")
-        check, extra = enrich(match) if enrich is not None else (None, {})
+        corro = corroborate(match) if corroborate is not None else None
         out.append(emit_detection_verdict(
             f"{pattern.name}|{join}",
             technique=pattern.technique,
             pvalue=1e-6,                      # nominal structural-precision proxy — NOT a calibrated FAR (calibration None)
-            params={"pattern": pattern.name, "roles": list(match), **extra},
+            params={"pattern": pattern.name, "roles": list(match)},
             what=TRUE, how=TRUE, who=who, where=where, when=_temporal_ok(evs),
-            check=check, calibration=None,
+            calibration=None, corroboration=corro,
         ))
     return out
 

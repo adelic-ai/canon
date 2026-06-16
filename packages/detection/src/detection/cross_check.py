@@ -23,10 +23,12 @@ statistical side reuses the existing :mod:`detection.fanout` bindings. Validated
 A second, *external* witness lives here too: the deduped Sigma panel (:mod:`detection.sigma_panel`).
 Where the in-house structural signatures can contradict the primary (FALSE → a ``both`` soundness
 alarm), the Sigma panel is one-sided — a community rule firing CORROBORATES, but a rule not firing is a
-coverage gap, not a refutation. So it feeds the cross_check axis as ``TRUE`` iff ≥1 deduped class fires,
-and otherwise contributes no axis at all (never a spurious ``both``). :func:`sigma_enrich` is the
-dependency-injected witness that :func:`detection.subgraph.pattern_verdicts` calls; it is wired here, not
-in the structural module, so ``subgraph`` stays ignorant of *who* corroborates it.
+coverage gap, not a refutation. Because corroboration is a *relation to other artifacts* (this verdict
+⇐corroborated-by⇒ that community rule-class), not a redundant measure of the same evidence, it is
+recorded as a PROVENANCE EDGE on the verdict's root — **not** on the ``cross_check`` axis (which stays a
+within-evidence redundant-measure check). :func:`sigma_corroborator` is the dependency-injected witness
+that :func:`detection.subgraph.pattern_verdicts` calls; it is wired here, not in the structural module, so
+``subgraph`` stays ignorant of *who* corroborates it.
 """
 
 from __future__ import annotations
@@ -102,32 +104,35 @@ def spray_signature(rows: list[dict], min_accounts: int = 10) -> dict[str, Four]
                  else FALSE if len(allacct[ip]) >= min_accounts else NONE) for ip in allacct}
 
 
-def sigma_enrich(technique: str, category: str = "process_access",
-                 *, leg: str | None = None) -> Callable[[dict], tuple[Four | None, dict]]:
-    """Build an ``enrich`` witness for :func:`detection.subgraph.pattern_verdicts`: corroborate a match
-    against the deduped Sigma panel and feed the cross_check axis. Returns ``(check, extra)`` where
-    ``check`` is ``TRUE`` iff ≥1 deduped class fires (external corroboration), else ``None`` (panel silent
-    — it cannot contradict, so it adds no axis). ``extra`` records the vote count, class count, and firing
-    rule names in the verdict's provenance params. ``leg`` selects which motif's event the panel scores
-    (default: the last event in the match)."""
-    def _enrich(match: dict) -> tuple[Four | None, dict]:
+def sigma_corroborator(technique: str, logsource="process_access",
+                       *, leg: str | None = None) -> Callable[[dict], dict | None]:
+    """Build a ``corroborate`` witness for :func:`detection.subgraph.pattern_verdicts`: score a match's
+    event against the deduped Sigma panel. Returns a corroboration dict ``{rules, votes, classes,
+    technique, logsource}`` iff ≥1 deduped class fires, else ``None`` (the panel is silent — it cannot
+    contradict, so it adds no edge). The returned dict becomes a PROVENANCE EDGE on the verdict's root
+    (``sigma_corroboration`` ``prov:used`` one entity per fired rule-class), not a ``cross_check`` value.
+    ``leg`` selects which motif's event the panel scores (default: the last event in the match)."""
+    sel = logsource
+    def _corroborate(match: dict) -> dict | None:
         event = match.get(leg) if leg is not None else None
         if event is None:
             event = list(match.values())[-1]
-        corr = corroborate(technique, event, category)
-        check = TRUE if corr["votes"] > 0 else None
-        return check, {"sigma_votes": corr["votes"], "sigma_classes": corr["classes"],
-                       "sigma_rules": [name for name, _fields, _n in corr["fired"]]}
-    return _enrich
+        corr = corroborate(technique, event, sel)
+        if corr["votes"] == 0:
+            return None
+        return {"rules": [name for name, _fields, _n in corr["fired"]],
+                "votes": corr["votes"], "classes": corr["classes"],
+                "technique": technique, "logsource": str(sel)}
+    return _corroborate
 
 
 def lsass_dump_corroborated(path: str) -> list[DetectionVerdict]:
-    """Canon's structural LSASS-dump subgraph (T1003.001) cross-checked against the deduped Sigma panel:
-    each verdict's cross_check axis = ``true`` iff the independent community panel corroborates the
-    comsvcs dump, with the firing rule names recorded in the verdict's params. The structural finding is
-    unchanged; the external witness is *added* to it (verdict enrichment)."""
+    """Canon's structural LSASS-dump subgraph (T1003.001), corroborated by the deduped Sigma panel: when
+    the independent community panel confirms the comsvcs dump, the firing rule-classes are recorded as a
+    PROVENANCE EDGE on the verdict's root (``to_prov``-able, queryable on demand) — *not* on the
+    cross_check axis. The structural finding is unchanged; the external witness is *related* to it."""
     return pattern_verdicts(LSASS_DUMP, load_sysmon_events(path),
-                            enrich=sigma_enrich("T1003.001", "process_access", leg="lsass_read"))
+                            corroborate=sigma_corroborator("T1003.001", "process_access", leg="lsass_read"))
 
 
 def cross_check_verdicts(
