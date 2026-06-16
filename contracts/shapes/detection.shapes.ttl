@@ -1,0 +1,32 @@
+# contracts/shapes/detection.shapes.ttl
+# Domain SHACL shape for canon's detection op — the first per-op shape (was README-only).
+#
+# Constraint (stricter than the generic PROV-O well-formedness in provenance/shacl.py): a recorded
+# op-plan must name its op AND record its params. The params are the recipe that makes the result
+# RE-DERIVABLE — so a plan without them is not well-formed at the domain level, directly serving the
+# north star "no result asserted that isn't justified back to its inputs." Targets any node that
+# records a `canon:opName` (i.e. a prov:Plan emitted by `derive`).
+#
+# Discipline (per shapes/README): ships a PASS instance (detection.pass.ttl, must conform) and an
+# XFAIL instance (detection.xfail.ttl, must fail) — the generator-validator pairing.
+# TODO (fuller CASE discipline): OWL+SHACL dual-typing — declare a `canon:DetectionOp` as both
+# owl:Class and sh:NodeShape and type the activity as it; needs build_detection_root to emit the class.
+
+@prefix sh:    <http://www.w3.org/ns/shacl#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+@prefix canon: <urn:canon:prov#> .
+
+canon:OpPlanShape a sh:NodeShape ;
+    sh:targetSubjectsOf canon:opName ;
+    sh:property [
+        sh:path canon:opName ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "an op-plan must name its op exactly once (canon:opName)" ;
+    ] ;
+    sh:property [
+        sh:path canon:params ;
+        sh:minCount 1 ;
+        sh:message "an op-plan must record its params — the re-derivable recipe (canon:params)" ;
+    ] .

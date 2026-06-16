@@ -1,0 +1,7 @@
+# PASS — a detection op-plan that names its op AND records its params (re-derivable). Must conform.
+@prefix prov:  <http://www.w3.org/ns/prov#> .
+@prefix canon: <urn:canon:prov#> .
+
+<urn:canon:plan:pass> a prov:Plan ;
+    canon:opName "detection" ;
+    canon:params "(('entity', 'backup'), ('technique', 'T1496'))" .

@@ -177,8 +177,10 @@ Detailed record + the exact assertions: `packages/detection/README.md` (the vali
   `machine_checked`. §4 of the architecture.
 - **SHACL shapes** — the GENERIC well-formedness check is now ENFORCED in the detection emit path
   (2026-06-14): `emit_detection_verdict` runs `validate(root)` (provenance `well_formed_shapes`) and the
-  guarantee tier follows `.conforms` — see PROVEN. Still deferred: DOMAIN-specific shapes
-  (`contracts/shapes/` is README-only), which would enforce per-technique structure beyond generic PROV-O.
+  guarantee tier follows `.conforms` — see PROVEN. Domain shapes STARTED (2026-06-16): first per-op shape
+  `contracts/shapes/detection.shapes.ttl` (op-plan must record `canon:params` = the re-derivable recipe;
+  ships PASS/XFAIL; `test_domain_shapes.py`). Still pending: more per-op/per-technique shapes + OWL+SHACL
+  dual-typing (type the activity as a `canon:` class) + wiring domain shapes into the emit tier-earning.
 - **Multi-scale** — the divisibility lattice (`forge_core/lattice.py`) is built but unused by the
   detectors; the grain-divisibility discipline beyond a single window, with the materialized-bucket
   guard, is future work. Earns its keep first at multi-scale MI (coordination cadence).

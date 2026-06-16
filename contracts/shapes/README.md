@@ -1,6 +1,9 @@
 # contracts/shapes — SHACL well-formedness contracts
 
-**Status:** DRAFT scaffold, 2026-05-30. Empty until shapes are authored.
+**Status:** scaffold, 2026-05-30; first domain shape landed 2026-06-16. No longer empty —
+`detection.shapes.ttl` (the detection op-plan: must record `canon:params`, the re-derivable recipe)
+with its `detection.pass.ttl` / `detection.xfail.ttl` pair, tested in
+`packages/detection/tests/test_domain_shapes.py`. More per-op / per-technique shapes land here as cut.
 
 SHACL shapes are the executable form of "this artifact is well-formed" — the `well-formed`
 guarantee tier and the `validate` fold (architecture spine §3–4). They are authored with
