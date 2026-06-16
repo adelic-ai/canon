@@ -88,11 +88,21 @@ from detection.subgraph import (
     pattern_verdicts,
 )
 from detection.sigma_eval import block_matches, evaluate_rule, is_evaluable, rule_fires
-from detection.sigma_panel import corroborate, gather, lsass_comsvcs_event, panel, signature
+from detection.sigma_panel import (
+    corroborate,
+    corroboration_coverage,
+    coverage_category,
+    gather,
+    lsass_comsvcs_event,
+    panel,
+    signature,
+)
 
 __all__ = [
     # sigma corroboration — independent FCA/SKOS-deduped external confirmation of a canon finding
     "corroborate",
+    "corroboration_coverage",   # per-detector coverage map (the honest spectrum, gaps recorded as data)
+    "coverage_category",
     "panel",
     "gather",
     "signature",

@@ -137,6 +137,40 @@ def corroborate(technique: str, events, logsource="process_access",
     return {**res, "votes": votes, "belnap": belnap, "verdict": verdict}
 
 
+def coverage_category(res: dict) -> str:
+    """Classify a panel result into the honest corroboration spectrum — turning the gap into data:
+
+      CORROBORATED         ≥1 deduped class fires (an external witness confirms)
+      no-overlap           rules ran but none fired (community rules cover a different artifact/family)
+      not-evaluable        same-logsource rules exist but none in the evaluable subset (operators/shape)
+      no-same-logsource    no rule of the detector's logsource is tagged for the technique at all
+    """
+    if res["votes"] > 0:
+        return "CORROBORATED"
+    if res["relevant"] == 0:
+        return "no-same-logsource"
+    if res["evaluated"] == 0:
+        return "not-evaluable"
+    return "no-overlap"
+
+
+def corroboration_coverage(specs: list[dict]) -> list[dict]:
+    """Per-detector corroboration coverage against the real Sigma corpus. Each spec is
+    ``{technique, logsource, events, note?}``; returns a record per spec with the panel counts, the
+    :func:`coverage_category`, the firing rule-classes, and any author ``note`` (e.g. a detection-model
+    or field-name caveat the counts alone don't convey). This is the recorded artifact behind the claim
+    "what can the external panel actually corroborate" — honest negatives included, never silent."""
+    out = []
+    for s in specs:
+        res = corroborate(s["technique"], s["events"], s["logsource"])
+        out.append({"technique": s["technique"], "logsource": str(s["logsource"]),
+                    "tagged": res["tagged"], "relevant": res["relevant"], "classes": res["classes"],
+                    "evaluated": res["evaluated"], "votes": res["votes"],
+                    "category": coverage_category(res),
+                    "fired": [name for name, _f, _n in res["fired"]], "note": s.get("note", "")})
+    return out
+
+
 def lsass_comsvcs_event(events: list[dict]) -> dict | None:
     """The ground-truth T1003.001 event canon's ``lsass_dump_subgraph`` fires on (the comsvcs EID10),
     reconstructed from a Sysmon corpus — the demo/test target for corroborating that finding."""
