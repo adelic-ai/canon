@@ -52,12 +52,17 @@ def build_specs() -> list[dict]:
         {"technique": "T1496", "logsource": AWS, "events": region,
          "note": "region-sweep — SigmaHQ's T1496 rules are azure/zeek, none aws/cloudtrail"},
         {"technique": "T1558.003", "logsource": SEC, "events": krb_4769,
-         "note": "GRAIN mismatch, not a model deficiency: the evaluable security rule is a tool-artifact "
-                 "IOC (Rubeus' custom logon provider, EID 4611), while our detector is a behavioral TTP "
-                 "(4769 RC4 fan-out) — complementary witnesses on the pyramid of pain. They corroborate "
-                 "at the ENTITY/incident grain (same actor+window triggering both), not by scoring one "
-                 "detector's single event against the other's rule. This representative is one 4769 event "
-                 "(no Rubeus 4611 in the corpus), so the right-grained join correctly returns nothing here"},
+         "note": "GRAIN mismatch, not a model deficiency. Kerberoasting leaves TWO traces: the "
+                 "technique-intrinsic 4769 RC4 ticket fan-out (always present, tool-agnostic — what our "
+                 "detector flags) AND a tool-incidental artifact (Rubeus registering its logon provider, "
+                 "EID 4611 — what the Sigma rule flags; conditional, only on Rubeus ops needing "
+                 "SeTcbPrivilege). Complementary, not ranked: 'lower on the pyramid of pain' = cheaper to "
+                 "EVADE (recompile), not lower VALUE — commodity Rubeus is prevalent in the wild, so the "
+                 "tool rule is high value-NOW; the behavioral signal is evasion-resistant. Because Rubeus "
+                 "is common, real intrusions usually emit BOTH from the same actor → entity+window "
+                 "cross-model corroboration is HIGH-YIELD in practice. It returns nothing HERE only because "
+                 "no Rubeus 4611 is in this corpus; scoring one 4769 event against a 4611-reading rule is "
+                 "the wrong grain."},
         {"technique": "T1550.003", "logsource": SEC, "events": krb_4769,
          "note": "pass-the-ticket — no evaluable windows/security rule (SigmaHQ's are process_creation)"},
         {"technique": "T1110.003", "logsource": SEC, "events": {"EventID": 4625},
