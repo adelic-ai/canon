@@ -11,9 +11,11 @@ plug into.
 The gate is field-based and corpus-agnostic: a Kerberos CSV fires the Kerberos detectors and skips
 the CloudTrail one (no ``userIdentity``/``awsRegion``); a CloudTrail log does the reverse.
 
-Coverage grows as detectors promote. NOT yet registered (still experiment-only): the lsass-subgraph,
-taint-flow/orphan, and enc-downgrade families. Coordination is also absent — it consumes host-activity
-vectors, not a path-shaped corpus, so it needs a path adapter before it can join.
+Coverage grows as detectors promote. NOT yet registered (still experiment-only): the taint-flow/orphan
+and enc-downgrade families. Coordination is also absent — it consumes host-activity vectors, not a
+path-shaped corpus, so it needs a path adapter before it can join. The Sigma panel
+(:mod:`detection.sigma_panel`) is deliberately NOT a registry entry: it corroborates an existing
+finding against a specific event, rather than being a primary detector dispatched over a corpus.
 """
 
 from __future__ import annotations

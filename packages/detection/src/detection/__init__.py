@@ -85,8 +85,21 @@ from detection.subgraph import (
     match_pattern,
     pattern_verdicts,
 )
+from detection.sigma_eval import block_matches, evaluate_rule, is_evaluable, rule_fires
+from detection.sigma_panel import corroborate, gather, lsass_comsvcs_event, panel, signature
 
 __all__ = [
+    # sigma corroboration — independent FCA/SKOS-deduped external confirmation of a canon finding
+    "corroborate",
+    "panel",
+    "gather",
+    "signature",
+    "lsass_comsvcs_event",
+    # sigma evaluator — minimal faithful Sigma-subset matcher (the corroboration substrate)
+    "rule_fires",
+    "evaluate_rule",
+    "block_matches",
+    "is_evaluable",
     # subgraph — structural multi-EID pattern detection (the structural paradigm; emits canonical verdicts)
     "MotifSpec",
     "PatternSpec",
