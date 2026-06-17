@@ -20,14 +20,27 @@ import functools
 from pathlib import Path
 
 from forge_core import Calibration, DetectionVerdict, assemble_verdict
-from provenance import NONE, TRUE, Confidence, Entity, Four, Tier, derive, lineage, source
+from provenance import (
+    NONE,
+    TRUE,
+    Confidence,
+    CustodyAttestation,
+    Entity,
+    Four,
+    Tier,
+    derive,
+    evidence_digest,
+    lineage,
+    source,
+)
 
 _PD = 0.9  # nominal detection probability for the confidence leaf (no calibrated Pd per detector)
 _SHAPES_DIR = Path(__file__).parents[4] / "contracts" / "shapes"
 _DOMAIN_SHAPES = (_SHAPES_DIR / "detection.shapes.ttl", _SHAPES_DIR / "cross_model.shapes.ttl")
 
 
-def build_detection_root(ref: str, params: dict, corroboration: dict | None = None) -> Entity:
+def build_detection_root(ref: str, params: dict, corroboration: dict | None = None,
+                         *, evidence: "bytes | str | None" = None) -> Entity:
     """The detection layer's verdict **provenance root**: a by-reference source (unattested telemetry ⇒
     carries no integrity) + a structural ``detection`` derivation recording the recipe ``params``. The
     folds never *evaluate* it; it is the content-addressed node the verdict justifies. Named (not inlined)
@@ -41,8 +54,17 @@ def build_detection_root(ref: str, params: dict, corroboration: dict | None = No
     rule-class. The corroboration is then a relation to other artifacts in the lineage graph —
     ``to_prov``-able and queryable on demand — *not* overloaded onto the ``cross_check`` axis (which is a
     within-evidence redundant-measure check, a different epistemic relation). This is the representation
-    that scales to N witnesses / M sources without amending the verdict contract."""
-    src = source(ref, name=ref)  # by-reference identity — carries NO integrity (unattested log)
+    that scales to N witnesses / M sources without amending the verdict contract.
+
+    **Custody is earned at the source.** Default: a by-reference source (a trusted handle by ``ref``,
+    no integrity) ⇒ custody ``NONE``. Pass ``evidence`` (the ingested bytes) to make the source an
+    *evidence* source whose CID **is** the content digest — the keystone (one hash, three roles). Paired
+    with a :class:`~provenance.CustodyAttestation` in :func:`emit_detection_verdict`, the custody fold can
+    then earn ``TRUE`` (signed + digest-matched) instead of the unsigned-telemetry floor."""
+    if evidence is not None:
+        src = source(evidence, name=ref, evidence=True)  # content-addressed by the evidence digest (keystone)
+    else:
+        src = source(ref, name=ref)  # by-reference identity — carries NO integrity (unattested log)
     root = derive("detection", lambda _p: None, (src,), params)  # structural; the folds never evaluate it
     if corroboration and corroboration.get("rules"):
         # the external witnesses, as related artifacts the corroboration `used` (a real PROV-O edge)
@@ -97,6 +119,8 @@ def emit_detection_verdict(
     check: Four | None = None,
     calibration: Calibration | None = None,
     corroboration: dict | None = None,
+    evidence: "bytes | str | None" = None,
+    attestation: CustodyAttestation | None = None,
 ) -> DetectionVerdict:
     """Project a detection into the canonical :class:`~forge_core.DetectionVerdict`.
 
@@ -121,9 +145,22 @@ def emit_detection_verdict(
     EDGE on the root, **not** on ``check`` — see :func:`build_detection_root`. ``check`` is reserved for a
     within-evidence redundant-measure cross-check (BOTH on disagreement); corroboration is one-sided and a
     relation to other artifacts, so it lives in the lineage graph.
+
+    **Earned custody.** Default (``evidence=None``) keeps the unsigned-telemetry floor: a by-reference
+    source ⇒ ``custody = NONE`` (no faked attestation). Pass ``evidence`` (the ingested bytes) to anchor
+    the source on its content digest (the keystone), and ``attestation`` (a signed in-toto/DSSE projection
+    — see :func:`detection.ingest.attest`) for the custody fold to verify: ``TRUE`` (signed + digest-match),
+    ``FALSE`` (digest mismatch — tampered), ``NONE`` (unsigned / silent feed). NOTE — **composition with
+    corroboration is a flagged limit:** the corroboration's rule-source entities are unattested reference
+    data, so they ``tmeet`` ``NONE`` into the custody of a *corroborated* verdict, pulling it to ``NONE``
+    even with attested evidence. Earned custody on a plain (single-source) detection is the supported path;
+    whether reference-data custody should participate in the evidence-custody fold is an open design question.
     """
-    root = build_detection_root(ref, params, corroboration)  # root (+ corroboration edge), SHACL-validated below
+    root = build_detection_root(ref, params, corroboration, evidence=evidence)  # +corroboration/+evidence
     earned = tier if tier is not None else _earned_well_formed(root)  # EARN the tier via SHACL, not assert
+    # Earned custody: an attestation vouches for the evidence source (keyed by its content digest = its CID).
+    attestations = ({evidence_digest(evidence): attestation}
+                    if evidence is not None and attestation is not None else None)
     # The SHACL conformance is a property of the WHOLE graph, so every derived node earns the tier; the
     # guarantee fold meets claims across the DAG, so claim each derived node (not just root) — otherwise
     # the corroboration-wrapped inner `detection` node is unclaimed and meets the tier down to ABSENT.
@@ -133,6 +170,7 @@ def emit_detection_verdict(
         technique=technique,
         confidence_evidence={root.id: Confidence.from_detector(True, pd=_PD, pfa=pvalue)},
         claims=claims,
+        attestations=attestations,  # earned custody: the signed ingest record for the evidence source
         who=who,
         when=when,
         what=what,

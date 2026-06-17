@@ -95,8 +95,17 @@ Detailed record + the exact assertions: `packages/detection/README.md` (the vali
 - **Features/decodes cap a detection at `well_formed`.** Any unverified computation on the
   guarantee-critical chain (the decode; the entropy/KL/MI feature) caps the end-to-end tier at the
   floor by weakest-link — a property of having any unverified step, and a feature is one.
-- **`custody = NONE` on unattested telemetry.** A CSV is not signed evidence, so verdicts report
-  custody/trustworthiness `NONE` while the detection stands — no faked attestation. `detection/_verdict.py`.
+- **`custody = NONE` on unattested telemetry — but now EARNABLE (2026-06-17).** A CSV is not signed
+  evidence, so by default verdicts report custody/trustworthiness `NONE` while the detection stands — no
+  faked attestation (the honest floor, still the default). Custody is now earnable end-to-end:
+  `emit_detection_verdict(evidence=<bytes>, attestation=<CustodyAttestation>)` anchors the source on its
+  content digest (the keystone — source CID = digest = the vouched `product_digest`) and the custody fold
+  returns `TRUE` (signed + digest-match), `FALSE` (mismatch = tamper), or `NONE` (unsigned / silent feed).
+  Constructive existence-proof — the bytes + attestation are synthesized (no signed feed in the corpora;
+  real DSSE verification is the deployment boundary, `detection/ingest.py::attest`); `test_custody.py`.
+  **Flagged composition limit:** a corroboration's unattested rule-source entities `tmeet` `NONE` into a
+  *corroborated* verdict's custody, so corroborated+attested is currently `NONE` (pinned in the test) —
+  whether reference-data custody should participate in the evidence-custody fold is an open design question.
 - **Source tier-transparency:** a raw source carries no rigor tier (its trust is the orthogonal custody
   axis), so it never drags a result to the floor; absence-of-claim is `None`-like, not `False`-like.
 - **Conformal is empty without a population — capped to silence on a burst, and the detector emits no
