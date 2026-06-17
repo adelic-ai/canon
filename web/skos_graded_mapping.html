@@ -25,6 +25,8 @@
   pre{font-family:var(--mono);font-size:13px;line-height:1.5;background:#1a1e26;border:1px solid var(--line);
     border-radius:8px;padding:14px 18px;margin:18px 0;overflow-x:auto;color:#d3d8e2}
   pre code{background:none;padding:0;font-size:inherit}
+  pre.verbatim{white-space:pre-wrap;border-left:3px solid var(--accent2);background:#181a22}
+  .vlabel{font:12px/1.5 var(--mono);color:var(--accent2);margin:18px 0 4px;text-transform:uppercase;letter-spacing:.06em}
   .note{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
     border-radius:8px;padding:14px 18px;margin:18px 0}
   .note.gap{border-left-color:var(--gap)}
@@ -187,7 +189,78 @@ class TypeMapping:
   Convergence is likely but not guaranteed — a persistently-contested edge is <em>honest signal</em> (genuine platform
   ambiguity), not noise to resolve away.</div>
 
-  <h2>7 · The open problem</h2>
+  <h2>7 · The electrical-engineering analog</h2>
+  <p>It goes past the borrowed word "impedance." The core analog is the <strong>reflection coefficient</strong> — and
+  it lines up structurally, including the two-axis grading.</p>
+  <p>When a source and load impedance don't match, not all the signal transfers — some reflects. The reflection
+  coefficient <code>Γ = (Z_load − Z_source) / (Z_load + Z_source)</code> is a <strong>complex number in the unit
+  disk</strong>: <code>Γ=0</code> is a perfect match (all transfers), <code>|Γ|=1</code> is total mismatch (all
+  reflects). A complex number carries <em>magnitude and phase</em> — "how much" and "which way" — which is exactly the
+  tightness-vs-position split we insisted on.</p>
+  <pre><code>Γ = 0                 ⇄  exactMatch     (perfect transfer, no penalty)
+small |Γ|             ⇄  closeMatch     (mostly transfers, some loss)
+|Γ| → 1               ⇄  no real match  (nothing transfers)
+|Γ|  (magnitude)      ⇄  tightness      (HOW MUCH mismatch)
+∠Γ   (phase)          ⇄  position       (WHICH WAY — inductive/capacitive ≈ broad/narrow)
+
+VSWR / return loss          ⇄  scalar magnitude / demotion cost (one number for "how bad")
+S-parameters / Smith chart  ⇄  per-dimension sub-scores, shown on demand (decomposed "why")
+frequency band in use       ⇄  load-bearing (a mismatch only costs you IN the band you use)
+matching network/transformer⇄  OCSF / pySigma pipelines (literally "impedance matching")
+common ground / reference   ⇄  OCSF as the shared schema everyone is measured against
+VNA calibration (SOLT)      ⇄  the grade is a claim needing validation; defns = reference plane</code></pre>
+  <p>The <strong>load-bearing</strong> gate is the cleanest: impedance is frequency-dependent, <code>Z(ω)</code>, and a
+  mismatch only degrades your signal where your spectrum has power. A bad match at a frequency you don't use is inert —
+  exactly "a closeMatch on a field the rule never reads doesn't demote."</p>
+  <div class="note gap"><strong>Where it breaks — and the break is the point.</strong> <code>Γ</code> is a physical,
+  measurable quantity underwritten by Maxwell's equations: you measure it, it's true. A semantic grade has <em>no
+  underwriting physics</em> — there's no equation for "is <code>ServiceName</code> the same concept as
+  <code>Service_Name</code>." The analogy gives the <em>shape</em> (graded, magnitude+phase, band-gated, calibrated,
+  decomposable) but not the <em>ground truth</em>. Which is exactly why canon needs the parts a transmission line never
+  does — justification, contestability, a peer-reviewed commons. A coax cable doesn't need its reflection coefficient
+  peer-reviewed; a semantic edge does. The faint analog even there is <strong>metrology</strong>: trust via traceability
+  to community-maintained reference standards (NIST). Reviewer credibility ≈ calibration traceability.</div>
+  <p class="muted">Canon already lives in EE on the <em>detection</em> side — the battery is radar/sonar DSP lineage
+  (CFAR, matched filtering, conformal). This puts the same physics-borrowed thinking on the <em>integration</em> side.
+  The matched filter maximizes SNR against a known template; impedance mismatch in that template degrades the
+  correlation. Same family, one layer over.</p>
+
+  <p class="vlabel">Verbatim — session discussion · 2026-06-16</p>
+  <pre class="verbatim">Yes — and it goes well past the borrowed word. The core analog is the **reflection coefficient**, and it's almost uncomfortably good.
+
+In EE, when a source and load impedance don't match, not all the signal transfers — some reflects. The reflection coefficient is
+
+    Γ = (Z_load − Z_source) / (Z_load + Z_source)
+
+and it's a **complex number in the unit disk**: `Γ = 0` is a perfect match (everything transfers), `|Γ| = 1` is total mismatch (everything reflects). That maps onto the SKOS grade structurally, including the two-axis part we kept insisting on:
+
+    Γ = 0                 ⇄  exactMatch        (perfect transfer, no penalty)
+    small |Γ|             ⇄  closeMatch        (mostly transfers, some loss)
+    |Γ| → 1               ⇄  no real match     (nothing transfers)
+    |Γ|  (magnitude)      ⇄  tightness         (HOW MUCH mismatch)
+    ∠Γ   (phase)          ⇄  position          (WHICH WAY — inductive/capacitive ≈ broad/narrow)
+
+A complex number carries magnitude *and* phase — "how much" and "which way" — which is exactly the tightness-vs-position split. I didn't design it to line up; it just does.
+
+The rest of the apparatus has analogs too:
+
+    VSWR / return loss          ⇄  the scalar magnitude / demotion cost (one number for "how bad")
+    S-parameters, Smith chart   ⇄  the per-dimension sub-scores, shown on demand (decomposed "why")
+    frequency band of operation ⇄  load-bearing  (a mismatch only costs you IN the band you use)
+    matching network/transformer⇄  OCSF / pySigma pipelines (literally "impedance matching")
+    common ground / reference   ⇄  OCSF as the shared schema you measure everyone against
+    VNA calibration (SOLT)      ⇄  the grade is a claim needing its own validation; definitional
+                                   pointers = the reference plane
+
+The **load-bearing** gate is the cleanest of these: impedance is frequency-dependent, `Z(ω)`, and a mismatch only degrades your signal where your spectrum actually has power. A bad match at a frequency you don't use is inert — exactly "a closeMatch on a field the rule never reads doesn't demote."
+
+**Where it breaks — and the break is the interesting part.** `Γ` is a *physical, measurable* quantity underwritten by Maxwell's equations. You measure it; it's true. A semantic mapping grade has **no underwriting physics** — there's no equation for "is `ServiceName` the same concept as `Service_Name`." So the EE analogy gives you the *shape* (graded, magnitude+phase, band-gated, calibrated, decomposable) but not the *ground truth*. And that gap is precisely **why canon needs the parts a transmission line never does**: justification, contestability, a peer-reviewed commons. A coax cable doesn't need its reflection coefficient peer-reviewed; a semantic edge does, because nothing physical pins it down. The one faint analog even there is **metrology** — measurements made trustworthy by traceability to community-maintained reference standards (NIST). Reviewer credibility ≈ calibration traceability.
+
+Worth noting: canon already lives in EE on the *detection* side — the battery is radar/sonar DSP lineage (CFAR, matched filtering, conformal). This puts the same physics-borrowed thinking on the *integration* side. The matched filter maximizes SNR against a known template; impedance mismatch in that template degrades the correlation. Same family of ideas, one layer over.
+
+Want me to fold the reflection-coefficient framing into the impedance page (it's a strong intuition pump — `Γ=0` = exactMatch, phase = broad/narrow, frequency-band = load-bearing), or leave it as discussion?</pre>
+
+  <h2>8 · The open problem</h2>
   <p>When an edge flips to contested, every verdict that ever leaned on it <em>load-bearingly</em> is retroactively in
   question — a <strong>provenance-invalidation / re-derivation</strong> problem. Tractable precisely because everything
   is content-addressed and reconstructable, but it is the non-trivial part, and it is its own pass.</p>
