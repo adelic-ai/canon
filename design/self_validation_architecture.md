@@ -311,6 +311,40 @@ The tier a result earns is **computed, not asserted**. No prior system couples
 runtime assumption-checking → tier selection → PROV record. This is the mechanism
 that makes "honest per result" real.
 
+**Why the top rung matters — adversarial numeric robustness (not benign pedantry).**
+"machine-checked is only the few accumulation kernels" is a *benign-workload* read. Under an
+**adversarial** threat model — canon's actual domain — the top rung has a distinct, load-bearing
+purpose: it is the only tier that holds against an input an attacker *chose*, not one nature drew.
+
+- The numeric parts of `well-formed`/`bounded` are **sampled** (property/metamorphic tests; a
+  distributional bound). Nature draws at random, so sampling covers it. An **adversary deliberately
+  searches for the case you did not sample** — so property testing is evadable *by construction*. A
+  machine-checked proof is over **all** inputs; it cannot be evaded that way. (Dijkstra: testing shows
+  the presence of bugs, not their absence.)
+- The attack class is **minute, in-tolerance manipulation of the computation itself**: threshold-boundary
+  evasion through the round-off window (`exact` statistic anomalous, the `float`-computed one lands just
+  under `α` — or the reverse, to *induce* false alarms / alert-fatigue); accumulation drift in CUSUM/Welch
+  sums; float non-associativity exploited via input *reordering*; the anomaly malforming its own telemetry.
+  A *proven* round-off `ε` lets the threshold be set tight against the window (`flag if computed > α − ε`);
+  an unproven `ε` leaves it open.
+- *Honest caveats:* for **noisy** telemetry the round-off window (`ε ~ 1e-15` relative) is swamped by
+  measurement noise, so the pure round-off attack is mostly theoretical there. It bites hardest where the
+  adversary **fully controls the input** (crafted payloads, deterministic/structural checks) or where
+  **errors accumulate**.
+
+**This generalizes beyond cyber detection — to high-assurance engineering and ICS/OT/SCADA.** Wherever a
+computed value drives a consequential decision and an adversary (or fault) can hide in the gap between the
+idealized math and its floating-point implementation, the all-inputs proof is the defense. Cyber-physical
+control is the sharp case: **Stuxnet** is the canonical "minute in-tolerance manipulation (centrifuge
+frequencies) + falsified telemetry to operators" — physical harm engineered to stay under coarse alarms.
+Safety-critical engineering already mandates this rigor at its top assurance levels (DO-178C Level A,
+IEC 61508 SIL 3/4, IEC 62443) via formal verification (SPARK/Ada, Frama-C, Coq/F\*), precisely because
+"tested" is insufficient when failure is physical. canon's `machine-checked` is that same culture, made a
+**per-result, recorded, liftable** tier rather than a one-time certification. So the tier is
+**cost-deferred, not value-deferred**: the proof stack is expensive, but the purpose — provable robustness
+of the deterministic skeleton against an adversary manipulating it within tolerance — is load-bearing in
+canon's domain and central to the cyber-physical / OT applications canon could serve.
+
 **Source tier-transparency.** Weakest-link composes over the **computed** sub-chain
 only: a *source* input carries no rigor tier — its trust is the orthogonal custody and
 validity axes, not this one — so an unclaimed source earns the meet-identity and never

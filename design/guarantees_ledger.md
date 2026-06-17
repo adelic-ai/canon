@@ -239,7 +239,15 @@ Detailed record + the exact assertions: `packages/detection/README.md` (the vali
   **evade**, not lower **value** (commodity Rubeus is widespread → the tool rule is high value-now; the
   behavioral signal is evasion-resistant). `design/sigma_corroboration_coverage.md`.
 - **F\*/Coq machine-checked proofs** (the polyglot path) — the only thing that lifts a decode/kernel to
-  `machine_checked`. §4 of the architecture.
+  `machine_checked`. §4 of the architecture. **Cost-deferred, NOT value-deferred** — its purpose is
+  *adversarial numeric robustness*: the only tier that holds against an input an attacker *chose* (not one
+  nature drew), because the numeric parts of `well_formed`/`bounded` are SAMPLED (property tests) and a
+  proof is over ALL inputs. Defends against minute, **in-tolerance** manipulation of the computation
+  (threshold-boundary evasion via the round-off window; CUSUM/Welch accumulation drift; float
+  non-associativity via input reordering). Load-bearing beyond cyber detection — high-assurance
+  engineering and **ICS/OT/SCADA** (Stuxnet = in-tolerance manipulation + falsified telemetry; the rigor
+  DO-178C / IEC 61508 already mandate). Socket already cut (`decode_guarantee_posture(proof=TRUE)` lifts
+  it). See architecture §4 "Why the top rung matters."
 - **SHACL shapes** — the GENERIC well-formedness check is now ENFORCED in the detection emit path
   (2026-06-14): `emit_detection_verdict` runs `validate(root)` (provenance `well_formed_shapes`) and the
   guarantee tier follows `.conforms` — see PROVEN. Domain shapes are now WIRED into the emit tier-earning
