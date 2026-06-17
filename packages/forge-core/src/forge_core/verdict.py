@@ -118,9 +118,12 @@ class DetectionVerdict:
     decision: Four
     w_record: WRecord
     guarantee: GuaranteeCertificate
-    custody: Four  # PRIMITIVE: the digest verdict (integrity in transit) — never reads content
+    custody: Four | None  # PRIMITIVE: the digest verdict (integrity in transit) — never reads content.
+    # ``None`` = PARKED: custody is not tracked in this deployment (no attested feed), a precondition-absent
+    # state distinct from ``NONE`` (tracked, but this verdict's custody is unknown). Parked → omitted from
+    # the contract (like cross_check), so "axis absent" ≠ "axis evaluated to none".
     validity: Validity  # PRIMITIVE: source-payload well-formedness + the deviation
-    trustworthiness: Four  # DERIVED VIEW: kjoin(custody, validity) — "is the chain sound"
+    trustworthiness: Four | None  # DERIVED VIEW: kjoin(custody, validity); ``None`` when custody is parked
     provenance: str
     # OPTIONAL explanatory structure — the custody-chain walk; "where do I look", not a scalar.
     custody_localization: Localization | None = None
@@ -153,14 +156,16 @@ class DetectionVerdict:
                 "subject_cid": self.guarantee.subject_cid,
                 "tier": self.guarantee.tier.label,
             },
-            "custody": _BELNAP[self.custody],
             "validity": {
                 "verdict": _BELNAP[self.validity.verdict],
                 "deviation": list(self.validity.deviation),  # the feature — no longer dropped
             },
-            "trustworthiness": _BELNAP[self.trustworthiness],
             "provenance": self.provenance,
         }
+        if self.custody is not None:  # omitted when PARKED (custody not tracked in this deployment)
+            out["custody"] = _BELNAP[self.custody]
+        if self.trustworthiness is not None:  # parked alongside custody (the synthesis needs it)
+            out["trustworthiness"] = _BELNAP[self.trustworthiness]
         if self.custody_localization is not None:  # optional explanatory surface
             loc = self.custody_localization
             out["custody_localization"] = {
@@ -194,6 +199,7 @@ def assemble_verdict(
     who: Four = NONE,
     where: Four = NONE,
     how: Four = NONE,
+    track_custody: bool = True,
 ) -> DetectionVerdict:
     """Assemble a :class:`DetectionVerdict` by folding the concerns over ``root``'s DAG.
 
@@ -227,8 +233,6 @@ def assemble_verdict(
     surfaces as ``BOTH`` — the soundness alarm.
     """
     conf = confidence(root, evidence=confidence_evidence)[root.id]
-    # `chains` (multi-hop custody) takes precedence per source; the scalar still folds by tmeet.
-    digest_custody = custody(root, attestations=attestations, chains=chains)[root.id]
     cert = guarantee(root, claims=claims, monitors=monitors)[root.id]
 
     detect = conf.belnap  # ∃-detect: did the detector's evidence say fired?
@@ -237,8 +241,15 @@ def assemble_verdict(
     # BOTH on disagreement. None when no check was supplied (the cross-check was not performed).
     cross = None if check is None else kjoin(detect, check)
     score = conf.probability if conf.probability is not None else 0.0
-    # custody (digest) and validity stay separate primitives; trustworthiness is the derived view.
-    trust = trustworthiness(digest_custody, validity)
+    # Custody is PRECONDITION-GATED. ``track_custody=False`` (no attested feed in this deployment) PARKS
+    # the axis: custody/trustworthiness/localization are ``None`` (omitted from the contract), distinct from
+    # an evaluated ``NONE``. Otherwise the digest fold runs (chains take precedence per source); validity
+    # stays a separate primitive and trustworthiness is its derived synthesis with custody.
+    if track_custody:
+        digest_custody = custody(root, attestations=attestations, chains=chains)[root.id]
+        trust = trustworthiness(digest_custody, validity)
+    else:
+        digest_custody, trust, localization = None, None, None
 
     w = WRecord(
         who=who,

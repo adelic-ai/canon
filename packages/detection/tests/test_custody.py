@@ -48,6 +48,19 @@ def test_unsigned_claim_is_none():
     assert _emit(evidence=EVIDENCE, attestation=attest(EVIDENCE, signed=False))["custody"] == "none"
 
 
+def test_parked_omits_the_axis_distinct_from_none():
+    # precondition-gated: no attested feed in this deployment → custody is PARKED, not always-NONE.
+    from detection.render import render_dict
+    tracked = _emit()                              # default: axis tracked → present, evaluated to none
+    assert tracked["custody"] == "none" and tracked["trustworthiness"] == "none"
+    parked = _emit(track_custody=False)            # parked → axis omitted entirely (≠ "none")
+    assert "custody" not in parked and "trustworthiness" not in parked
+    assert parked["decision"] == "true"            # parking an axis never touches the decision
+    v = emit_detection_verdict("x", technique="T1003.001", pvalue=1e-6, params=PARAMS, track_custody=False)
+    d = render_dict(v)
+    assert d["custody"] == "parked" and d["trustworthiness"] == "parked"   # surfaced honestly, not dropped
+
+
 def test_corroboration_composition_is_a_flagged_limit():
     # documented limit: a corroboration's unattested rule-sources tmeet NONE into custody, so a
     # corroborated+attested verdict is currently NONE (not TRUE) — pinned so it's honest, not a surprise

@@ -121,6 +121,7 @@ def emit_detection_verdict(
     corroboration: dict | None = None,
     evidence: "bytes | str | None" = None,
     attestation: CustodyAttestation | None = None,
+    track_custody: bool = True,
 ) -> DetectionVerdict:
     """Project a detection into the canonical :class:`~forge_core.DetectionVerdict`.
 
@@ -155,6 +156,11 @@ def emit_detection_verdict(
     data, so they ``tmeet`` ``NONE`` into the custody of a *corroborated* verdict, pulling it to ``NONE``
     even with attested evidence. Earned custody on a plain (single-source) detection is the supported path;
     whether reference-data custody should participate in the evidence-custody fold is an open design question.
+
+    **Custody is precondition-gated.** ``track_custody=False`` (no attested feed in this deployment — the
+    common case) PARKS the axis: custody + trustworthiness are omitted from the contract (a
+    precondition-absent state distinct from an evaluated ``NONE``; the renderer shows ``parked``). The
+    decision is never affected — same discipline as off-hours being registry-gated when its fields are absent.
     """
     root = build_detection_root(ref, params, corroboration, evidence=evidence)  # +corroboration/+evidence
     earned = tier if tier is not None else _earned_well_formed(root)  # EARN the tier via SHACL, not assert
@@ -171,6 +177,7 @@ def emit_detection_verdict(
         confidence_evidence={root.id: Confidence.from_detector(True, pd=_PD, pfa=pvalue)},
         claims=claims,
         attestations=attestations,  # earned custody: the signed ingest record for the evidence source
+        track_custody=track_custody,  # False → park the axis (no attested feed): custody/trust omitted
         who=who,
         when=when,
         what=what,

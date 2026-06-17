@@ -40,14 +40,16 @@ def render_dict(verdict: DetectionVerdict, root: Entity | None = None) -> dict:
     w = c["w_record"]
     val = c["validity"]
     validity = val.get("verdict", val) if isinstance(val, dict) else val   # show the scalar, not the raw dict
+    # custody/trustworthiness are omitted from the contract when PARKED (axis not tracked) — distinct from
+    # an evaluated "none". Surface that distinction explicitly rather than silently dropping it.
     return {
         "technique": c["technique"],
         "decision": c["decision"],
         "score": c["score"],
         "guarantee_tier": c["guarantee"]["tier"],
-        "custody": c["custody"],
+        "custody": c.get("custody", "parked"),
         "validity": validity,
-        "trustworthiness": c["trustworthiness"],
+        "trustworthiness": c.get("trustworthiness", "parked"),
         "cross_check": c.get("cross_check"),
         "w_record": {k: w[k] for k in _WS},
         "provenance_cid": c["provenance"],

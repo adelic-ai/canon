@@ -103,6 +103,12 @@ Detailed record + the exact assertions: `packages/detection/README.md` (the vali
   returns `TRUE` (signed + digest-match), `FALSE` (mismatch = tamper), or `NONE` (unsigned / silent feed).
   Constructive existence-proof — the bytes + attestation are synthesized (no signed feed in the corpora;
   real DSSE verification is the deployment boundary, `detection/ingest.py::attest`); `test_custody.py`.
+  **Precondition-gated (2026-06-17):** `track_custody=False` (no attested feed in this deployment — the
+  common case, since virtually nothing signs logs) PARKS the axis: custody + trustworthiness are *omitted*
+  from the contract (schema relaxed to optional), a **precondition-absent** state distinct from an
+  evaluated `NONE`; the renderer shows `parked`. The decision is never touched. Matches the discipline by
+  which off-hours is already registry-gated (it isn't run when `_time`/`Account_Name` are absent) — an axis
+  whose precondition can't hold in a deployment is parked, not surfaced as a misleading per-verdict `NONE`.
   **Flagged composition limit:** a corroboration's unattested rule-source entities `tmeet` `NONE` into a
   *corroborated* verdict's custody, so corroborated+attested is currently `NONE` (pinned in the test) —
   whether reference-data custody should participate in the evidence-custody fold is an open design question.
