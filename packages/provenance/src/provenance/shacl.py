@@ -85,7 +85,6 @@ def validate_graph(data: Graph, shapes: "Graph | str | None" = None) -> Validati
         data,
         shacl_graph=shapes_graph,
         inference="none",
-        advanced=True,  # enable SHACL Advanced Features (SPARQL targets + sh:sparql) for domain shapes
     )
     return ValidationReport(conforms=conforms, text=text, results=results_graph)
 

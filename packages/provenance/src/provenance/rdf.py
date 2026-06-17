@@ -31,6 +31,7 @@ CANON = Namespace("urn:canon:prov#")
 ENT = Namespace("urn:canon:entity:")
 ACT = Namespace("urn:canon:activity:")
 PLAN = Namespace("urn:canon:plan:")
+OP = Namespace("urn:canon:op#")  # per-op class IRIs — dual-typing: each activity is typed by its op
 
 
 def to_prov(entity: Entity) -> Graph:
@@ -61,6 +62,7 @@ def to_prov(entity: Entity) -> Graph:
 
         a_uri = ACT[prod.id]
         g.add((a_uri, RDF.type, PROV.Activity))
+        g.add((a_uri, RDF.type, OP[prod.op_name]))  # dual-typing: type the activity by its op (sh:targetClass-able)
         g.add((e_uri, PROV.wasGeneratedBy, a_uri))
         for u in prod.used:
             u_uri = ENT[u.id]

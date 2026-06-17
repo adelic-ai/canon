@@ -1,14 +1,10 @@
 # PASS — a sigma_corroboration activity BACKED BY a sigma-rule witness it used. Must conform.
 @prefix prov:  <http://www.w3.org/ns/prov#> .
 @prefix canon: <urn:canon:prov#> .
+@prefix op:    <urn:canon:op#> .
 
-<urn:canon:activity:pass> a prov:Activity ;
-    prov:qualifiedAssociation [ prov:hadPlan <urn:canon:plan:pass> ] ;
+<urn:canon:activity:pass> a prov:Activity , op:sigma_corroboration ;   # dual-typed by its op
     prov:used <urn:canon:entity:detection_pass> , <urn:canon:entity:rule_pass> .
-
-<urn:canon:plan:pass> a prov:Plan ;
-    canon:opName "sigma_corroboration" ;
-    canon:params "(('logsource', 'windows/security'), ('technique', 'T1558.003'), ('votes', 1))" .
 
 <urn:canon:entity:rule_pass> a prov:Entity ;
     canon:kind "sigma-rule" .                       # the witness — the corroboration is backed

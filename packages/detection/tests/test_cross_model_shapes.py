@@ -1,9 +1,10 @@
 """Cross-model corroboration SHACL shape — "corroboration earned, not asserted."
 
 A `sigma_corroboration` must be BACKED by ≥1 sigma-rule witness it actually `prov:used` — the verdict's
-own provenance must exhibit the witnesses or it does not conform. Needs SHACL Advanced Features (SPARQL
-target); `validate_graph` now enables them. Ships PASS/XFAIL per the shapes discipline + validates the
-real emitter's output and the earned tier.
+own provenance must exhibit the witnesses or it does not conform. Expressed in CORE SHACL via OWL+SHACL
+dual-typing: `to_prov` types each activity by its op (`a <urn:canon:op#sigma_corroboration>`), so the
+shape `sh:targetClass`es it and counts qualifying `prov:used` witnesses — no SPARQL. Ships PASS/XFAIL per
+the shapes discipline + validates the real emitter's output and the earned tier.
 """
 
 from pathlib import Path

@@ -217,11 +217,15 @@ Detailed record + the exact assertions: `packages/detection/README.md` (the vali
       recipe); core SHACL; `test_domain_shapes.py`.
   (2) `cross_model.shapes.ttl` (2026-06-17) — a `sigma_corroboration` must be BACKED BY ≥1 sigma-rule
       witness it actually `prov:used`: **corroboration earned, not asserted** — the verdict's own provenance
-      must exhibit the witnesses or the tier drops to ABSENT. Needs SHACL Advanced Features (SPARQL target +
-      `sh:sparql`), so `validate_graph` now passes `advanced=True`. Ships PASS/XFAIL;
-      `test_cross_model_shapes.py` (incl. a tamper test: drop the witness edges → fails).
-  Both ship the PASS/XFAIL generator-validator pairing. Still pending: more per-op/per-technique shapes +
-  OWL+SHACL dual-typing (type the activity as a `canon:` class for `sh:targetClass` instead of SPARQL).
+      must exhibit the witnesses or the tier drops to ABSENT. CORE SHACL via OWL+SHACL dual-typing (below);
+      ships PASS/XFAIL; `test_cross_model_shapes.py` (incl. a tamper test: drop the witness edges → fails).
+  Both ship the PASS/XFAIL generator-validator pairing.
+  **OWL+SHACL dual-typing — DONE (2026-06-17).** `to_prov` now types every activity by its op
+  (`a <urn:canon:op#{op_name}>`), so domain shapes `sh:targetClass` the op directly instead of selecting it
+  by `canon:opName` via a SPARQL target. This let `cross_model.shapes.ttl` be written in pure core SHACL
+  (`sh:targetClass` + `sh:qualifiedValueShape`), so the transient `advanced=True` (added then reverted) is
+  no longer needed. Still pending: more per-op/per-technique shapes; full OWL class declarations
+  (`owl:Class` + `rdfs:subClassOf`) for reasoning, if a consumer pulls it.
 - **Multi-scale** — the divisibility lattice (`forge_core/lattice.py`) is built but unused by the
   detectors; the grain-divisibility discipline beyond a single window, with the materialized-bucket
   guard, is future work. Earns its keep first at multi-scale MI (coordination cadence).
