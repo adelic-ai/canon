@@ -82,7 +82,8 @@ from detection.cross_model import (
     slice_entity_window,
     synthesize_kerberoast_corpus,
 )
-from detection.render import render_dict, render_dot, render_report, write_report
+from detection.render import render_dict, render_dot, render_report, report_from_dict, write_report
+from detection.store import find_by_tag, load_verdict, render_stored, save_verdict
 from detection.rarity import cloud_account_manipulation_verdicts, rare_actors
 from detection.subgraph import (
     LSASS_DUMP,
@@ -129,8 +130,14 @@ __all__ = [
     # render — pure projection of a verdict + its provenance DAG into report / record / chart
     "render_dict",
     "render_report",
+    "report_from_dict",
     "render_dot",
     "write_report",
+    # store — persist a verdict (record + PROV-O graph + DOT), re-render later with no live Entity
+    "save_verdict",
+    "load_verdict",
+    "render_stored",
+    "find_by_tag",
     # rarity — flag the rare ACTOR for a sensitive action family (cred-access: rare doer, not breadth)
     "rare_actors",
     "cloud_account_manipulation_verdicts",

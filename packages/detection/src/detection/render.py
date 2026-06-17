@@ -58,7 +58,12 @@ def render_dict(verdict: DetectionVerdict, root: Entity | None = None) -> dict:
 
 def render_report(verdict: DetectionVerdict, root: Entity | None = None, *, title: str | None = None) -> str:
     """A Markdown report — the verdict, its W's, its folds, its external corroboration, and its lineage."""
-    d = render_dict(verdict, root)
+    return report_from_dict(render_dict(verdict, root), title=title)
+
+
+def report_from_dict(d: dict, *, title: str | None = None) -> str:
+    """Format a :func:`render_dict` record into the Markdown report. Split out so a *persisted* record
+    (from the verdict store) re-renders with no live verdict/Entity — the record carries everything."""
     out = [
         f"# {title or 'Detection verdict'} — {d['technique']}",
         "",
