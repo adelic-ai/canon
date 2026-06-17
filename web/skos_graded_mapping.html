@@ -146,6 +146,17 @@ class TypeMapping:
   detection — part mechanical (is the field in the support set?), part semantic (does <code>0x17</code> vs
   <code>RC4-HMAC</code> flip the predicate?).</p>
 
+  <div class="note key"><strong>[Future — examine closely] Three definitions, per event.</strong>
+  Load-bearing above is stated syntactically — <em>is the field in the support set?</em> — but it is
+  deeper: whether a difference bites is a function of <strong>three definitions</strong> meeting at the
+  <em>detection event</em> — the source field def, the target field def, and the <em>detection's own
+  definition</em>. The same edge-grade is load-bearing for one detection and inert for another, by what
+  each <em>asserts</em> about the field (presence vs literal-equality vs numeric-compare; <code>0x17</code>
+  vs <code>RC4-HMAC</code> is inert if only presence is tested, load-bearing if compared literally — and
+  "which" is a fact about the <em>detection's</em> definition, not the field's). Because a Sigma rule is a
+  fairly formal predicate, much of "does this difference matter to THIS detection" is computable from the
+  rule's AST crossed with the dimension the edge differs on — shrinking the judgment residual.</div>
+
   <h2>5 · The verdict object — everything routes back to provenance</h2>
   <p>A detection result is a <code>DetectionVerdict</code> instance. Its <code>.provenance</code> is the root CID into a
   content-addressed PROV-O DAG; walking it (<code>to_prov</code> / <code>lineage</code>) recovers <em>every fact</em> —
@@ -220,6 +231,14 @@ VNA calibration (SOLT)      ⇄  the grade is a claim needing validation; defns 
   does — justification, contestability, a peer-reviewed commons. A coax cable doesn't need its reflection coefficient
   peer-reviewed; a semantic edge does. The faint analog even there is <strong>metrology</strong>: trust via traceability
   to community-maintained reference standards (NIST). Reviewer credibility ≈ calibration traceability.</div>
+  <div class="note"><strong>[Correction owed]</strong> "No underwriting physics" just above is too strong.
+  The field definitions — and the emitted-value behavior — ARE the reference plane, pointable to the exact
+  differing part. The grade is an <em>inference</em> over that ground: <strong>computable where the specs
+  are formal</strong> (datatype / enum / value-domain → broad/narrow as set containment), <strong>judgment
+  only in the residual</strong> (semantic identity not reducible to type + values, e.g. <code>source_ip</code>
+  vs <code>nat_ip</code>; silent specs; intent). Not "no physics" — rather "the specs are the law, written
+  partly in prose and sometimes silent, so applying it has an interpretive step, with the formal fraction
+  computed outright." To be reframed in the body when this area is examined.</div>
   <p class="muted">Canon already lives in EE on the <em>detection</em> side — the battery is radar/sonar DSP lineage
   (CFAR, matched filtering, conformal). This puts the same physics-borrowed thinking on the <em>integration</em> side.
   The matched filter maximizes SNR against a known template; impedance mismatch in that template degrades the
