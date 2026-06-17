@@ -159,6 +159,25 @@ drop; a `closeMatch` is graded-TRUE, not full-TRUE.
 
 ## Open questions
 
+- **[FUTURE — examine closely] Load-bearingness depends on the DETECTION's own definition, per event.**
+  Whether a field-difference bites is not a property of the edge alone — it is a function of THREE
+  definitions meeting at the detection event: the source field def, the target field def, AND the
+  detection's own definition. The same edge-grade is load-bearing for one detection and inert for another,
+  by what each *asserts* about the field (presence vs literal-equality vs numeric-compare; cf. `0x17` vs
+  `RC4-HMAC` — inert if only presence is tested, load-bearing if compared literally, and "which" is a fact
+  about the *detection's* definition, not the field's). Because a Sigma rule is a fairly formal predicate,
+  much of "does this difference matter to THIS detection" is computable from the rule's AST crossed with
+  the dimension the edge differs on — shrinking the judgment residual. The locus is the **detection
+  event**, where a concrete detection instance meets concrete mapped fields. Examine more closely later.
+- **[CORRECTION owed] "No underwriting physics" is too strong** (the EE-analog / §where-it-breaks framing).
+  The field definitions — and the emitted-value behavior — ARE the reference plane, pointable to the exact
+  differing part. The grade is an *inference* over that ground: **computable where the specs are formal**
+  (datatype / enum / value-domain → broad/narrow as set containment; overlap → a magnitude), **judgment
+  only in the residual** (semantic identity not reducible to type + values, e.g. `source_ip` vs `nat_ip`;
+  silent specs; intent). So it is not "no physics" — it is "the specs are the law, written partly in prose
+  and sometimes silent, so applying it has an interpretive step, with the formal fraction computed
+  outright." Reframe the line when this whole area is examined.
+
 - **Where do sub-scores come from** — authored (a human grades the edge, like the OCSF mappers) or computed
   (a metric over the two definitions)? Either way the grade is itself a *claim with provenance*, demotable,
   possibly wrong — not ground truth.
