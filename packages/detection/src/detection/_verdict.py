@@ -23,7 +23,8 @@ from forge_core import Calibration, DetectionVerdict, assemble_verdict
 from provenance import NONE, TRUE, Confidence, Entity, Four, Tier, derive, lineage, source
 
 _PD = 0.9  # nominal detection probability for the confidence leaf (no calibrated Pd per detector)
-_DOMAIN_SHAPES = Path(__file__).parents[4] / "contracts" / "shapes" / "detection.shapes.ttl"
+_SHAPES_DIR = Path(__file__).parents[4] / "contracts" / "shapes"
+_DOMAIN_SHAPES = (_SHAPES_DIR / "detection.shapes.ttl", _SHAPES_DIR / "cross_model.shapes.ttl")
 
 
 def build_detection_root(ref: str, params: dict, corroboration: dict | None = None) -> Entity:
@@ -57,12 +58,15 @@ def build_detection_root(ref: str, params: dict, corroboration: dict | None = No
 @functools.lru_cache(maxsize=1)
 def _well_formed_shapes():
     """Generic PROV-O well-formedness (provenance) + canon's DETECTION-DOMAIN shapes, merged once.
-    The domain shape (``contracts/shapes/detection.shapes.ttl``) requires the op-plan to record its
-    params — so the earned tier now checks per-op structure, not just generic PROV-O."""
+    ``detection.shapes.ttl`` requires every op-plan to record its params (the re-derivable recipe);
+    ``cross_model.shapes.ttl`` requires a ``sigma_corroboration`` to be backed by ≥1 sigma-rule witness
+    it actually used (corroboration earned, not asserted) — so the earned tier checks per-op structure
+    AND the cross-model corroboration invariant, not just generic PROV-O."""
     from provenance import well_formed_shapes
     g = well_formed_shapes()
-    if _DOMAIN_SHAPES.exists():
-        g.parse(_DOMAIN_SHAPES, format="turtle")
+    for shape in _DOMAIN_SHAPES:
+        if shape.exists():
+            g.parse(shape, format="turtle")
     return g
 
 

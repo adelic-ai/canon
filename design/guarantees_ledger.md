@@ -211,10 +211,17 @@ Detailed record + the exact assertions: `packages/detection/README.md` (the vali
   `machine_checked`. §4 of the architecture.
 - **SHACL shapes** — the GENERIC well-formedness check is now ENFORCED in the detection emit path
   (2026-06-14): `emit_detection_verdict` runs `validate(root)` (provenance `well_formed_shapes`) and the
-  guarantee tier follows `.conforms` — see PROVEN. Domain shapes STARTED (2026-06-16): first per-op shape
-  `contracts/shapes/detection.shapes.ttl` (op-plan must record `canon:params` = the re-derivable recipe;
-  ships PASS/XFAIL; `test_domain_shapes.py`). Still pending: more per-op/per-technique shapes + OWL+SHACL
-  dual-typing (type the activity as a `canon:` class) + wiring domain shapes into the emit tier-earning.
+  guarantee tier follows `.conforms` — see PROVEN. Domain shapes are now WIRED into the emit tier-earning
+  (`_well_formed_shapes` merges generic + every `contracts/shapes/*.shapes.ttl`):
+  (1) `detection.shapes.ttl` (2026-06-16) — every op-plan must record `canon:params` (the re-derivable
+      recipe); core SHACL; `test_domain_shapes.py`.
+  (2) `cross_model.shapes.ttl` (2026-06-17) — a `sigma_corroboration` must be BACKED BY ≥1 sigma-rule
+      witness it actually `prov:used`: **corroboration earned, not asserted** — the verdict's own provenance
+      must exhibit the witnesses or the tier drops to ABSENT. Needs SHACL Advanced Features (SPARQL target +
+      `sh:sparql`), so `validate_graph` now passes `advanced=True`. Ships PASS/XFAIL;
+      `test_cross_model_shapes.py` (incl. a tamper test: drop the witness edges → fails).
+  Both ship the PASS/XFAIL generator-validator pairing. Still pending: more per-op/per-technique shapes +
+  OWL+SHACL dual-typing (type the activity as a `canon:` class for `sh:targetClass` instead of SPARQL).
 - **Multi-scale** — the divisibility lattice (`forge_core/lattice.py`) is built but unused by the
   detectors; the grain-divisibility discipline beyond a single window, with the materialized-bucket
   guard, is future work. Earns its keep first at multi-scale MI (coordination cadence).

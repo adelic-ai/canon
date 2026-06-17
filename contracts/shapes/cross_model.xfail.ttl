@@ -1,0 +1,12 @@
+# XFAIL — a sigma_corroboration activity that claims corroboration (opName + params with votes) but is
+# NOT backed by any sigma-rule witness it used. Corroboration asserted, not earned → must FAIL the shape.
+@prefix prov:  <http://www.w3.org/ns/prov#> .
+@prefix canon: <urn:canon:prov#> .
+
+<urn:canon:activity:xfail> a prov:Activity ;
+    prov:qualifiedAssociation [ prov:hadPlan <urn:canon:plan:xfail> ] ;
+    prov:used <urn:canon:entity:detection_xfail> .   # only the detection — NO sigma-rule witness
+
+<urn:canon:plan:xfail> a prov:Plan ;
+    canon:opName "sigma_corroboration" ;
+    canon:params "(('logsource', 'windows/security'), ('technique', 'T1558.003'), ('votes', 1))" .

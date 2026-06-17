@@ -1,0 +1,44 @@
+# contracts/shapes/cross_model.shapes.ttl
+# Domain SHACL shape for the cross-model corroboration join (detection/cross_model.py + sigma_panel).
+#
+# Property earned (not asserted): a `sigma_corroboration` derivation must be BACKED BY at least one
+# real witness — an entity it `prov:used` that is a Sigma rule-class (`canon:kind "sigma-rule"`). The
+# corroboration verdict records votes/technique/logsource in its plan params, but params are just a
+# claim; this shape ties the claim to the graph — you cannot emit a "corroborated" verdict whose DAG
+# carries no actual witness. That is canon's "earned, not asserted" applied to corroboration: the
+# verdict's own provenance must exhibit the witnesses, or it does not conform (→ tier ABSENT).
+#
+# Needs SHACL Advanced Features (SPARQL target + sh:sparql): the target selects the corroboration
+# ACTIVITY by its plan's opName, and the constraint flags any such activity lacking a sigma-rule it used.
+# Ships PASS (cross_model.pass.ttl) and XFAIL (cross_model.xfail.ttl) per shapes/README.
+
+@prefix sh:    <http://www.w3.org/ns/shacl#> .
+@prefix prov:  <http://www.w3.org/ns/prov#> .
+@prefix canon: <urn:canon:prov#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+
+canon:_prefixes
+    sh:declare [ sh:prefix "canon" ; sh:namespace "urn:canon:prov#"^^xsd:anyURI ] ,
+               [ sh:prefix "prov"  ; sh:namespace "http://www.w3.org/ns/prov#"^^xsd:anyURI ] .
+
+canon:CorroborationBackedShape a sh:NodeShape ;
+    sh:target [
+        a sh:SPARQLTarget ;
+        sh:prefixes canon:_prefixes ;
+        sh:select """
+            SELECT ?this WHERE {
+                ?assoc prov:hadPlan ?plan .
+                ?plan  canon:opName "sigma_corroboration" .
+                ?this  prov:qualifiedAssociation ?assoc .
+            }
+        """ ;
+    ] ;
+    sh:sparql [
+        sh:prefixes canon:_prefixes ;
+        sh:message "a sigma_corroboration must be backed by >=1 sigma-rule witness it prov:used (corroboration earned, not asserted)" ;
+        sh:select """
+            SELECT $this WHERE {
+                FILTER NOT EXISTS { $this prov:used ?rule . ?rule canon:kind "sigma-rule" . }
+            }
+        """ ;
+    ] .
