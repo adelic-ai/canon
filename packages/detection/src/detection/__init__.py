@@ -82,6 +82,7 @@ from detection.cross_model import (
     slice_entity_window,
     synthesize_kerberoast_corpus,
 )
+from detection.render import render_dict, render_dot, render_report, write_report
 from detection.rarity import cloud_account_manipulation_verdicts, rare_actors
 from detection.subgraph import (
     LSASS_DUMP,
@@ -125,6 +126,11 @@ __all__ = [
     "LSASS_DUMP",
     "LSASS_READ_ANY",
     "lsass_dump_verdicts",
+    # render — pure projection of a verdict + its provenance DAG into report / record / chart
+    "render_dict",
+    "render_report",
+    "render_dot",
+    "write_report",
     # rarity — flag the rare ACTOR for a sensitive action family (cred-access: rare doer, not breadth)
     "rare_actors",
     "cloud_account_manipulation_verdicts",
