@@ -148,3 +148,16 @@ def test_confirmed_exchangeability_lets_conformal_stand_at_bounded():
     claims, monitors = conformal_guarantee_posture(node, exchangeability=TRUE)
     cert = guarantee(node, claims=claims, monitors=monitors)[node.id]
     assert cert.tier == Tier.BOUNDED and cert.demotion is None
+
+
+# ── exchangeability monitor (the BOUNDED-tier gate) ──────────────────────────────────
+def test_exchangeability_monitor_falsifies_drift_not_stationarity():
+    import numpy as np
+    from forge_core import exchangeability_monitor
+    from provenance import TRUE, FALSE, NONE
+    rng = np.random.default_rng(7)
+    stationary = rng.normal(size=300)                                   # iid → not falsified
+    drift = np.concatenate([rng.normal(0, 1, 150), rng.normal(4, 1, 150)])  # mean shift halfway
+    assert exchangeability_monitor(stationary) is TRUE      # no detected drift — the most an empirical check earns
+    assert exchangeability_monitor(drift) is FALSE          # calibration non-stationary → exchangeability violated
+    assert exchangeability_monitor(stationary[:8]) is NONE  # too few to check → recorded absence, not a pass

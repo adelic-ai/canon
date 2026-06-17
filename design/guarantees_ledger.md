@@ -47,8 +47,19 @@ Detection guarantee tier is SHACL-EARNED, not asserted:            detection/_ve
 ## ASSUMED — the tier stands only if a precondition holds (else it demotes)
 
 - **Conformal `bounded`** is conditional on **exchangeability** (calibration ~ test for the normal
-  points). Per-input confirmation is unbuilt, so the default monitor is a recorded absence that
-  demotes to `well_formed`; pass `exchangeability=TRUE` only when confirmed. `conformal_guarantee_posture`.
+  points) — and the monitor is now BUILT (2026-06-17): `exchangeability_monitor` (forge_core/conformal.py)
+  is a **falsification** check — split-half two-sample KS over the calibration scores in time order →
+  `TRUE` (no drift detected; the most an empirical check earns), `FALSE` (calibration non-stationary →
+  violated), `NONE` (too few → recorded absence). It gates the tier via `conformal_guarantee_posture`:
+  `emit_detection_verdict(exchangeability=…)` claims `BOUNDED` on the conformal `detection` node (over a
+  SHACL-well-formed graph, so the demotion floor is earned), and the guarantee fold stands it on `TRUE` /
+  demotes on `NONE`/`FALSE`. Wired into the fan-out (`fanout_verdicts` computes it once per run). **Earned
+  end-to-end:** faker-kerberos (stationary) → `bounded`; flaws CloudTrail (drifting calibration) → demoted
+  to `well_formed` — the substrate refusing the bound it can't back. `test_conformal.py`, `test_bounded.py`.
+  **Scope (honest):** confirms calibration *stationarity* (one necessary condition / the "stale calibration"
+  threat), NOT full exchangeability — test-time distribution shift + calibration-contamination are
+  complementary monitors, deferred. `TRUE` = "no evidence against the precondition," exactly the
+  assumption-bearing footing `bounded` is defined to carry.
 - **CFAR `bounded`** is conditional on the **homogeneous-reference-window / noise model**. The detector
   node claims `bounded`; the per-result monitor selects whether it stands. (And: CA-CFAR's square-law α
   is mismatched to a *bounded* statistic like entropy — see FALSIFIED-adjacent note below.)

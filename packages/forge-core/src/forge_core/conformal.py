@@ -37,7 +37,7 @@ from typing import Any
 
 import numpy as np
 
-from provenance import NONE, Entity, Four, Tier
+from provenance import FALSE, NONE, TRUE, Entity, Four, Tier
 
 from forge_core.ops import op
 from forge_core.signal import Signal, SignalKind
@@ -137,6 +137,36 @@ def conformal_detect(
         "n_cal": int(cal.size),
         "tail": tail,
     }
+
+
+def exchangeability_monitor(scores: np.ndarray, *, alpha: float = 0.05, min_n: int = 20) -> Four:
+    """A runtime monitor for conformal's **exchangeability** precondition — the verdict that gates the
+    ``BOUNDED`` tier (:func:`conformal_guarantee_posture`).
+
+    Exchangeability cannot be *proven* from finite data, so this is a **falsification** check, not a proof:
+    it tests the named, load-bearing threat — *stale / drifting calibration* (custody.md / the conformal
+    docstring: "no stale/contaminated calibration"). The ``scores`` are taken **in temporal order**; the
+    monitor splits them first-half vs second-half and runs a two-sample Kolmogorov–Smirnov test. No
+    detected drift (KS ``p > alpha``) ⇒ ``TRUE`` (the precondition is **not falsified** — the most an
+    empirical check can earn); detected drift (``p ≤ alpha``) ⇒ ``FALSE`` (exchangeability violated →
+    demote); fewer than ``min_n`` points ⇒ ``NONE`` (can't check — a recorded absence, "no data ≠ data-
+    says-fine"). NaNs are dropped.
+
+    Scope, stated honestly: this confirms calibration **stationarity** (one necessary condition), not full
+    exchangeability — it does not check test-time distribution shift or contamination of the calibration by
+    anomalies. So ``TRUE`` earns BOUNDED *modulo* this check; complementary monitors (test-time shift,
+    contamination) are deferred. A ``TRUE`` here is "no evidence against exchangeability from drift," which
+    is exactly the assumption-bearing footing BOUNDED is defined to have."""
+    from scipy.stats import ks_2samp
+
+    s = np.asarray(scores, dtype=float)
+    s = s[np.isfinite(s)]
+    if s.size < min_n:
+        return NONE  # too few points to test stationarity — recorded absence, not a pass
+    half = s.size // 2
+    first, second = s[:half], s[half:]
+    _, p = ks_2samp(first, second)
+    return TRUE if p > alpha else FALSE
 
 
 def conformal_guarantee_posture(

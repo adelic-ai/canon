@@ -39,4 +39,8 @@ def test_emitted_verdict_carries_the_validated_tier():
     from detection.fanout import SERVICE_TICKET_FANOUT, fanout_verdicts, run_binding
 
     v = fanout_verdicts(run_binding(str(csv), SERVICE_TICKET_FANOUT))[0]
-    assert v.to_contract()["guarantee"]["tier"] == "well_formed"   # earned, because the root conforms
+    # EARNED, not asserted: the root SHACL-conforms (well_formed) AND, since faker-kerberos's calibration
+    # is stationary, the exchangeability monitor confirms the conformal FAR bound → the tier rises to
+    # `bounded`. (On a drifting calibration the monitor would demote it back to well_formed — see
+    # test_bounded.py.) Either way the tier follows the validator + monitor, never a self-certification.
+    assert v.to_contract()["guarantee"]["tier"] == "bounded"

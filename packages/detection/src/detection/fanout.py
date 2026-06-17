@@ -43,8 +43,14 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from forge_core import Calibration, DetectionVerdict, conformal_pvalues, shannon_entropy
-from provenance import FALSE, NONE, TRUE
+from forge_core import (
+    Calibration,
+    DetectionVerdict,
+    conformal_pvalues,
+    exchangeability_monitor,
+    shannon_entropy,
+)
+from provenance import FALSE, NONE, TRUE, Four
 
 from detection._verdict import emit_detection_verdict
 
@@ -278,7 +284,8 @@ def detect_by_distinct_count(
 
 
 def fanout_verdict(
-    detection: FanoutDetection, binding: FanoutBinding, *, distinct_threshold: int = 5
+    detection: FanoutDetection, binding: FanoutBinding, *, distinct_threshold: int = 5,
+    exchangeability: Four = NONE,
 ) -> DetectionVerdict:
     """Emit the canonical :class:`~forge_core.DetectionVerdict` for one detected fan-out cell —
     closing the loop: real telemetry → binding → detection → the schema-validated verdict. Custody
@@ -307,6 +314,9 @@ def fanout_verdict(
         # calibration evidence: the detection thresholded a conformal p-value at the binding's alpha →
         # distribution-free FAR ≤ alpha (marginal). Already computed; attached, not recomputed.
         calibration=Calibration("conformal", binding.alpha),
+        # the conformal FAR ≤ alpha bound is BOUNDED only if exchangeability holds; the monitor verdict
+        # (computed once over the calibration in fanout_verdicts) gates the tier — TRUE earns bounded.
+        exchangeability=exchangeability,
         # `when` is the TEMPORAL ∀-validate fold's verdict; fan-out runs NO temporal recognition, so it is
         # honestly NONE (unanswered), not the TRUE default — claiming a validation that never ran would be
         # the None-vs-True drift the substrate exists to prevent. decision = kjoin(detect, NONE) = detect.
@@ -314,8 +324,17 @@ def fanout_verdict(
     )
 
 
+def _calibration_exchangeability(cells: "list[FanoutCell]") -> Four:
+    """The exchangeability monitor verdict over a run's calibration: the cell entropies in time order
+    (the conformal calibration population). TRUE = no calibration drift detected; NONE = too few cells."""
+    scores = np.array([c.entropy for c in sorted(cells, key=lambda c: c.bin)], dtype=float)
+    return exchangeability_monitor(scores)
+
+
 def fanout_verdicts(result: dict) -> "list[DetectionVerdict]":
     """One :class:`~forge_core.DetectionVerdict` per detected cell in a :func:`run_binding` result
-    (which carries the ``binding`` and thus the technique)."""
+    (which carries the ``binding`` and thus the technique). The exchangeability monitor is computed ONCE
+    over the run's calibration (all cells) and gates each verdict's BOUNDED tier."""
     binding = result["binding"]
-    return [fanout_verdict(d, binding) for d in result["detected"]]
+    exch = _calibration_exchangeability(result["cells"])
+    return [fanout_verdict(d, binding, exchangeability=exch) for d in result["detected"]]

@@ -122,6 +122,7 @@ def emit_detection_verdict(
     evidence: "bytes | str | None" = None,
     attestation: CustodyAttestation | None = None,
     track_custody: bool = True,
+    exchangeability: Four | None = None,
 ) -> DetectionVerdict:
     """Project a detection into the canonical :class:`~forge_core.DetectionVerdict`.
 
@@ -172,11 +173,23 @@ def emit_detection_verdict(
     # guarantee fold meets claims across the DAG, so claim each derived node (not just root) — otherwise
     # the corroboration-wrapped inner `detection` node is unclaimed and meets the tier down to ABSENT.
     claims = {e.id: earned for e in lineage(root) if e.producer is not None}
+    # EARNED bounded: a conformal detector node can CLAIM bounded (a distribution-free FAR ≤ α bound), but
+    # only stands on a confirming exchangeability monitor — and only over a SHACL-well-formed graph (else the
+    # demotion floor would be asserted, not earned). The guarantee fold gates it: TRUE → bounded, NONE/FALSE
+    # → demoted to well_formed with the demotion recorded. Claimed on the `detection` node (the statistical
+    # test), not the corroboration wrapper.
+    monitors = None
+    if exchangeability is not None and earned == Tier.WELL_FORMED:
+        det_id = next((e.id for e in lineage(root)
+                       if e.producer is not None and e.producer.op_name == "detection"), root.id)
+        claims[det_id] = Tier.BOUNDED
+        monitors = {det_id: exchangeability}
     return assemble_verdict(
         root,
         technique=technique,
         confidence_evidence={root.id: Confidence.from_detector(True, pd=_PD, pfa=pvalue)},
         claims=claims,
+        monitors=monitors,  # exchangeability monitor gating the BOUNDED claim (None → no bounded claim)
         attestations=attestations,  # earned custody: the signed ingest record for the evidence source
         track_custody=track_custody,  # False → park the axis (no attested feed): custody/trust omitted
         who=who,

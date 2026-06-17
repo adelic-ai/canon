@@ -51,6 +51,7 @@ from forge_core.conformal import (
     conformal_far_bound,
     conformal_guarantee_posture,
     conformal_pvalues,
+    exchangeability_monitor,
 )
 from forge_core.fdr import fdr_adjust, fdr_control
 from forge_core.ingest import (
@@ -114,6 +115,7 @@ __all__ = [
     "conformal_pvalues",
     "conformal_far_bound",
     "conformal_guarantee_posture",
+    "exchangeability_monitor",
     "fdr_control",
     "fdr_adjust",
     "validate_float64_stream",
