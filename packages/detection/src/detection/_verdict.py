@@ -68,8 +68,8 @@ def build_detection_root(ref: str, params: dict, corroboration: dict | None = No
     root = derive("detection", lambda _p: None, (src,), params)  # structural; the folds never evaluate it
     if corroboration and corroboration.get("rules"):
         # the external witnesses, as related artifacts the corroboration `used` (a real PROV-O edge)
-        rule_ents = [source(f"sigma-rule:{n}", name=f"sigma-rule:{n}", kind="sigma-rule")
-                     for n in corroboration["rules"]]
+        rule_ents = [source(f"sigma-rule:{n}", name=f"sigma-rule:{n}", kind="sigma-rule", reference=True)
+                     for n in corroboration["rules"]]  # reference data, not evidence — custody excludes it
         root = derive("sigma_corroboration", lambda _p: None, (root, *rule_ents),
                       {"votes": corroboration["votes"], "classes": corroboration.get("classes"),
                        "technique": corroboration.get("technique"),
@@ -151,11 +151,12 @@ def emit_detection_verdict(
     source ⇒ ``custody = NONE`` (no faked attestation). Pass ``evidence`` (the ingested bytes) to anchor
     the source on its content digest (the keystone), and ``attestation`` (a signed in-toto/DSSE projection
     — see :func:`detection.ingest.attest`) for the custody fold to verify: ``TRUE`` (signed + digest-match),
-    ``FALSE`` (digest mismatch — tampered), ``NONE`` (unsigned / silent feed). NOTE — **composition with
-    corroboration is a flagged limit:** the corroboration's rule-source entities are unattested reference
-    data, so they ``tmeet`` ``NONE`` into the custody of a *corroborated* verdict, pulling it to ``NONE``
-    even with attested evidence. Earned custody on a plain (single-source) detection is the supported path;
-    whether reference-data custody should participate in the evidence-custody fold is an open design question.
+    ``FALSE`` (digest mismatch — tampered), ``NONE`` (unsigned / silent feed). Composition with
+    corroboration is **resolved**: the corroboration's rule-source entities are marked ``reference=True``
+    (knowledge applied to evidence, not evidence), so the custody fold EXCLUDES them — an attested +
+    corroborated verdict earns custody ``TRUE`` (the rules don't drag it), and the corroboration edge stays
+    in provenance. Reference-data integrity (is the rule itself tampered?) is a separate concern (analytic
+    provenance), not evidence-custody.
 
     **Custody is precondition-gated.** ``track_custody=False`` (no attested feed in this deployment — the
     common case) PARKS the axis: custody + trustworthiness are omitted from the contract (a

@@ -162,3 +162,19 @@ def test_child_knowledge_only_raises_result():
     join_unknown = custody(root, attestations={a.id: aa})[root.id]  # b unattested -> NONE
     join_known = custody(root, attestations={a.id: aa, b.id: ba})[root.id]
     assert join_unknown is NONE and join_known is TRUE  # rose NONE -> TRUE, up ≤_k
+
+
+# ── reference inputs are excluded from the evidence-custody fold ─────────────────────
+def test_reference_input_does_not_drag_custody():
+    # A derived node over an ATTESTED evidence source + an unattested REFERENCE source (a rule/model).
+    # Custody is about the EVIDENCE bytes, so the reference input is custody-N/A and excluded: the result
+    # stays TRUE, not dragged to NONE. (This is the corroboration/custody composition resolution.)
+    ev, att = _evidence("evidence", "payload-bytes")
+    ref = source("sigma-rule:foo", name="sigma-rule:foo", reference=True)  # knowledge, not evidence
+    v = custody(derive("corroborate", K, (ev, ref)), attestations={ev.id: att})
+    assert v[derive("corroborate", K, (ev, ref)).id] is TRUE  # reference excluded — not dragged
+    assert v[ref.id] is NONE                                   # its own entry is N/A, never folded up
+    # contrast: a non-reference unattested EVIDENCE input WOULD drag it (the evidence-vs-reference line)
+    other = source("other", name="other")                      # evidence, unattested
+    assert custody(derive("join", K, (ev, other)), attestations={ev.id: att})[
+        derive("join", K, (ev, other)).id] is NONE

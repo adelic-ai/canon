@@ -113,6 +113,8 @@ class Entity:
     label: str | None = None
     source_id: str | None = None
     evidence_id: str | None = None
+    reference: bool = False  # a knowledge/reference input (a rule, model, parameter), NOT evidence —
+    # custody is about the evidence bytes, so reference inputs are excluded from the evidence-custody fold.
 
     @property
     def is_source(self) -> bool:
@@ -122,6 +124,13 @@ class Entity:
     def is_evidence(self) -> bool:
         """A by-payload-digest (tamper-evident) source — its CID *is* its content digest."""
         return self.evidence_id is not None
+
+    @property
+    def is_reference(self) -> bool:
+        """Reference/knowledge data (a rule, model, parameter) applied TO the evidence — not evidence
+        itself. Its integrity is a separate concern (analytic provenance); it is custody-NOT-APPLICABLE,
+        so the evidence-custody fold excludes it rather than dragging the verdict to ``NONE``."""
+        return self.reference
 
     @property
     def id(self) -> str:
@@ -158,8 +167,12 @@ def source(
     kind: str | None = None,
     label: str | None = None,
     evidence: bool = False,
+    reference: bool = False,
 ) -> Entity:
     """Wrap a raw input as a source :class:`Entity`.
+
+    ``reference=True`` marks a knowledge/reference input (a rule, model, parameter applied TO the
+    evidence) — custody-not-applicable, so the evidence-custody fold excludes it (see :meth:`Entity.is_reference`).
 
     Two identity routes, the cid.md PIN 4 distinction:
 
@@ -181,6 +194,7 @@ def source(
         label=label or name,
         source_id=name,
         evidence_id=evidence_id,
+        reference=reference,
     )
 
 

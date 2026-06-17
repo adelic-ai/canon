@@ -61,10 +61,12 @@ def test_parked_omits_the_axis_distinct_from_none():
     assert d["custody"] == "parked" and d["trustworthiness"] == "parked"   # surfaced honestly, not dropped
 
 
-def test_corroboration_composition_is_a_flagged_limit():
-    # documented limit: a corroboration's unattested rule-sources tmeet NONE into custody, so a
-    # corroborated+attested verdict is currently NONE (not TRUE) — pinned so it's honest, not a surprise
+def test_corroboration_does_not_drag_evidence_custody():
+    # RESOLVED (was a flagged limit): a corroboration's Sigma rule-sources are reference data, not
+    # evidence, so they're excluded from the evidence-custody fold. An attested + corroborated verdict
+    # earns custody TRUE — the rules don't drag it — while the corroboration edge stays in provenance.
     corro = {"rules": ["proc_access_win_lsass_dump_comsvcs_dll.yml"], "votes": 1, "classes": 7,
              "technique": "T1003.001", "logsource": "process_access"}
-    c = _emit(evidence=EVIDENCE, attestation=attest(EVIDENCE), corroboration=corro)
-    assert c["custody"] == "none"
+    assert _emit(evidence=EVIDENCE, attestation=attest(EVIDENCE), corroboration=corro)["custody"] == "true"
+    # and unsigned + corroborated is still NONE — because the EVIDENCE is unattested, not the rules
+    assert _emit(corroboration=corro)["custody"] == "none"

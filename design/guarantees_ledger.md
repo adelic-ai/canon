@@ -109,9 +109,14 @@ Detailed record + the exact assertions: `packages/detection/README.md` (the vali
   evaluated `NONE`; the renderer shows `parked`. The decision is never touched. Matches the discipline by
   which off-hours is already registry-gated (it isn't run when `_time`/`Account_Name` are absent) — an axis
   whose precondition can't hold in a deployment is parked, not surfaced as a misleading per-verdict `NONE`.
-  **Flagged composition limit:** a corroboration's unattested rule-source entities `tmeet` `NONE` into a
-  *corroborated* verdict's custody, so corroborated+attested is currently `NONE` (pinned in the test) —
-  whether reference-data custody should participate in the evidence-custody fold is an open design question.
+  **Composition with corroboration — RESOLVED (2026-06-17).** A corroboration's Sigma rule-sources are
+  knowledge applied TO the evidence, not evidence, so they are marked `reference=True` and the evidence-
+  custody fold EXCLUDES them (a reference input is custody-N/A — not folded as `NONE`, not faked `TRUE`).
+  An attested + corroborated verdict now earns custody `TRUE` (the rules don't drag it) while the
+  corroboration edge stays in provenance; unsigned + corroborated is still `NONE` because the *evidence*
+  is unattested, not the rules. Reference-data integrity (is the rule itself tampered?) is a separate
+  concern (analytic provenance), deliberately NOT evidence-custody. `provenance/entity.py` (`reference`
+  flag + `is_reference`), `custody.py` (fold skips reference inputs); `test_custody.py` (both layers).
 - **Source tier-transparency:** a raw source carries no rigor tier (its trust is the orthogonal custody
   axis), so it never drags a result to the floor; absence-of-claim is `None`-like, not `False`-like.
 - **Conformal is empty without a population — capped to silence on a burst, and the detector emits no

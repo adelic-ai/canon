@@ -109,8 +109,9 @@ def custody(
     for node in lineage(root):  # dependency order: every child precedes its parent
         nid = node.id
         if node.producer is None:
-            chain = chains.get(nid)
-            if chain is not None:
+            if node.is_reference:
+                verdicts[nid] = NONE  # reference/knowledge input — custody-N/A; excluded from parents' fold
+            elif (chain := chains.get(nid)) is not None:
                 # held bytes = the source's content digest (its CID, for an evidence source —
                 # the keystone alignment, so the chain's last product must equal it).
                 held = node.id if node.is_evidence else evidence_digest(node.payload)
@@ -120,6 +121,8 @@ def custody(
         else:
             v = TRUE  # tmeet identity; vacuous custody for a derived node with no inputs
             for child in node.producer.used:
+                if child.is_reference:
+                    continue  # custody is about the EVIDENCE; reference inputs don't constrain it
                 v = tmeet(v, verdicts[child.id])
             verdicts[nid] = v
     return verdicts
