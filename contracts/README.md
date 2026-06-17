@@ -1,7 +1,10 @@
 # canon/contracts — the narrow-waist base
 
-**Status:** DRAFT scaffold, 2026-05-30. Rationale and full architecture:
-`../design/self_validation_architecture.md` (read it first).
+**Status:** PINNED + ENFORCED for the Python binding (audited 2026-06-17; the old "DRAFT scaffold,
+2026-05-30" label predated every pin and was stale). The core contracts are stable in shape AND
+mechanically enforced — see *Enforcement* below. What is **not** yet validated is the *polyglot* claim:
+there is exactly one binding (Python), so the contracts are "Python's interface, enforced" — not yet
+*proven* language-independent. Rationale and full architecture: `../design/self_validation_architecture.md`.
 
 This directory is **the base everything else falls out of** — the language-independent
 *source of truth* for the contracts every joint mates through. It is deliberately **not**
@@ -52,9 +55,30 @@ seams are free and the muscle is built behind them.
   non-trivial verdict must carry a structured `cause` + reproducible `evidence`, so it
   cannot degrade to opinion-with-a-hash.
 
-## Status discipline
+## Enforcement (the audit, 2026-06-17)
 
-Every file states its own status. These are DRAFTS — the home and the shape are
-established; the precise encodings (param canonicalization, hash default, predicate
-schemas) are open and flagged inline. Borrowed standards (PROV-O, in-toto/DSSE, SHACL,
-Verifiable Credentials) are *referenced, not redefined* here.
+The honest finding: **nothing here is aspirational prose** — every core contract is enforced, by the
+mechanism that fits its kind. Three modes:
+
+- **Schema-validated** — code validates instances against the JSON Schema.
+  `detection_verdict.schema.json` is the strongest: the emitter's output is checked against it in
+  `test_verdict.py`, `test_fanout.py`, `test_offhours.py`, `test_coordination.py` — the verdict cannot
+  drift from the standard without a test failing.
+- **SHACL-validated** — the shapes run *in the emit path*, and the guarantee tier follows conformance.
+  `shapes/detection.shapes.ttl` (every op-plan records its params) + `shapes/cross_model.shapes.ttl`
+  (corroboration backed by a witness). Enforced live, not just in tests. (`detection/_verdict.py`.)
+- **Property-test-enforced** — the prose (`.md`) contracts are *not* schema-validatable (you cannot
+  JSON-Schema "every fold is `≤_k`-monotone"), so they are pinned by exhaustive / property tests — which
+  *are* enforcement, the PROVEN-tier kind: `carrier.md` ⇐ Belnap algebra exhaustive over the 4-value
+  domain (`test_carrier.py`); `fold_protocol.md` ⇐ the monotonicity acceptance test (`test_monotone.py`);
+  `cid.md` ⇐ one-hash-three-roles (`test_custody.py`); `custody.md` ⇐ the custody-fold tests.
+- **Referenced / peripheral** — `guarantee_certificate.schema.json` (read by `guarantee.py`/`tier.py`);
+  `fidelity_attestation.schema.json` (experiments only — the rule-attestation artifact, not yet in proper);
+  `regime_record.schema.json` (the regime-ledger sidecar, one test).
+
+So the contracts are real and pinned. The genuine open frontier is **not** "finish the contracts" — it is
+that all enforcement is of the *Python* binding. A contract with one consumer is its interface hoisted
+upward; the narrow-waist *claim* (multiple implementations, one contract, inherit each other's proofs) is
+only **proven** by a second binding (a thin Rust/OCaml reader, or — dovetailing with the `machine_checked`
+tier — an F\*/Coq spec that is simultaneously a second consumer AND the proof path). Borrowed standards
+(PROV-O, in-toto/DSSE, SHACL, Verifiable Credentials) are *referenced, not redefined* here.
