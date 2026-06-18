@@ -85,13 +85,17 @@ from detection.cross_model import (
 from detection.coverage_space import LocationCoverage, lsass_location_coverage
 from detection.fidelity import attest_fidelity
 from detection.adversarial import AdversarialCase, adversarial_corpus, attest_corpus
+from detection.baseline import blend_baselines, credibility_estimates, learn_entity_baseline
 from detection.workspace import (
     Ruleset,
     Source,
     Workspace,
     diff_derived,
     load_derived,
+    load_parameter,
     run_lsass_location_coverage,
+    save_parameter,
+    update_entity_baseline,
 )
 from detection.motif import (
     FieldMatch,
@@ -180,6 +184,13 @@ __all__ = [
     "run_lsass_location_coverage",
     "load_derived",
     "diff_derived",
+    # workspace parameters store + per-entity credibility baseline (learned values accumulate in the workspace)
+    "save_parameter",
+    "load_parameter",
+    "update_entity_baseline",
+    "learn_entity_baseline",
+    "blend_baselines",
+    "credibility_estimates",
     # render — pure projection of a verdict + its provenance DAG into report / record / chart
     "render_dict",
     "render_report",

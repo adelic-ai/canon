@@ -16,6 +16,7 @@ import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
+from detection.baseline import blend_baselines, credibility_estimates, learn_entity_baseline
 from detection.coverage_space import LocationCoverage, lsass_location_coverage
 from detection.fidelity import _cid
 
@@ -137,3 +138,51 @@ def diff_derived(prior: dict, rerun: dict) -> dict:
         "gaps_added": sorted(names(rerun, "gaps") - names(prior, "gaps")),
         "gaps_removed": sorted(names(prior, "gaps") - names(rerun, "gaps")),
     }
+
+
+# ── The parameters store: named, mutable, accumulating learned state ──────────────────────────────────
+# Distinct from the derived store on purpose: ``derived/`` holds immutable, CID-keyed *findings* (a verdict
+# is what it is); ``parameters/`` holds named, mutable, *accumulating* learned state (a baseline grows as the
+# engine is re-run over more data). Findings are addressed by content; parameters by name.
+
+def save_parameter(ws: Workspace, name: str, payload: dict) -> str:
+    """Persist a named learned parameter into ``ws.parameters_dir`` (overwriting the prior — parameters
+    accumulate by being *re-blended*, not by piling up files). Returns the path."""
+    d = Path(ws.parameters_dir)
+    d.mkdir(parents=True, exist_ok=True)
+    p = d / f"{name}.json"
+    p.write_text(json.dumps(payload, indent=2, sort_keys=True))
+    return str(p)
+
+
+def load_parameter(ws: Workspace, name: str) -> dict | None:
+    """Load a named learned parameter, or ``None`` if the workspace has never learned it (first run)."""
+    p = Path(ws.parameters_dir) / f"{name}.json"
+    return json.loads(p.read_text()) if p.exists() else None
+
+
+def _load_events(source: Source) -> list[dict]:
+    """Load a source's events: a ``sysmon`` source via the Sysmon loader, else a ``json`` file holding a list
+    of event dicts (the generic case)."""
+    if source.kind == "sysmon":
+        from detection.subgraph import load_sysmon_events
+        return load_sysmon_events(source.ref)
+    return json.loads(Path(source.ref).read_text())
+
+
+def update_entity_baseline(ws: Workspace, *, entity: str, value: str,
+                           source_kind: str = "json", name: str = "entity_baseline") -> dict:
+    """Learn/extend a per-entity baseline from the workspace's corpus and persist it into the parameters
+    store. **Algorithm in canon, learned values in the workspace**: this loads the prior baseline from
+    ``ws`` (``None`` on first run), learns from ``ws``'s source, *blends* (additively — the parameter grows),
+    and writes it back. On a re-run over more data the entity's ``n`` rises and its credibility ``Z`` with it,
+    sharpening the estimate toward the entity's own mean. Returns ``{first_run, baseline, estimates}``."""
+    src = ws.source_of(source_kind)
+    if src is None:
+        raise ValueError(f"workspace has no '{source_kind}' source")
+    observed = learn_entity_baseline(_load_events(src), entity=entity, value=value)
+    prior = load_parameter(ws, name)
+    updated = blend_baselines(prior, observed)
+    save_parameter(ws, name, updated)
+    return {"first_run": prior is None, "baseline": updated,
+            "estimates": credibility_estimates(updated)}
