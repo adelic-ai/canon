@@ -64,13 +64,14 @@ Python    ASCII       glob        CONFORMS on both. `_ascii_lower` + `glob_regex
           (oracle)                `field_matches`; non-regressive on real rules (38+ tests
                                   unchanged), and the glob is verified EXHAUSTIVELY vs stdlib
                                   `fnmatch` (test_glob.py) + a golden escaping table.
-SPARQL    LCASE       literal     TWO open non-conformances: (1) `LCASE` is full-Unicode (agrees
-                      CONTAINS    on ASCII, diverges off it); (2) still does literal CONTAINS, not
-                                  glob — must compile `glob_regex_body` into `REGEX(...,"s")`
-                                  (mind XPath-vs-Python regex-flavor escaping). Latent: no current
-                                  flow attests a wildcard rule via SPARQL, so it is unexercised —
-                                  but it MUST be fixed before the SPARQL emitter is trusted on
-                                  wildcard rules.
+SPARQL    LCASE       glob        WILDCARDS CONFORMS: `_filter_expr` compiles the shared
+                      (REGEX)     `glob_regex_body` into anchored `REGEX(...,"s")` for wildcard
+                                  values (fast string fns for plain ones), verified by
+                                  `attest_emitter_agreement` ↔ the Python oracle (rdflib's REGEX
+                                  uses Python `re`, so the flavor is identical — a non-rdflib
+                                  triple store may differ; re-attest there). ONE open
+                                  non-conformance left: `LCASE` is full-Unicode (agrees on ASCII,
+                                  diverges off it) — fix with a byte-wise A–Z fold.
 Rust      ascii fold  glob        TO BUILD — targets this spec directly (byte ASCII fold +
           (scoped)                `glob_regex_body`), conformant by construction.
 >>>
@@ -86,9 +87,10 @@ wildcards) — which is exactly where the dataset-generator earns its keep.
    regex via `glob_regex_body`, Sigma escape convention), so `CallTrace|contains: 'python3*.dll+'` correctly
    matches `python311.dll+` instead of producing a false gap. **Verified conclusively**: exhaustive differential
    vs stdlib `fnmatch` over a bounded alphabet (~10.5k pairs, an independent glob engine) + a golden escaping
-   table; 46 field_matches-touching tests unchanged (non-regressive). *Remaining*: the SPARQL emitter must
-   compile the same `glob_regex_body` (still literal `CONTAINS` — see the conformance table); the Rust emitter
-   targets it by construction.
+   table; 46 field_matches-touching tests unchanged (non-regressive). The SPARQL emitter now compiles the same
+   `glob_regex_body` into `REGEX(...,"s")` too — verified by `attest_emitter_agreement` ↔ the Python oracle on
+   wildcard cases (rdflib REGEX = Python `re`). *Remaining for wildcards*: only the Rust emitter (targets
+   `glob_regex_body` by construction when built) and re-attestation on a non-rdflib triple store.
 2. **Non-string coercion.** Pin the Python oracle to the JSON lexical form (bool→`"true"`) to match the spec;
    currently uses `str()`. Unexercised by string-field rules today; reconcile with the Rust emitter.
 3. **SPARQL non-ASCII case-fold.** Replace `LCASE` with a byte-wise A–Z fold for full conformance off-ASCII.
