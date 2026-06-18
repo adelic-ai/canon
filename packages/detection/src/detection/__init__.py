@@ -82,6 +82,7 @@ from detection.cross_model import (
     slice_entity_window,
     synthesize_kerberoast_corpus,
 )
+from detection.coverage_space import LocationCoverage, lsass_location_coverage
 from detection.fidelity import attest_fidelity
 from detection.ingest import attest
 from detection.render import render_dict, render_dot, render_report, report_from_dict, write_report
@@ -133,6 +134,9 @@ __all__ = [
     "attest",
     # fidelity — a justified, reproducible claim about what a RULE covers (the warranted detects-edge)
     "attest_fidelity",
+    # coverage-space — a verdict + the fidelity-attested detectors at its location (primary/witnesses/gaps)
+    "lsass_location_coverage",
+    "LocationCoverage",
     # render — pure projection of a verdict + its provenance DAG into report / record / chart
     "render_dict",
     "render_report",
