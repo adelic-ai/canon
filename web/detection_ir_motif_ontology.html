@@ -155,7 +155,15 @@ SPL   eventstats        (streaming window)      ≠  pandas groupby             
   <ul>
     <li><strong>Not a universal transpiler.</strong> Cross-language semantic equivalence is undecidable in general; the IR
       buys structural portability + a verification harness (fidelity), not guaranteed equivalence.</li>
-    <li><strong>Does not subsume the hot path into SPARQL</strong> (§4) — firing stays code.</li>
+    <li><strong>Does not subsume the hot path into SPARQL</strong> (§4) — firing stays code. The SPARQL emitter is a
+      correctness <strong>oracle</strong> + the knowledge-query surface, <em>not</em> the firing path. Measured: the built
+      <code>eval_sparql</code> ran the OTRF agreement check in <strong>368s → 11s</strong> (parsing the <code>ASK</code> once),
+      still ~1–2 orders slower than the Python predicate — per-event SPARQL means <em>allocate a graph → insert triples →
+      invoke a general planner</em> for one boolean. Intrinsic, not a tuning bug; on billions of events SPARQL lags fatally. So
+      the tiers are literal: <strong>hot path = the emitted predicate</strong> (Python now, Rust later, attested-equivalent);
+      <strong>cold path = SPARQL over the rule graph</strong> — small, rarely-changing, hence precomputable/cacheable — and even
+      there "SPARQL lags" is really "rdflib lags": a real triple store (Oxigraph, Jena, Neptune, QLever) runs the same SPARQL
+      competitively. The agreement attestation (§3) licenses running the fast emitter in place of the oracle.</li>
     <li><strong>The molecule vocabulary is earned, not designed up front.</strong> Extract a molecule only when ≥2 real
       detections share it (concrete-first, the <code>Binding</code> discipline). A speculative ontology of unused motifs is the
       failure mode to avoid.</li>
@@ -172,6 +180,16 @@ SPL   eventstats        (streaming window)      ≠  pandas groupby             
    in the verdict's provenance — closing the §0 hole</pre>
   <p class="muted">Do not build the Rust emitter, the full ontology, or correlation molecules first — layers 2+. The first
   slice proves one thing: one detection, two emitters, agreement attested.</p>
+
+  <div class="note good">
+    <strong>BUILT (2026-06-18).</strong> <code>detection/motif.py</code> + <code>test_motif.py</code>, 9 tests, ~11s.
+    <code>FieldMatch</code>/<code>Suppression</code> molecules; <code>from_sigma</code> → content-addressed
+    <code>MotifGraph</code>; two emitters (<code>eval_python</code> reusing <code>sigma_eval</code>'s primitive so it's
+    identical-by-construction, + <code>to_sparql</code>/<code>eval_sparql</code>); <code>attest_emitter_agreement</code> ran both
+    over <strong>every OTRF event → coverage=true, zero disagreements</strong> — the IR is sound for this rule, language-agnosticism
+    earned not assumed; and <code>record_selector_provenance</code> makes the discarded <code>_comsvcs_positive</code> a
+    content-addressed <code>prov:Activity</code> (op dual-typed <code>urn:canon:op#comsvcs_positive_select</code>), closing §0.
+  </div>
 
   <div class="note">
     <strong>One line.</strong> The relation is the invariant; the language is a phrasebook; the port is fidelity-attested —

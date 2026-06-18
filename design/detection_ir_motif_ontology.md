@@ -123,7 +123,18 @@ parsed graph.
 
 - It is **not** a universal transpiler. Cross-language semantic equivalence is undecidable in general; the IR
   buys *structural* portability and a *verification harness* (fidelity), not guaranteed equivalence.
-- It does **not** subsume the per-event hot path into SPARQL (see §4) — firing stays code.
+- It does **not** subsume the per-event hot path into SPARQL (see §4) — firing stays code. **The SPARQL
+  emitter is a correctness *oracle* and the knowledge-query surface, not the firing path.** Measured: the
+  built `eval_sparql` ran the OTRF agreement check in 368s, cut to 11s only by parsing the `ASK` once
+  (`_prepared_ask`) — still ~1–2 orders slower than the Python predicate (`str.endswith` in a loop),
+  because per-event SPARQL means *allocate a graph → insert triples → invoke a general-purpose planner* to
+  answer one boolean. That overhead is intrinsic, not a tuning bug; on billions of events SPARQL lags
+  fatally. So the tiers are literal: the **hot path** runs the *emitted* predicate (Python now, Rust later,
+  attested-equivalent); the **cold path** runs SPARQL over the *rule graph* — small (thousands of rules, not
+  events), rarely changing, hence **precomputable/cacheable** and never latency-sensitive — and even there
+  "SPARQL lags" is really "rdflib (a pure-Python reference impl) lags": a real triple store (Oxigraph, Jena
+  TDB, Neptune, QLever) runs the same SPARQL competitively. The agreement attestation (§3) is what licenses
+  running the fast emitter in production in place of the oracle.
 - The molecule vocabulary is **earned, not designed up front.** Extract a molecule only when ≥2 real
   detections share it (concrete-first, the same discipline as the `Binding` generalization). A speculative
   ontology of motifs nobody uses is the failure mode to avoid.
