@@ -11,9 +11,10 @@ coercion, multibyte UTF-8 — and attests two things over the panel at once:
 * **parity** — the Python and SPARQL emitters agree.
 
 This is where the generator earns its keep: it turns the spec's "open items" into an executable, *localized*
-conformance report. The one documented residual — SPARQL ``LCASE`` is full-Unicode — shows up here as a
-disagreement on exactly the ``nonascii_case`` landmine and nowhere else; the report pins it rather than hiding
-it. (Correct-by-construction labels are the dataset-generator's core value, applied to the emitter gate.)
+conformance report. It first surfaced a SPARQL escape-routing bug (``\\*``) and a Unicode-``LCASE`` residual on
+``nonascii_case`` — both since fixed (the SPARQL emitter now pre-folds event values ASCII-only, exactly like the
+oracle), so the panel now reports **full parity** across every landmine; the report would re-localize any future
+divergence. (Correct-by-construction labels are the dataset-generator's core value, applied to the emitter gate.)
 """
 
 from __future__ import annotations
@@ -48,10 +49,10 @@ def adversarial_corpus() -> list[AdversarialCase]:
     return [
         C("ascii_case", _rule("TargetImage|endswith", "\\lsass.exe"),
           {"TargetImage": "C:\\X\\LSASS.EXE"}, True, "ASCII fold: LSASS.EXE ~ \\lsass.exe"),
-        # the ONE documented residual: ASCII pin does not fold É→é, but SPARQL LCASE (Unicode) does →
-        # oracle says no-match (correct per spec), SPARQL says match → a LOCALIZED divergence.
+        # ASCII pin does not fold É→é → no match. Both emitters now agree here (SPARQL pre-folds ASCII-only,
+        # like the oracle); this case formerly localized the Unicode-LCASE residual, now closed.
         C("nonascii_case", _rule("User|eq", "rené"),
-          {"User": "RENÉ"}, False, "ASCII pin does NOT fold É; SPARQL LCASE does → the localized divergence"),
+          {"User": "RENÉ"}, False, "ASCII pin does NOT fold É — both emitters agree (no match)"),
         C("nonascii_exact", _rule("User|eq", "café"),
           {"User": "café"}, True, "exact non-ASCII, already lowercase → no fold needed, both agree"),
         C("wildcard", _rule("CallTrace|contains", "python3*.dll+"),

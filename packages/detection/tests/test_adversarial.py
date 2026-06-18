@@ -34,14 +34,16 @@ def test_oracle_is_correct_on_every_landmine():
 
 
 @pytest.mark.skipif(not _have_rdflib, reason="rdflib [rdf] extra needed for the SPARQL emitter")
-def test_emitters_agree_except_the_documented_residual():
+def test_emitters_fully_agree_after_ascii_fold_fix():
+    """The SPARQL emitter now ASCII-folds (event values pre-folded with the oracle's `_ascii_lower`), closing
+    the last residual: Python and SPARQL agree on EVERY landmine, no exceptions."""
     report = attest_corpus()
     assert report["oracle_correct"], report["incorrect"]          # no oracle bug
-    # the ONLY allowed divergence is the documented SPARQL Unicode-LCASE residual, on nonascii_case
-    assert report["divergent_landmines"] == ["nonascii_case"], report["divergent"]
-    # and the divergence is precisely what the spec predicts: SPARQL folds É→é, the oracle does not
+    assert report["emitters_agree"], report["divergent"]          # full parity — no residual left
+    assert report["divergent_landmines"] == []
+    # the formerly-divergent case now agrees: ASCII pin does not fold É on EITHER side
     row = report["by_landmine"]["nonascii_case"]
-    assert row["python"] is False and row["sparql"] is True
+    assert row["python"] is False and row["sparql"] is False and row["agree"]
     assert len(report["cid"]) == 64
 
 

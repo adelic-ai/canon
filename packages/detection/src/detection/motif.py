@@ -157,11 +157,14 @@ def _filter_expr(m: FieldMatch, var: str) -> str:
     Per value: a **wildcard** value compiles the shared :func:`~detection.sigma_eval.glob_regex_body` into an
     anchored ``REGEX(..., "s")`` — the same regex the Python oracle uses, so the two emitters glob identically
     (verified by `attest_emitter_agreement`). A **plain** value keeps the fast string function
-    (``STRENDS``/``STRSTARTS``/``CONTAINS``/``=``), which is equivalent to the glob for non-wildcards. Case-fold
-    is ASCII (``_ascii_lower``) on the pattern, matching the oracle; the event side's ``LCASE`` (Unicode) is the
-    separate, tracked case-fold non-conformance (faithful on ASCII)."""
+    (``STRENDS``/``STRSTARTS``/``CONTAINS``/``=``), which is equivalent to the glob for non-wildcards.
+
+    Case-fold is **ASCII on both sides**: the pattern via ``_ascii_lower`` here, and the event value
+    pre-folded with the *same* ``_ascii_lower`` at serialization time (:func:`eval_sparql`). So the query needs
+    no case-fold operator at all — ``lhs`` is just ``STR(?v)``. This both matches the oracle exactly (no more
+    Unicode ``LCASE`` residual) and is portable (no engine-specific lowering / no nested ``REPLACE``)."""
     fn = {"endswith": "STRENDS", "startswith": "STRSTARTS", "contains": "CONTAINS"}
-    lhs = f"LCASE(STR({var}))"
+    lhs = f"STR({var})"                                         # event is pre-ASCII-folded at serialization
     parts = []
     for v in m.values:
         p = _ascii_lower(v)
@@ -198,7 +201,12 @@ def _prepared_ask(graph: MotifGraph):
 
 def eval_sparql(graph: MotifGraph, event: dict, *, prepared=None) -> bool:
     """Serialize the event as RDF (absent referenced fields → ``""``) and answer the compiled ``ASK``.
-    Pass ``prepared`` (from :func:`_prepared_ask`) to avoid re-parsing the query for every event."""
+    Pass ``prepared`` (from :func:`_prepared_ask`) to avoid re-parsing the query for every event.
+
+    Each field value is **pre-folded with** ``_ascii_lower`` (the same fold the oracle uses), so the query's
+    case-insensitivity needs no SPARQL ``LCASE`` — the comparison is folded-vs-folded by construction. This is
+    what closes the Unicode-``LCASE`` non-conformance: the SPARQL emitter now folds ASCII-only, exactly like
+    :func:`field_matches`."""
     import rdflib
     from rdflib import Literal, Namespace, URIRef
 
@@ -206,7 +214,7 @@ def eval_sparql(graph: MotifGraph, event: dict, *, prepared=None) -> bool:
     mev = Namespace(MEV)
     e = URIRef(MEV + "e")
     for f in graph.fields():
-        g.add((e, mev[f], Literal(str(event.get(f, "")))))
+        g.add((e, mev[f], Literal(_ascii_lower(str(event.get(f, ""))))))
     return bool(g.query(prepared if prepared is not None else to_sparql(graph)).askAnswer)
 
 

@@ -64,14 +64,15 @@ Python    ASCII       glob        CONFORMS on both. `_ascii_lower` + `glob_regex
           (oracle)                `field_matches`; non-regressive on real rules (38+ tests
                                   unchanged), and the glob is verified EXHAUSTIVELY vs stdlib
                                   `fnmatch` (test_glob.py) + a golden escaping table.
-SPARQL    LCASE       glob        WILDCARDS CONFORMS: `_filter_expr` compiles the shared
-                      (REGEX)     `glob_regex_body` into anchored `REGEX(...,"s")` for wildcard
-                                  values (fast string fns for plain ones), verified by
-                                  `attest_emitter_agreement` ↔ the Python oracle (rdflib's REGEX
-                                  uses Python `re`, so the flavor is identical — a non-rdflib
-                                  triple store may differ; re-attest there). ONE open
-                                  non-conformance left: `LCASE` is full-Unicode (agrees on ASCII,
-                                  diverges off it) — fix with a byte-wise A–Z fold.
+SPARQL    ASCII       glob        FULLY CONFORMS. case-fold: event values are PRE-FOLDED with the
+          (pre-fold)  (REGEX)     oracle's `_ascii_lower` at serialization (`eval_sparql`), so the
+                                  query needs no `LCASE` (`lhs` is `STR(?v)`) — ASCII-only and
+                                  portable (no engine-specific lowering / no nested `REPLACE`).
+                                  wildcards: `_filter_expr` compiles the shared `glob_regex_body`
+                                  into anchored `REGEX(...,"s")` (fast string fns for plain values).
+                                  Verified by the adversarial corpus + `attest_emitter_agreement` ↔
+                                  the Python oracle: FULL parity, no residual. (rdflib REGEX uses
+                                  Python `re`; a non-rdflib triple store may differ — re-attest there.)
 Rust      ascii fold  glob        TO BUILD — targets this spec directly (byte ASCII fold +
           (scoped)                `glob_regex_body`), conformant by construction.
 >>>
@@ -93,7 +94,10 @@ wildcards) — which is exactly where the dataset-generator earns its keep.
    `glob_regex_body` by construction when built) and re-attestation on a non-rdflib triple store.
 2. **Non-string coercion.** Pin the Python oracle to the JSON lexical form (bool→`"true"`) to match the spec;
    currently uses `str()`. Unexercised by string-field rules today; reconcile with the Rust emitter.
-3. **SPARQL non-ASCII case-fold.** Replace `LCASE` with a byte-wise A–Z fold for full conformance off-ASCII.
+3. **SPARQL non-ASCII case-fold — RESOLVED (2026-06-18).** `eval_sparql` now pre-folds event values with
+   `_ascii_lower` (the oracle's fold) at serialization, so the query uses no `LCASE`. Verified by the
+   adversarial corpus: Python ↔ SPARQL now agree on `nonascii_case` (both no-match) and on every other landmine
+   — full parity, no residual.
 4. **Normalization.** Pinned to *no* NFC/NFD normalization; revisit only if a real rule needs it.
 
 ## This slice
