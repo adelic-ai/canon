@@ -1,6 +1,11 @@
 # Detection IR — a motif ontology with verified emitters
 
-**Status: design, 2026-06-18. Design-only; no code yet.** A backbone idea, not a committed build. It
+**Status: design + first slice BUILT, 2026-06-18.** §7's first slice is implemented in
+`packages/detection/src/detection/motif.py` (+ `tests/test_motif.py`, 9 passing): two molecules
+(`FieldMatch`/`Suppression`), `from_sigma` ingestion, two emitters (`eval_python` + `to_sparql`/`eval_sparql`),
+`attest_emitter_agreement` (the gate — Python and SPARQL agree on **every** event of the OTRF corpus,
+`coverage="true"`), and `record_selector_provenance` (the ground-truth selector is now a content-addressed
+`prov:Activity`, closing §0). The rest below is the standing design. It
 unifies four existing threads — Atlas (the primitive library), the OpenMath/OMDoc math-symbol stack,
 the SKOS-graded mapping seam, and warrant-is-relational — and reframes the proposed Sigma→RDF ingestion
 as its first concrete instance. Read and react before any build.

@@ -84,6 +84,18 @@ from detection.cross_model import (
 )
 from detection.coverage_space import LocationCoverage, lsass_location_coverage
 from detection.fidelity import attest_fidelity
+from detection.motif import (
+    FieldMatch,
+    MotifGraph,
+    Suppression,
+    attest_emitter_agreement,
+    eval_python,
+    eval_sparql,
+    from_sigma,
+    record_selector_provenance,
+    to_rdf,
+    to_sparql,
+)
 from detection.ingest import attest
 from detection.render import render_dict, render_dot, render_report, report_from_dict, write_report
 from detection.store import find_by_tag, load_verdict, render_stored, save_verdict
@@ -134,6 +146,17 @@ __all__ = [
     "attest",
     # fidelity — a justified, reproducible claim about what a RULE covers (the warranted detects-edge)
     "attest_fidelity",
+    # motif IR — a detection as a molecule graph; two verified emitters (Python + SPARQL), agreement attested
+    "FieldMatch",
+    "Suppression",
+    "MotifGraph",
+    "from_sigma",
+    "eval_python",
+    "eval_sparql",
+    "to_sparql",
+    "to_rdf",
+    "attest_emitter_agreement",
+    "record_selector_provenance",
     # coverage-space — a verdict + the fidelity-attested detectors at its location (primary/witnesses/gaps)
     "lsass_location_coverage",
     "LocationCoverage",
