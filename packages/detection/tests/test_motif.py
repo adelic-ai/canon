@@ -5,9 +5,12 @@ agree on *every* event in the real corpus, else the IR is lossy. The rest pin pa
 ``sigma_eval`` parity, the RDF view, and the selector-as-provenance hole-closure.
 """
 
+import importlib.util
 from pathlib import Path
 
 import pytest
+
+_have_rdflib = importlib.util.find_spec("rdflib") is not None
 
 from detection.motif import (
     FieldMatch,
@@ -47,6 +50,23 @@ POSITIVE = {"TargetImage": "C:\\Windows\\System32\\lsass.exe",
 NEG_WRONG_SOURCE = {**POSITIVE, "SourceImage": "C:\\Windows\\System32\\notepad.exe"}
 NEG_MISSING_FIELD = {"TargetImage": "C:\\Windows\\System32\\lsass.exe"}   # no SourceImage / CallTrace
 
+# A wildcard rule, to exercise the SPARQL emitter's glob path (REGEX) against the Python oracle.
+WILDCARD_RULE = {
+    "id": "test-wildcard",
+    "detection": {
+        "selection": {"CallTrace|contains": "python3*.dll+", "TargetImage|endswith": "\\lsass.exe"},
+        "condition": "selection",
+    },
+}
+_LSASS = "C:\\Windows\\System32\\lsass.exe"
+WILD_CASES = [
+    ({"CallTrace": "x python311.dll+0x1", "TargetImage": _LSASS}, True),    # * absorbs '11'
+    ({"CallTrace": "x python3ABCDE.dll+0x1", "TargetImage": _LSASS}, True), # * absorbs anything
+    ({"CallTrace": "x python311Xdll+0x1", "TargetImage": _LSASS}, False),   # '.' is literal, not any-char
+    ({"CallTrace": "x python27.dll+0x1", "TargetImage": _LSASS}, False),    # needs the 'python3' prefix
+    ({"TargetImage": _LSASS}, False),                                       # missing CallTrace
+]
+
 
 def test_from_sigma_parses_the_three_clauses():
     g = from_sigma(COMSVCS_RULE)
@@ -84,6 +104,26 @@ def test_to_sparql_is_an_ask_over_referenced_fields():
     q = to_sparql(from_sigma(COMSVCS_RULE))
     assert q.startswith("PREFIX mev:") and "ASK {" in q
     assert q.count("FILTER(") == 3 and "STRENDS" in q and "CONTAINS" in q
+
+
+def test_sparql_uses_regex_for_wildcards_and_strfns_for_plain():
+    q = to_sparql(from_sigma(WILDCARD_RULE))
+    assert "REGEX(" in q                          # the wildcard CallTrace clause → REGEX
+    assert "python3" in q and ".dll" in q
+    assert "STRENDS" in q                          # the plain TargetImage endswith clause stays a string fn
+
+
+@pytest.mark.skipif(not _have_rdflib, reason="rdflib [rdf] extra needed for the SPARQL emitter")
+def test_sparql_emitter_globs_identically_to_python():
+    """Close the SPARQL-glob gap: on a wildcard rule the SPARQL REGEX path must agree with the Python oracle
+    on every crafted case — the agreement gate is the proof the emitters glob the same way."""
+    g = from_sigma(WILDCARD_RULE)
+    for ev, expected in WILD_CASES:
+        py, sp = eval_python(g, ev), eval_sparql(g, ev)
+        assert py == sp == expected, (ev, py, sp, expected)
+    # discriminating: at least one true and one false among the cases (not vacuously equal)
+    outcomes = {expected for _, expected in WILD_CASES}
+    assert outcomes == {True, False}
 
 
 @pytest.mark.skipif(not _have_corpus, reason="rdflib [rdf] extra not exercised without corpus")

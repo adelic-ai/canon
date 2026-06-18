@@ -27,7 +27,13 @@ from dataclasses import dataclass
 from provenance import evidence_digest
 
 from detection.fidelity import _cid
-from detection.sigma_eval import field_matches, is_evaluable
+from detection.sigma_eval import (
+    _ascii_lower,
+    field_matches,
+    glob_regex_body,
+    has_wildcard,
+    is_evaluable,
+)
 
 MOTIF = "urn:canon:motif#"        # the molecule vocabulary
 MEV = "urn:canon:motif:event#"    # the event-as-RDF vocabulary (one predicate per field)
@@ -147,13 +153,24 @@ def _esc(s: str) -> str:
 
 def _filter_expr(m: FieldMatch, var: str) -> str:
     """A field-match as a SPARQL boolean expression over ``var`` (the event's value for ``m.field``).
-    Case-insensitive via ``LCASE`` on both sides — identical to ``field_matches``'s ``.lower()``."""
+
+    Per value: a **wildcard** value compiles the shared :func:`~detection.sigma_eval.glob_regex_body` into an
+    anchored ``REGEX(..., "s")`` — the same regex the Python oracle uses, so the two emitters glob identically
+    (verified by `attest_emitter_agreement`). A **plain** value keeps the fast string function
+    (``STRENDS``/``STRSTARTS``/``CONTAINS``/``=``), which is equivalent to the glob for non-wildcards. Case-fold
+    is ASCII (``_ascii_lower``) on the pattern, matching the oracle; the event side's ``LCASE`` (Unicode) is the
+    separate, tracked case-fold non-conformance (faithful on ASCII)."""
     fn = {"endswith": "STRENDS", "startswith": "STRSTARTS", "contains": "CONTAINS"}
     lhs = f"LCASE(STR({var}))"
     parts = []
     for v in m.values:
-        lit = '"' + _esc(v.lower()) + '"'
-        parts.append(f"{lhs} = {lit}" if m.op == "eq" else f"{fn[m.op]}({lhs}, {lit})")
+        p = _ascii_lower(v)
+        if has_wildcard(v):
+            rx = "^" + glob_regex_body(p, m.op) + "$"          # anchored full match, dotall via the "s" flag
+            parts.append(f'REGEX({lhs}, "{_esc(rx)}", "s")')
+        else:
+            lit = '"' + _esc(p) + '"'
+            parts.append(f"{lhs} = {lit}" if m.op == "eq" else f"{fn[m.op]}({lhs}, {lit})")
     return "(" + (" && " if m.match_all else " || ").join(parts) + ")"
 
 
