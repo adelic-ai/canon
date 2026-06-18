@@ -141,6 +141,52 @@ verdict                                       =  a fully-addressed point + carri
   the who/what axes; <em>same entity across sources = same coordinate</em>. Cross-layer correlation is just "events at the same
   coordinates," and lateral movement is a path through coordinate space.</p>
 
+  <h2>Maturation (2026-06-18): a verdict is a <em>location</em>, in two linked spaces</h2>
+  <p>The coordinate lens sharpens once you ask <em>which</em> space. There are two, bridged by the W-record:</p>
+  <dl>
+    <dt>observation space</dt><dd>entity × time × feature. An anomaly is a <em>point</em> here — the
+    <em>where-in-the-data</em>. The battery's distinctive job is <strong>surfacing these points</strong>, including
+    ones no rule has a signature for (the unknown).</dd>
+    <dt>state space</dt><dd>the kill-chain / tactic graph (states = tactics, edges = transitions; the Markov model
+    and HMM-Viterbi live here) — the <em>where-in-the-campaign</em>.</dd>
+    <dt>the W-record</dt><dd>the coordinate that <strong>bridges</strong> them — an observation's address <em>and</em>
+    the key that places it into the state space via the framework (technique → tactic).</dd>
+  </dl>
+  <p>So the battery surfaces a point in observation space; the W-record locates it in state space; rules verify
+  <em>at that location</em>; the chain (priors / future potentials / actor positioning) is the <strong>trajectory</strong>
+  through the state graph.</p>
+  <div class="note key"><strong>Detectors are co-deployed over a coverage space — not a fixed primary/corroboration
+  hierarchy.</strong> Battery (statistical), structural detectors (subgraph), and external rules (Sigma) each deploy with
+  their own coverage strategy. A verdict's primary can be <em>any</em> of them; the battery may not apply at all. Coverage
+  is mutual and gappy both ways — battery-surfaces-but-no-rule (<code>COVERAGE-GAP</code>), rule-fires-but-battery-silent (a
+  battery miss) — and gaps are honest <code>NONE</code>s, themselves signal. <strong>A verdict = "what is true at a
+  location,"</strong> aggregating whatever detectors apply there as <em>independent witnesses</em>, warrant accruing
+  per-location. The lens, fully: <em>framework = the axes/state-space · battery = surfaces points · W-record = the
+  coordinates · rules = verify at points · verdict = truth-at-the-coordinate · chain = the path between them.</em></div>
+
+  <h2>Wiring rule-fidelity in — without gating unnaturally</h2>
+  <p>A rule's <em>fidelity</em> (measured coverage — what it catches, structurally misses, and why) should flow into a
+  verdict's warrant when the rule contributes. But the obvious wiring ("weight corroboration by fidelity, multiply into a
+  score") gates and entrenches. The guardrails — all one discipline: <strong>fidelity is a graded <em>additive</em> warrant,
+  never a subtractive gate, and its components stay visible</strong>:</p>
+  <ul>
+    <li><strong>Selection by fidelity; corroboration by independence.</strong> Fidelity picks the best detector per role (a
+    stronger synonym <em>replaces</em> a weaker one — selection); only an <em>independent</em> witness (different mechanism)
+    earns a corroboration edge. A synonym in the corroboration slot is fake corroboration — the FCA/SKOS dedup already forbids it.</li>
+    <li><strong>Additive and one-sided.</strong> Corroboration may only <em>add</em> to the primary, never push a verdict
+    below its no-corroboration baseline. A low-fidelity witness makes its corroboration weaker, not the detection worse.</li>
+    <li><strong>Absence is <code>NONE</code>, never a penalty.</strong> No good rule → no corroboration, not a downgrade.
+    Don't gate real detections behind corpus coverage.</li>
+    <li><strong>Carry the components, shown on demand.</strong> The edge holds each witness <em>and</em> its fidelity; the
+    aggregate is a fold over them, never a pre-collapsed score that hides the why.</li>
+    <li><strong>Fidelity weights the corroboration layer, not the primary decision</strong> — else a rich-get-richer loop
+    entrenches well-attested rules and hides novel ones.</li>
+    <li><strong>In chains: a weak/absent node is a <code>NONE</code>-gap, not a chain-break</strong> — uncertainty stays an
+    honest gap, never a false negative.</li>
+  </ul>
+  <p class="muted">Source of truth: <code>design/verdict_coverage_space.md</code> — the frame + the wiring contract, written
+  before the build so the structure is constrained, not discovered after.</p>
+
   <div class="note gap">
     <strong>It's a lens, not the implementation.</strong> The real objects are the graph + framework + folds. The one thing
     <em>not</em> to take from the coordinate picture is "so build a tensor" — the categorical-keys + sparsity precisions say
