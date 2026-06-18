@@ -19,13 +19,14 @@ change an outcome.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 
 from forge_core import DetectionVerdict
 
 from detection.cross_check import lsass_dump_corroborated
 from detection.fidelity import attest_fidelity
 from detection.sigma_eval import evaluate_rule, is_evaluable
-from detection.sigma_panel import _logsource, gather
+from detection.sigma_panel import SIGMA, _logsource, gather
 from detection.subgraph import load_sysmon_events
 
 _TECH = "T1003.001"
@@ -56,16 +57,18 @@ def _comsvcs_positive(events: list[dict]) -> dict | None:
                  and "lsass" in str(e.get("TargetImage", "")).lower()), None)
 
 
-def lsass_location_coverage(path: str) -> LocationCoverage:
+def lsass_location_coverage(path: str, *, sigma_root: Path = SIGMA) -> LocationCoverage:
     """The coverage picture at the comsvcs T1003.001 location in an OTRF LSASS corpus: structural primary +
-    each applicable Sigma rule's fidelity (witness if it fires, gap with cause if it misses)."""
+    each applicable Sigma rule's fidelity (witness if it fires, gap with cause if it misses). ``sigma_root``
+    pins which ruleset is evaluated — the swappable input a workspace supplies (the structural primary is
+    unaffected; only the witness/gap coverage moves with the ruleset)."""
     events = load_sysmon_events(path)
     positive = _comsvcs_positive(events)
     verdict = lsass_dump_corroborated(path)[0]   # structural primary + its corroboration edge
 
     witnesses: list[dict] = []
     gaps: list[dict] = []
-    for p, r in gather(_TECH):
+    for p, r in gather(_TECH, root=sigma_root):
         if _logsource(r)[0] != _LOGSOURCE or not is_evaluable(r):
             continue
         fires = evaluate_rule(r, positive)["fires"]

@@ -84,6 +84,14 @@ from detection.cross_model import (
 )
 from detection.coverage_space import LocationCoverage, lsass_location_coverage
 from detection.fidelity import attest_fidelity
+from detection.workspace import (
+    Ruleset,
+    Source,
+    Workspace,
+    diff_derived,
+    load_derived,
+    run_lsass_location_coverage,
+)
 from detection.motif import (
     FieldMatch,
     MotifGraph,
@@ -160,6 +168,13 @@ __all__ = [
     # coverage-space — a verdict + the fidelity-attested detectors at its location (primary/witnesses/gaps)
     "lsass_location_coverage",
     "LocationCoverage",
+    # workspace — the per-engagement case file the engine points at + writes back into (engine holds no data)
+    "Workspace",
+    "Source",
+    "Ruleset",
+    "run_lsass_location_coverage",
+    "load_derived",
+    "diff_derived",
     # render — pure projection of a verdict + its provenance DAG into report / record / chart
     "render_dict",
     "render_report",
