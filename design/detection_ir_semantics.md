@@ -46,25 +46,33 @@ missing field     an absent referenced field → "" (empty string). Consequence 
 
 list spec         a list of values is OR by default; the |all modifier makes it AND.
 
-wildcards         `*` and `?` are treated LITERALLY in the current subset — NOT globbed. This
-                  is a KNOWN NON-CONFORMANCE with real Sigma (which globs). See Open items — it
-                  is the highest-priority correctness gap, ahead of the case-fold nicety.
+wildcards         Sigma glob: `*` → any run (incl. empty), `?` → exactly one char; compiled to an
+                  ANCHORED, DOTALL regex (`sigma_eval.glob_regex_body`, a full match). Escape
+                  convention: `\*` `\?` `\\` are the literal char, a lone `\` is a literal
+                  backslash, and every literal run is regex-escaped — so `.` in `comsvcs.dll`,
+                  `+` in `lsass.exe+`, and backslash paths stay LITERAL (the naive `replace('*',
+                  '.*')` would break on all of these). Modifiers are glob sugar: contains x ≡
+                  `*x*`, startswith ≡ `x*`, endswith ≡ `*x`. The single regex `glob_regex_body`
+                  is what every emitter compiles, so they glob identically by construction.
 >>>
 
 ## Per-emitter conformance
 
 <<<
-emitter   case-fold              status
-Python    ASCII (this slice)     CONFORMS — `_ascii_lower` replaces `str.lower()` in
-          (oracle)               `field_matches`; non-regressive on ASCII (Windows paths/DLLs),
-                                 so all existing Sigma tests are unchanged.
-SPARQL    LCASE (Unicode)        CONFORMS ON ASCII INPUT ONLY. `LCASE()` is full-Unicode; it
-                                 agrees with the ASCII pin on ASCII data (hence OTRF agreement
-                                 stays green) but diverges on non-ASCII. The one open
-                                 non-conformance — fix with a byte-wise A–Z fold (nested REPLACE
-                                 or a UDF) when the adversarial corpus lands.
-Rust      make_ascii_lowercase   TO BUILD — targets this spec directly (byte ASCII fold), so it
-          (scoped)               is conformant by construction.
+emitter   case-fold   wildcards   status
+Python    ASCII       glob        CONFORMS on both. `_ascii_lower` + `glob_regex_body` in
+          (oracle)                `field_matches`; non-regressive on real rules (38+ tests
+                                  unchanged), and the glob is verified EXHAUSTIVELY vs stdlib
+                                  `fnmatch` (test_glob.py) + a golden escaping table.
+SPARQL    LCASE       literal     TWO open non-conformances: (1) `LCASE` is full-Unicode (agrees
+                      CONTAINS    on ASCII, diverges off it); (2) still does literal CONTAINS, not
+                                  glob — must compile `glob_regex_body` into `REGEX(...,"s")`
+                                  (mind XPath-vs-Python regex-flavor escaping). Latent: no current
+                                  flow attests a wildcard rule via SPARQL, so it is unexercised —
+                                  but it MUST be fixed before the SPARQL emitter is trusted on
+                                  wildcard rules.
+Rust      ascii fold  glob        TO BUILD — targets this spec directly (byte ASCII fold +
+          (scoped)                `glob_regex_body`), conformant by construction.
 >>>
 
 Conformance is **measured, not asserted**: `attest_emitter_agreement` runs the emitters over a corpus and any
@@ -74,12 +82,13 @@ wildcards) — which is exactly where the dataset-generator earns its keep.
 
 ## Open items (honest, ordered by correctness impact)
 
-1. **Wildcards (highest).** The subset treats `*`/`?` literally, so a rule like `CallTrace|contains:
-   'python3*.dll+'` is mis-evaluated — it would *miss* a real `python311.dll+` that genuine Sigma *matches*,
-   silently turning a covering rule into a false "gap" in the coverage map. Two honest fixes: implement glob
-   semantics in the profile, **or** make `is_evaluable` *reject* wildcard-bearing specs so they abstain (NONE)
-   rather than mis-evaluate. The latter is the canon-honest minimum (abstain > wrong) and the recommended next
-   step. Deferred here to keep this slice non-regressive on the coverage tests.
+1. **Wildcards — RESOLVED in the oracle (2026-06-18).** `field_matches` now globs (`*`/`?` → anchored DOTALL
+   regex via `glob_regex_body`, Sigma escape convention), so `CallTrace|contains: 'python3*.dll+'` correctly
+   matches `python311.dll+` instead of producing a false gap. **Verified conclusively**: exhaustive differential
+   vs stdlib `fnmatch` over a bounded alphabet (~10.5k pairs, an independent glob engine) + a golden escaping
+   table; 46 field_matches-touching tests unchanged (non-regressive). *Remaining*: the SPARQL emitter must
+   compile the same `glob_regex_body` (still literal `CONTAINS` — see the conformance table); the Rust emitter
+   targets it by construction.
 2. **Non-string coercion.** Pin the Python oracle to the JSON lexical form (bool→`"true"`) to match the spec;
    currently uses `str()`. Unexercised by string-field rules today; reconcile with the Rust emitter.
 3. **SPARQL non-ASCII case-fold.** Replace `LCASE` with a byte-wise A–Z fold for full conformance off-ASCII.
