@@ -172,7 +172,13 @@ verdict                                       =  a fully-addressed point + carri
   <ul>
     <li><strong>Selection by fidelity; corroboration by independence.</strong> Fidelity picks the best detector per role (a
     stronger synonym <em>replaces</em> a weaker one — selection); only an <em>independent</em> witness (different mechanism)
-    earns a corroboration edge. A synonym in the corroboration slot is fake corroboration — the FCA/SKOS dedup already forbids it.</li>
+    earns a corroboration edge. A synonym in the corroboration slot is fake corroboration — the FCA/SKOS dedup already forbids it.
+    <br><span class="muted">Two corrections (2026-06-18): <strong>selection must RANK the attested, never GATE OUT the
+    unattested</strong> — absence of a fidelity measurement is <code>NONE</code>, not low quality, at the selection layer too;
+    an unmeasured detector still runs, or you suppress novelty (the entrenchment from #5 leaking back in). And
+    <strong>independence is <em>statistical</em>, not structural</strong> — FCA-dedup catches same-field-set synonyms, not
+    correlated-different-fields ones; real independence is measured (low mutual information), so until that's wired, vote counts
+    are an <em>upper bound</em> on independent support.</span></li>
     <li><strong>Additive and one-sided.</strong> Corroboration may only <em>add</em> to the primary, never push a verdict
     below its no-corroboration baseline. A low-fidelity witness makes its corroboration weaker, not the detection worse.</li>
     <li><strong>Absence is <code>NONE</code>, never a penalty.</strong> No good rule → no corroboration, not a downgrade.
@@ -184,6 +190,20 @@ verdict                                       =  a fully-addressed point + carri
     <li><strong>In chains: a weak/absent node is a <code>NONE</code>-gap, not a chain-break</strong> — uncertainty stays an
     honest gap, never a false negative.</li>
   </ul>
+  <div class="note good"><strong>These two generalize past canon.</strong> <em>Absence-gating suppresses novelty</em> —
+  any system that selects by a score needing data to compute must not let the *unmeasured* be excluded (ML model selection,
+  search ranking, hiring, peer review: the unscored still get a turn, or you only re-confirm what you already know).
+  <em>Assumed independence double-counts</em> — combining "independent" sources needs *measured* independence (ensemble ML,
+  sensor fusion, poll aggregation, portfolio "diversification" of correlated assets). One rule under both: <strong>a grade is
+  an additive, measured warrant — never a subtractive, assumed gate — and absence of a grade is <code>NONE</code>, not a low
+  grade.</strong></div>
+  <div class="note key"><strong>North-star: gather → learn → self-apply.</strong> "Go get labeled corpora before building the
+  weighting" isn't a detour — it's the point. canon is a <em>data-gathering and learning</em> system as much as a detection
+  one: it already accretes measured data about itself (fidelity attestations, the coverage map, the regime ledger — the seed
+  for a learned dispatch policy). The aspiration: canon <em>absorbs relevant information and applies it to itself in the right
+  places</em> — measured fidelity drives selection + weighting, measured regimes drive dispatch, measured independence drives
+  how votes combine. The guardrails exist so that self-application stays honest (additive, measured, absence-aware) instead of
+  becoming a feedback loop that entrenches. Gather first; let application emerge from what's gathered.</div>
   <p class="muted">Source of truth: <code>design/verdict_coverage_space.md</code> — the frame + the wiring contract, written
   before the build so the structure is constrained, not discovered after.</p>
 

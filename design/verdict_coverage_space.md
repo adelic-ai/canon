@@ -45,6 +45,19 @@ wrong one; it gates and entrenches. The guardrails:
    mechanism / different evidence) earns a corroboration edge. A *synonym* in the corroboration slot is fake
    corroboration — the FCA/SKOS dedup already forbids it. Independence, not strength, is what makes a second
    opinion count.
+   - **(correction) selection must RANK the attested, never GATE OUT the unattested.** Absence of a fidelity
+     measurement is `NONE`, not low quality — at the *selection* layer too, not just corroboration. An
+     unattested detector still deploys and runs; fidelity only *ranks among those with evidence*. Gating
+     unmeasured detectors out of the primary slot suppresses novelty and undermines the battery's
+     surface-the-unknown role — the exact entrenchment the corroboration guardrail (#5) avoids, leaking back
+     in at selection. Same `absence=NONE` discipline, applied one layer up.
+   - **(correction) independence is *statistical*, not structural.** The FCA/SKOS dedup catches
+     *same-field-set* synonyms; it does **not** catch *correlated-but-different-fields* witnesses — two
+     detectors that key on different fields yet fire on the same underlying signal. Those pass the dedup, get
+     counted as "independent," and **inflate corroboration** (two votes that are really one). The honest
+     notion is *measured*: low mutual information between detector outputs (canon already has the MI /
+     coordination machinery). So FCA-dedup is the cheap structural pre-filter; measured independence is the
+     real test. Until it's wired, corroboration counts are an *upper bound* on independent support.
 2. **Additive and one-sided.** Fidelity-weighted corroboration may only *add* warrant to the primary
    detection; it must never push a verdict *below* its no-corroboration baseline. A low-fidelity witness
    makes its corroboration weaker, not the detection worse. (`NONE`≠`FALSE`; monotone-up the knowledge order.)
@@ -74,3 +87,32 @@ stay visible. It is the same `≤_k` / warrant-is-relational / `NONE`≠`FALSE` 
 - **Reframe / not yet built:** the explicit *coverage-space-with-locations* as the organizing structure;
   the **fidelity→verdict** wiring (the corroboration edge carrying + weighted by the witness's fidelity);
   **rules→chain** probability contribution. These are what the guardrails above constrain.
+
+## These two corrections generalize beyond canon
+
+They are domain-independent anti-patterns worth naming, because they recur anywhere you rank or combine:
+
+- **Absence-gating suppresses novelty.** Any system that *selects* by a quality score which requires data
+  to compute must not let *absence of measurement* exclude the unmeasured — that gates out the new and
+  entrenches the already-measured. Lack of evidence ≠ low quality. (Same shape in ML model selection, search
+  ranking, hiring, peer review, recommenders: the unscored must still get a turn, or the system only ever
+  re-confirms what it already knows.)
+- **Assumed independence double-counts.** Combining "independent" sources requires *measured* independence;
+  structurally-different-but-correlated sources inflate confidence. (Ensemble ML — correlated models add no
+  diversity; sensor fusion; poll aggregation; portfolio "diversification" of correlated assets.) Diversity
+  must be measured, not assumed.
+
+Both are special cases of the one rule: **a grade is an *additive, measured* warrant, never a *subtractive,
+assumed* gate — and absence of a grade is `NONE`, not a low grade.**
+
+## North-star: gather, learn, self-apply
+
+The staging recommendation — *go get labeled corpora before building the weighted aggregation* — isn't a
+detour; it's the point. **canon is a data-gathering and learning system as much as a detection one.** It
+already accretes measured data about itself: fidelity attestations (what each rule actually covers), the
+coverage map (the honest spectrum), the regime ledger (which primitive wins under which condition — *explicitly*
+the seed for a future learned dispatch policy). The aspiration this frame serves: canon **absorbs relevant
+information and applies it to itself in the right places** — measured fidelity drives selection and
+corroboration-weighting; measured regimes drive dispatch; measured independence drives how votes combine. The
+guardrails exist so that self-application stays honest (additive, measured, absence-aware) rather than becoming
+a feedback loop that entrenches. Build the gathering first; let the application emerge from what's gathered.
