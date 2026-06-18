@@ -84,6 +84,7 @@ from detection.cross_model import (
 )
 from detection.coverage_space import LocationCoverage, lsass_location_coverage
 from detection.fidelity import attest_fidelity
+from detection.adversarial import AdversarialCase, adversarial_corpus, attest_corpus
 from detection.workspace import (
     Ruleset,
     Source,
@@ -154,6 +155,10 @@ __all__ = [
     "attest",
     # fidelity — a justified, reproducible claim about what a RULE covers (the warranted detects-edge)
     "attest_fidelity",
+    # adversarial corpus — correct-by-construction cases stressing the semantics profile across emitters
+    "AdversarialCase",
+    "adversarial_corpus",
+    "attest_corpus",
     # motif IR — a detection as a molecule graph; two verified emitters (Python + SPARQL), agreement attested
     "FieldMatch",
     "Suppression",

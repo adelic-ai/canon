@@ -42,6 +42,26 @@ def has_wildcard(p: str) -> bool:
     return False
 
 
+def needs_regex(p: str) -> bool:
+    """True iff a plain string op (``CONTAINS``/``STRENDS``/``=``) would MISREPRESENT ``p`` — i.e. it has an
+    unescaped wildcard, OR an escape sequence (``\\*`` ``\\?`` ``\\\\``) whose *literal* differs from the raw
+    text. Only wildcard-free, escape-free patterns may take an emitter's fast string-op path; everything else
+    must compile :func:`glob_regex_body`. (A lone ``\\`` before a normal char is a literal backslash and is
+    fine on the fast path — Windows paths like ``\\lsass.exe`` stay fast.)"""
+    i = 0
+    while i < len(p):
+        c = p[i]
+        if c == "\\" and i + 1 < len(p):
+            if p[i + 1] in "*?\\":
+                return True          # an escape whose literal differs from the raw text
+            i += 2                   # lone backslash before a normal char — literal, fast path ok
+            continue
+        if c in "*?":
+            return True
+        i += 1
+    return False
+
+
 def _glob_body(p: str) -> str:
     """Translate a (case-folded) Sigma glob value to a regex body, the Sigma string-escape convention:
     ``*`` → ``.*`` (any run), ``?`` → ``.`` (one char), ``\\*`` / ``\\?`` / ``\\\\`` → the literal char,

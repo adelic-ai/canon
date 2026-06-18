@@ -31,8 +31,8 @@ from detection.sigma_eval import (
     _ascii_lower,
     field_matches,
     glob_regex_body,
-    has_wildcard,
     is_evaluable,
+    needs_regex,
 )
 
 MOTIF = "urn:canon:motif#"        # the molecule vocabulary
@@ -165,7 +165,7 @@ def _filter_expr(m: FieldMatch, var: str) -> str:
     parts = []
     for v in m.values:
         p = _ascii_lower(v)
-        if has_wildcard(v):
+        if needs_regex(v):                                     # wildcard OR escape → compile the shared glob
             rx = "^" + glob_regex_body(p, m.op) + "$"          # anchored full match, dotall via the "s" flag
             parts.append(f'REGEX({lhs}, "{_esc(rx)}", "s")')
         else:
