@@ -163,3 +163,45 @@ bridge + the extended attestation.
 
 Do **not** start at codegen, PyO3, or correlation molecules. The slice proves one thing: **a native emitter
 that agrees with the oracle on the adversarial corpus, and scales with cores.**
+
+## 11. The more general endpoint — emit standards, not emitters
+
+Step back: a per-language emitter (Python, SPARQL, Rust, Go…) is **O(targets) of hand-written backends**, and
+each target re-opens the §4 equivalence problem. The genuinely future-proof move is the same discipline canon
+already applies to ontologies — *don't re-mint, adopt the standard waist* (import `prov:` directly; OCSF as the
+shared schema). Applied to execution: **emit a portable plan over portable data, run by a vectorized engine.**
+
+- **Plan IR:** compile the ruleset to a **Substrait** plan (the open, cross-engine query-plan standard) — *one*
+  emitter, not one per language.
+- **Data:** **Arrow** columnar batches — the events as columns, which is what makes the scale lever (SIMD,
+  cache-friendly scans) available at all.
+- **Engine:** a vectorized columnar engine — **DataFusion** (Arrow + Rust) embedded, or DuckDB / Velox / Spark
+  for distributed. So "the Rust emitter" *dissolves*: Rust is the engine you didn't write, not an interpreter
+  you did.
+
+Why this is better at scale, not just trendier:
+1. **Vectorized/columnar is the real hardware lever** for billions of events; a row-at-a-time interpreter
+   (Python *or* bespoke Rust) leaves it on the table.
+2. **You inherit the optimizer** — common-subexpression elimination shares a predicate that a thousand rules
+   all check (`TargetImage endswith \lsass.exe` computed once), reordering by selectivity, indexing — none of
+   it hand-written.
+3. **Hot and cold unify:** the same plan-IR expresses "fire rules over events" (hot) and "which rules cover
+   T1003.001" (cold, a query over the rule table). One engine, two plans — the split stops being two systems.
+4. **Portability for free:** one Substrait plan runs embedded, distributed, or in a warehouse; a new target is
+   a new Substrait *consumer*, maintained by someone else.
+
+Honest limits — this over-reaches if unbounded:
+- **Field-match/suppression molecules are *perfectly* relational** (conjunctive predicates) — most of the Sigma
+  hot path maps cleanly.
+- **Correlation/multi-EID molecules** are windowed self-joins — engines do them, with more friction + state.
+- **The statistical battery (MI, CFAR, circular stats) is *not* relational** — custom aggregations; forcing
+  them into SQL is wrong. They attach as **UDF/UDAF** (the engine's extension API). So the general form is
+  *layered*: a portable plan for the relational majority + a UDF escape hatch for the non-relational primitives.
+- **The §4 pinning problem recurs** as "the engine's `ends_with` vs the spec" — the semantics profile and the
+  cross-emitter attestation remain the license, unchanged.
+
+**So the Rust interpreter (§§1–10) is a disposable stepping stone, named as such.** The semantics profile is the
+hard part and is cheaper to pin in a ~200-line Rust interpreter than inside a query engine. **▶ Keep the
+interpreter only to nail the §4 spec; treat it as throwaway; make the named production endpoint "emit
+Substrait/Arrow to a vectorized engine," not the bespoke interpreter.** Cheap rung to learn the semantics;
+standard waist for the real thing — the earned-not-designed discipline, one level up.
