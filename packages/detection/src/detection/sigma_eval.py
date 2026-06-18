@@ -12,15 +12,30 @@ classes and runs one representative per class through :func:`rule_fires`.
 
 from __future__ import annotations
 
+import string
+
+_ASCII_LOWER = str.maketrans(string.ascii_uppercase, string.ascii_lowercase)
+
+
+def _ascii_lower(s: str) -> str:
+    """ASCII-only lowercase (A–Z → a–z), every other code point left unchanged — the pinned case-fold of the
+    IR semantics profile (``design/detection_ir_semantics.md``). Identical across Python / Rust
+    (``make_ascii_lowercase``) / a byte-wise SPARQL fold, so emitters agree by targeting the spec rather than
+    their language's Unicode ``.lower()``. On ASCII input (Windows paths, DLLs) it equals ``str.lower()`` — so
+    this is non-regressive on real Sigma rules; it diverges from full-Unicode folding only on non-ASCII case
+    pairs, where it removes a silent cross-emitter disagreement."""
+    return s.translate(_ASCII_LOWER)
+
 
 def field_matches(event_val, spec, mods: set[str]) -> bool:
     """One ``field|mods: spec`` clause. A list ``spec`` is OR unless ``|all`` makes it AND.
-    Matches are case-insensitive (Windows Sigma string semantics)."""
-    ev = str(event_val).lower()
+    Case-insensitive per the IR semantics profile — **ASCII-only** case-fold (``design/detection_ir_semantics.md``),
+    not full-Unicode, so the Python/SPARQL/Rust emitters share one definition."""
+    ev = _ascii_lower(str(event_val))
     patterns = spec if isinstance(spec, list) else [spec]
 
     def one(p) -> bool:
-        p = str(p).lower()
+        p = _ascii_lower(str(p))
         if "endswith" in mods:
             return ev.endswith(p)
         if "startswith" in mods:

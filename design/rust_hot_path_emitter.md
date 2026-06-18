@@ -67,6 +67,10 @@ emitter (Go, a GPU kernel) targets it.
 
 ## 4. The semantics profile — the hard part, and the whole point
 
+> **Written + partly enforced (2026-06-18):** `design/detection_ir_semantics.md`. The case-fold clause is
+> pinned to ASCII-only and the Python oracle now conforms (`sigma_eval._ascii_lower`); SPARQL's `LCASE` and the
+> non-string coercion remain the open non-conformances tracked there.
+
 §3 of the IR doc: structure ports, semantics don't. Rust vs Python will diverge on specific, enumerable
 landmines — and surfacing them *is* the value, because today the IR's string semantics are implicit (the Python
 emitter just uses its language defaults). The slice must **pin a semantics profile in the IR** so every emitter
