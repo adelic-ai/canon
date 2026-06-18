@@ -127,6 +127,33 @@ rule / OWL-RL      Apache Jena · RDFox · GraphDB · Stardog   (materialize via
   entailment, validation, the tier. Abduction proposes; deduction disposes. That division is the whole point: it's how you
   get the LLM's reach without inheriting its overconfidence.</p>
 
+  <h2>6 · Warrant is relational — the bottom line</h2>
+  <p><strong>Entailment, exactly:</strong> <code>Γ ⊨ φ</code> means φ is true in <em>every</em> model of the
+  premises Γ — truth-preservation across all worlds, "cannot be otherwise given the premises." A reasoner is
+  trusted because it is <strong>sound</strong> (emits only entailments), <strong>complete</strong> (emits all),
+  and <strong>decidable</strong> (halts) for its logic — the trust lives in that proof, not in the machine. But
+  soundness preserves truth <em>from</em> the premises; it does not establish them. <strong>Sound reasoning over
+  false axioms is valid garbage.</strong> So the reasoner is trusted for the <em>inference</em>, never the inputs
+  — and the framework's axioms are a human-authored, revisable map.</p>
+  <div class="note key"><strong>So "lemma or hypothesis" is a property of the derivation, not the statement.</strong>
+  ATT&CK/D3FEND is epistemically <em>stratified</em>: <strong>definitional</strong> (true by meaning) and
+  <strong>mechanistic</strong> ("to dump LSASS you read its memory" — a lemma <em>relative to the Windows spec</em>,
+  conditional on a revisable platform: Credential Guard refutes the premise) are near-bedrock; only
+  <strong>taxonomy / empirical / coverage</strong> are the hypothesis. The same sentence is a lemma relative to one
+  premise set and a hypothesis relative to another. And a reasoner's conclusion <strong>inherits the epistemic
+  grade of its weakest axiom</strong> — sound, but only as grounded as the shakiest premise it leans on.</div>
+  <p><strong>Two relativities</strong> make the point precise: <em>accuracy</em> is relative to the premises
+  (`Γ ⊨ φ` = true where Γ holds; change the premise, φ flips); <em>warrantable precision</em> is relative to the
+  mode of backing (entailment = exact-relative-to-Γ; empirical = graded; a guess = none). Same statement, different
+  backing, different status.</p>
+  <div class="note good"><strong>The thesis, in one line: trustworthiness is a property of the derivation, not the
+  result.</strong> `anomaly = true` has no determinate epistemic status alone — a <code>machine_checked</code>-backed
+  one and a guessed one are the same string and not the same claim. So warrant must travel <strong>fused</strong>
+  with the result, unfakeable: a canon verdict is <em>the statement + its provenance graph + its tier</em>, welded so
+  the warrant can't be stripped off or forged. A result without its derivation has no determinate status at all —
+  which is exactly why the provenance DAG is the <em>same object</em> as the result, not a side-log. Everything above
+  is the scaffolding; this is the load it carries. (<code>design/warrant_is_relational.md</code>.)</div>
+
   <p class="stamp" style="margin-top:40px">Threads: <code>design/self_validation_architecture.md</code> (the spine) ·
   <code>web/skos_graded_mapping.html</code> (the graded edges) · <code>web/guarantee_tiers.html</code> (the honesty ladder)
   · <code>web/witness_and_check.html</code> (search-vs-check) · <code>web/agent_as_analyst.html</code> (the conscience).</p>
