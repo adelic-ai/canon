@@ -82,6 +82,7 @@ from detection.cross_model import (
     slice_entity_window,
     synthesize_kerberoast_corpus,
 )
+from detection.fidelity import attest_fidelity
 from detection.ingest import attest
 from detection.render import render_dict, render_dot, render_report, report_from_dict, write_report
 from detection.store import find_by_tag, load_verdict, render_stored, save_verdict
@@ -130,6 +131,8 @@ __all__ = [
     "lsass_dump_verdicts",
     # ingest — attested signed-evidence boundary; emit's `evidence`+`attestation` earn custody off NONE
     "attest",
+    # fidelity — a justified, reproducible claim about what a RULE covers (the warranted detects-edge)
+    "attest_fidelity",
     # render — pure projection of a verdict + its provenance DAG into report / record / chart
     "render_dict",
     "render_report",
