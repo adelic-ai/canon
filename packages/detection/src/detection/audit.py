@@ -3,11 +3,19 @@
 Not a read-only audit: this is the act of CONSUMING Sigma through the mechanism (run in Python, the reference
 runtime). It walks every rule, classifies create-ability via :func:`~detection.sigma_eval.evaluability` (the
 reason histogram = the IR-breadth roadmap: which construct blocks the most rules), and for the evaluable rules
-runs the **FCA dedup** — the signature ``(logsource, field-set keyed on)`` is the FCA attribute-set; rules
-sharing it are one detection *concept* = one equivalence class. So the report is the consumption result:
+runs dedup under **two concept keys that BRACKET redundancy** (neither measures it):
+
+* field-set ``signature`` ``(logsource, fields keyed on)`` — value-BLIND, so it OVER-collapses (value-distinct
+  detections sharing a field-set merge) → the **upper bound** on redundancy;
+* value-aware ``content_signature`` ``(logsource, content_digest)`` — collapses only byte-identical content
+  (≈none in a curated corpus) → the **lower bound** (≈1.0×).
+
+True redundancy (rules that *catch* the same instances) is between the two and needs the catch-set — no
+structural key reaches it. So the report is the consumption result:
 
 * raw rule count and **% that compiles to firing code**,
-* **distinct detection classes** after FCA dedup (and how many raw rules collapsed = redundancy),
+* **distinct detection classes** under each key (``distinct_detections`` field-set / ``..._content``), with
+  ``redundancy`` (upper bound) and ``redundancy_content`` (lower bound),
 * **why the rest don't compile**, ranked (the roadmap),
 * **ATT&CK technique coverage** — techniques with ≥1 evaluable rule vs honest NONE gaps.
 
