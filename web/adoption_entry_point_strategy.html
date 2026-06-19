@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canon — Adoption: get in where we fit, then dissolve into position</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --ink:#e6e8ee; --muted:#9aa3b2;
+    --line:#2a2f3a; --accent:#7db4ff; --accent2:#c79bff;
+    --good:#6fcf97; --warn:#f2c94c; --gap:#eb6f6f;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1080px;margin:0 auto;padding:48px 28px 96px}
+  h1{font-size:30px;margin:0 0 6px;letter-spacing:-.01em}
+  .sub{color:var(--muted);margin:0 0 4px;font-size:18px}
+  .stamp{color:var(--muted);font:13px/1.5 var(--mono);margin:0 0 32px}
+  h2{font-size:21px;margin:48px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+  h3{font-size:16px;margin:26px 0 6px;color:var(--accent2)}
+  p{margin:10px 0}
+  code{font-family:var(--mono);font-size:.88em;background:#1e222b;padding:1px 5px;border-radius:4px}
+  pre{background:#10131a;border:1px solid var(--line);border-radius:8px;padding:14px 16px;
+    overflow-x:auto;font-family:var(--mono);font-size:13px;line-height:1.55;color:#d4d9e4}
+  .note{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:8px;padding:14px 18px;margin:18px 0}
+  .note.gap{border-left-color:var(--gap)}
+  .note.key{border-left-color:var(--accent2)}
+  .note.good{border-left-color:var(--good)}
+  .muted{color:var(--muted)}
+  ul{margin:10px 0;padding-left:22px}
+  li{margin:7px 0}
+  strong{color:#fff}
+  ol{margin:10px 0;padding-left:22px}
+  table{border-collapse:collapse;width:100%;margin:18px 0;font-size:14px;background:var(--panel);
+    border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  th,td{text-align:left;padding:10px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#1c212b;color:var(--muted);font-weight:600;font-size:12px;
+    text-transform:uppercase;letter-spacing:.04em}
+  tr:last-child td{border-bottom:none}
+  td.k{font-weight:600;white-space:nowrap;color:var(--accent)}
+  .good{color:var(--good)} .gap{color:var(--gap)} .warn{color:var(--warn)}
+  .lede{font-size:17px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p style="font:13px/1.5 var(--mono,monospace);margin:0 0 22px"><a href="index.html" style="color:#7db4ff;text-decoration:none">← Canon index</a></p>
+  <h1>Adoption — get in where we fit, then dissolve into position</h1>
+  <p class="sub">You don't know how they're set up. So the entry point is theirs, not yours — meet them where they are, be useful immediately, earn the right to absorb.</p>
+  <p class="stamp">canon · strategy · 2026-06-19 · <span class="muted">four seams · read-only first · attestation as the wedge</span></p>
+
+  <p class="lede">Every enterprise stack is different and opaque from outside: you don't know their rule dialects, when
+  data arrives, where it lives, or in what form. So the <strong>entry point is determined by *their* setup, not by a fixed
+  integration</strong> — and a rip-and-replace ("adopt our schema, rewrite your rules") is dead on arrival. The design problem
+  is: meet them where they are, be useful immediately with minimal integration, and earn the right to do more.</p>
+
+  <h2>1 · Four seams — get in where we fit</h2>
+  <p>There is no single entry point; there are four, and the architecture already has a foot in each. Which is open varies per
+  enterprise — so expose canon at all of them, the same engine behind each.</p>
+  <table>
+    <thead><tr><th>Seam</th><th>How canon hooks in</th><th>Friction</th></tr></thead>
+    <tbody>
+      <tr><td class="k">rule layer</td>
+        <td>ingest their existing detections (Sigma now via <code>compile_rule</code>; KQL/SPL/CAR as more frontends) and
+          lower them into the IR — consume what they wrote, never ask them to rewrite</td>
+        <td>medium</td></tr>
+      <tr><td class="k">data layer</td>
+        <td>meet their telemetry in whatever form via the OFF-able OCSF waist — native if that's all you can touch,
+          normalized if they'll let you</td>
+        <td>medium</td></tr>
+      <tr><td class="k">verdict / alert layer</td>
+        <td>take the alerts they <em>already</em> produce and wrap them with the justified-verdict substrate (provenance,
+          confidence, honest NONE) — "wrap any detector → an alert that carries its receipts"</td>
+        <td class="good">lowest</td></tr>
+      <tr><td class="k">storage / columnar</td>
+        <td>run as a job over their retained data lake (the Substrait/DataFusion columnar direction — comprehensive,
+          distributed, predicate-pushed-down)</td>
+        <td>varies</td></tr>
+    </tbody>
+  </table>
+
+  <h2>2 · Be useful right away — lead with the read-only entries</h2>
+  <p>"Useful on day one, ~zero integration" is mostly the <strong>read-only</strong> seams:</p>
+  <ul>
+    <li>Point canon at their <strong>rule corpus</strong> → the coverage scorecard (real coverage, the redundancy bracketing,
+      the technique gaps). Pure read, insight immediately, nothing to deploy. The Sigma consumption audit <em>is</em> this.</li>
+    <li>Wrap their <strong>alert stream</strong> → add warrant. Read-mostly.</li>
+  </ul>
+  <p>These buy entry without touching their firing or data plumbing. Deeper value (running detections, the battery) needs data
+  access — a bigger hook, more friction — so it comes later, after trust.</p>
+
+  <h2>3 · Dissolve into position — the displacement arc</h2>
+  <p>Not a takeover; a gradual absorption, each step earned:</p>
+  <ol>
+    <li><strong>Read-only insight</strong> (scorecard / wrapped verdicts) — disruption-free, immediate value.</li>
+    <li><strong>Shadow mode</strong> — lower their rules + data into the IR, fire <em>alongside</em> their stack, show where
+      canon agrees, where it adds warrant, where it finds gaps.</li>
+    <li><strong>Incremental takeover</strong> — as the IR proves it reproduces their results, more of the
+      firing/normalization/dedup moves into canon.</li>
+    <li><strong>Canon becomes the canonical layer</strong> — their rules are one frontend lowered in; the ad-hoc stack
+      dissolves from underneath.</li>
+  </ol>
+
+  <h2>4 · Attestation as the trust mechanism — what earns each step</h2>
+  <p>What makes 2→4 possible <em>without</em> a rip-and-replace is the <strong>attestation gates</strong>
+  (<code>attest_ir_faithful</code>, <code>attest_rust_agreement</code>, <code>attest_ocsf_agreement</code>, and the catch-set
+  fidelity work). They let canon make the claim that earns the entry:</p>
+  <div class="note key">
+    <em>"I run your detections identically — provably, verdict-for-verdict — and add justification you didn't have."</em>
+  </div>
+  <p>You displace by being <strong>measurably faithful, plus more</strong> — not by mandate. That is embrace-and-extend done
+  honestly: consume faithfully (attested), add value additively (warrant, coverage, honest NONE), earn the right to absorb. The
+  gates are not a technical nicety here — they are the <strong>go-to-market wedge</strong>.</p>
+
+  <h2>5 · Honest hard parts — so this stays a plan, not a pitch</h2>
+  <ul>
+    <li><strong>Heterogeneity is the cost.</strong> "Fit anywhere" means an adapter per rule dialect and per source shape — the
+      N in N×M. The IR amortizes it, but each new frontend/source is real integration work, not free.</li>
+    <li><strong>Zero-integration value is mostly the read-only layer.</strong> The moment you want to <em>run</em> detections or
+      the battery, you need data access — a deeper hook.</li>
+    <li><strong>Displacement is slow and trust-earned</strong> — quarters, not demos. The realistic near-term is the additive
+      warrant + coverage-insight layer; "dissolve into position" is the long arc.</li>
+    <li><strong>This is a go-to-market architecture as much as a technical one.</strong> The IR / waist / gates <em>enable</em>
+      it; adoption is its own problem the code does not solve.</li>
+  </ul>
+
+  <div class="note">
+    <strong>One line.</strong> Consume-everything frontends + an OFF-able data waist + an additive warrant layer +
+    attestation-as-trust = <strong>slot in at whatever seam is open, prove faithfulness, then absorb.</strong> The entry point
+    to design is, per enterprise: which seam is open here, and what's the lowest-friction useful thing we can do at it — with the
+    same engine behind all of them.
+  </div>
+</div>
+</body>
+</html>
