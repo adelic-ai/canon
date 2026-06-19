@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canon — Per-TTP coverage: atoms, compositions, catch-classes</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --ink:#e6e8ee; --muted:#9aa3b2;
+    --line:#2a2f3a; --accent:#7db4ff; --accent2:#c79bff;
+    --good:#6fcf97; --warn:#f2c94c; --gap:#eb6f6f;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1080px;margin:0 auto;padding:48px 28px 96px}
+  h1{font-size:30px;margin:0 0 6px;letter-spacing:-.01em}
+  .sub{color:var(--muted);margin:0 0 4px;font-size:18px}
+  .stamp{color:var(--muted);font:13px/1.5 var(--mono);margin:0 0 32px}
+  h2{font-size:21px;margin:48px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+  h3{font-size:16px;margin:26px 0 6px;color:var(--accent2)}
+  p{margin:10px 0}
+  code{font-family:var(--mono);font-size:.88em;background:#1e222b;padding:1px 5px;border-radius:4px}
+  pre{background:#10131a;border:1px solid var(--line);border-radius:8px;padding:14px 16px;
+    overflow-x:auto;font-family:var(--mono);font-size:13px;line-height:1.55;color:#d4d9e4}
+  .note{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:8px;padding:14px 18px;margin:18px 0}
+  .note.gap{border-left-color:var(--gap)}
+  .note.key{border-left-color:var(--accent2)}
+  .note.good{border-left-color:var(--good)}
+  .muted{color:var(--muted)}
+  ul{margin:10px 0;padding-left:22px}
+  li{margin:7px 0}
+  strong{color:#fff}
+  table{border-collapse:collapse;width:100%;margin:18px 0;font-size:14px;background:var(--panel);
+    border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  th,td{text-align:left;padding:10px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#1c212b;color:var(--muted);font-weight:600;font-size:12px;
+    text-transform:uppercase;letter-spacing:.04em}
+  tr:last-child td{border-bottom:none}
+  td.k{font-weight:600;white-space:nowrap;color:var(--accent)}
+  .good{color:var(--good)} .gap{color:var(--gap)} .warn{color:var(--warn)}
+  .lede{font-size:17px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p style="font:13px/1.5 var(--mono,monospace);margin:0 0 22px"><a href="index.html" style="color:#7db4ff;text-decoration:none">← Canon index</a></p>
+  <h1>Per-TTP coverage — atoms, compositions, catch-classes</h1>
+  <p class="sub">A technique isn't covered by "≥1 rule." It's covered by a set of distinct checks — and the layer you count at decides what "covered" and "redundant" mean.</p>
+  <p class="stamp">canon · design · 2026-06-19 · <span class="muted">rule layer built · atom + catch layers pending</span></p>
+
+  <p class="lede">MITRE coverage is usually stated per technique — <em>"do we have a rule for T1003.001?"</em> That's the
+  wrong granularity. A technique is detected by a <strong>set of distinct checks</strong>, and coverage is a property of
+  that set. The content-aware signature work made this concrete: the old field-set key collapsed value-distinct checks into
+  one concept and the round fired only one of them — silently dropping the rest (OTRF T1003.001: 33 field-set concepts → 74
+  content concepts, <strong>41 distinct detections recovered</strong>). So per-TTP coverage is a <strong>layered count</strong>.</p>
+
+  <h2>1 · The three layers</h2>
+  <pre>atom            (field, op, value)                   — one predicate over one event       — SHARED across rules/TTPs
+  │  bonded by AND / cross-event join on a key
+molecule/rule   block(s) + condition                 — a composition of atoms             — the authored unit
+  │  grouped by what they catch
+catch-class     rules firing on the same instances   — the true per-TTP variant set       — the ground truth</pre>
+  <table>
+    <thead><tr><th>Layer</th><th>What it is</th><th>Key property</th></tr></thead>
+    <tbody>
+      <tr><td class="k">atom</td>
+        <td>a compiled clause <code>(field, op, value)</code> — <em>where</em> to look, <em>how</em> to compare, <em>what</em>
+          against (e.g. <code>TargetImage endswith \lsass.exe</code>). The smallest true/false on one event.</td>
+        <td><strong>Shared.</strong> <code>Image endswith \rundll32.exe</code> appears in dozens of rules across many
+          techniques.</td></tr>
+      <tr><td class="k">molecule / rule</td>
+        <td>a <strong>composition</strong> of atoms: a block (AND/OR of clauses), a cross-event bond
+          (<code>spawn ⋈ access on ProcessGuid</code>), and a condition (<code>selection and not filter</code>,
+          <code>1 of sel_*</code>, sequence-in-window).</td>
+        <td>Elaboration varies — comsvcs is near-atomic; <code>selection and not filter</code> is a real composition. No
+          "rule = primitive" assumption.</td></tr>
+      <tr><td class="k">catch-class</td>
+        <td>rules that fire on the <strong>same labeled instances</strong> — one variant of the detection, however written.</td>
+        <td>The only layer that measures real coverage. Needs labeled instances (synthcyber-gated).</td></tr>
+    </tbody>
+  </table>
+
+  <h2>2 · The keys bracket the truth</h2>
+  <p>The concept keys we have are structural proxies sitting at different layers; they bound the true variant count, none
+  measures it:</p>
+  <table>
+    <thead><tr><th>Key</th><th>Collapses</th><th>Per-TTP effect</th><th>Redundancy</th></tr></thead>
+    <tbody>
+      <tr><td class="k">field-set</td><td>same fields (value-BLIND)</td>
+        <td>UNDER-counts variants (over-collapse)</td><td class="gap">UPPER bound · 7.15×</td></tr>
+      <tr><td class="k">content <span class="muted">(built)</span></td><td>byte-identical (field+op+value)</td>
+        <td>enumerates at rule level; OVER-counts equivalents written differently</td><td class="warn">LOWER bound · ~1.0×</td></tr>
+      <tr><td class="k">catch-set</td><td>same instances caught</td>
+        <td>the TRUE variant count</td><td class="good">the real number</td></tr>
+    </tbody>
+  </table>
+  <div class="note key">
+    <strong>Report coverage as a bounded set, not a number.</strong> Until catch-set exists, per-TTP coverage is "a set of
+    checks between the field-set lower bound and the content upper bound." Content fixed the round's recall by measuring at the
+    rule layer; field-set was measuring the bug.
+  </div>
+
+  <h2>3 · The shared-atom firing model — the engine lever</h2>
+  <p>A naive per-TTP sweep re-evaluates shared atoms many times: <code>Image endswith \rundll32.exe</code> is checked once per
+  rule that contains it, across every technique swept. That's why "content-aware fires ~2× the rules" reads as a cost — it's
+  only a cost under a per-rule engine. Factor the rules to their atoms instead:</p>
+  <pre>1. collect the DISTINCT atom-set across all selected rules     (dedup is automatic — content-addressed)
+2. evaluate each distinct atom ONCE over the data → cache      (event → {atom_id: bool})
+3. evaluate each rule as a cheap boolean fold over the cache   (never re-touch the data)</pre>
+  <div class="note good">
+    <strong>Content-addressing makes step 1 free.</strong> An atom's content digest <em>is</em> its node id, so identical
+    atoms across rules are one node — the Merkle dedup property. This is the IR-as-spine picture literally: atoms are the leaves
+    of the content-addressed DAG, compositions are internal nodes, evaluate the DAG once. It dissolves the volume worry —
+    <strong>more rules firing ≠ more atom evaluations</strong> once atoms are shared. (Not built: <code>eval_ir</code> is
+    per-rule; atom-sharing is the next factoring and the scale architecture.)
+  </div>
+
+  <h2>4 · Redundancy: robustness vs correlation</h2>
+  <p>Catch-set co-membership says two rules catch the <strong>same target</strong>. It does <em>not</em> say "drop one." Two
+  rules catching the same instance via different structure are <strong>diverse paths</strong> — if one rule's field is absent
+  (telemetry gap), renamed (the OCSF/CallTrace impedance), blanked by a naming mismatch, or evaded, the other still fires. That
+  is N-version coverage. So a second axis decides whether redundancy is worth keeping:</p>
+  <table>
+    <thead><tr><th></th><th>atoms DISJOINT (independent paths)</th><th>atoms SHARED (correlated paths)</th></tr></thead>
+    <tbody>
+      <tr><td class="k">same catch-class</td>
+        <td class="good">ROBUST redundancy — keep both. Real corroboration; survives a telemetry gap / evasion / rename.</td>
+        <td class="gap">WASTEFUL redundancy — no added robustness, and over-counts confidence in Belnap fusion (the
+          shared-evidence risk).</td></tr>
+    </tbody>
+  </table>
+  <div class="note key">
+    <strong>Atom-overlap is the classifier — and content-addressing supplies it.</strong> Two rules share evidence iff they
+    share atoms (a shared sub-DAG). So the same factoring that makes firing cheap also decides which catch-set-redundant rules
+    are <em>independent witnesses</em> (keep — they raise real confidence) vs <em>correlated</em> (don't). Witness independence,
+    canon's flagged-open question for confidence fusion, becomes <strong>decidable structurally</strong> — by atom-disjointness.
+  </div>
+
+  <h2>5 · The model in one picture</h2>
+  <pre>per-TTP coverage = a set of catch-classes
+   each catch-class = one or more rules (compositions) that catch the same instances
+      each rule    = a composition of atoms (clauses bonded by AND / join / condition)
+         atoms are SHARED across rules and TTPs → evaluate once (content-addressed dedup)
+   keeping &gt;1 rule per catch-class is justified IFF their atoms are disjoint (independent witnesses)</pre>
+
+  <h2>6 · Status</h2>
+  <ul>
+    <li><strong>Built — rule layer:</strong> the content-aware signature (<code>CompiledRule.content_digest</code>,
+      <code>content_signature</code>), wired into <code>select_detections</code> and the audit. Recall fix proven
+      (33→74 on OTRF T1003.001).</li>
+    <li><strong>Not built — atom factoring:</strong> evaluate the distinct atom-set once, cache, compose. Pure engine work,
+      corpus-free; an atom-level content digest is the small addition (today the digest is per-rule).</li>
+    <li><strong>Not built — catch-class:</strong> the true per-TTP variant count and same-catch grouping. Gated on the
+      labeled-instance generator (synthcyber).</li>
+  </ul>
+
+  <div class="note">
+    <strong>One line.</strong> A technique is covered by a set of distinct checks, not one rule; rules are compositions of
+    shared atoms, so fire the atoms once and compose; and redundant catchers are worth keeping exactly when their atoms are
+    disjoint — independent witnesses, decidable by content-addressing.
+  </div>
+</div>
+</body>
+</html>
