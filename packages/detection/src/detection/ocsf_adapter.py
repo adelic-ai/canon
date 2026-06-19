@@ -150,6 +150,14 @@ class SourceAdapter:
         home under this adapter."""
         return self._by_source().get(source_field)
 
+    def ocsf_for(self, native_field: str) -> FieldMapping | None:
+        """The OCSF mapping for a *rule's* native field reference — the same graded map used
+        to normalize events, read in reverse for rewriting rule fields (step 3). The event
+        field a source emits and the field name a rule for that source reads are the *same*
+        vocabulary, so one map serves both. ``None`` if the field has no OCSF home (→ the
+        rewrite must drop and report it; firing the rule against OCSF would over-match)."""
+        return self._by_source().get(native_field)
+
     def grades(self) -> dict[str, str]:
         """``source_field → grade`` for every mapped field."""
         return {m.source_field: m.grade for m in self.mappings}
@@ -239,6 +247,19 @@ SYSMON_ADAPTER = SourceAdapter(
                      "Sysmon `User` is `DOMAIN\\user`; OCSF `actor.user.name` is the bare "
                      "name (the domain belongs in `actor.user.domain`). The whole composite "
                      "string crosses into `name`, bundling the domain — broad (lossy)."),
+        # process_access (EID 10) fields — a different Sysmon event class, but the same
+        # actor/subject roles, so they share the Process Activity attribute paths: the
+        # accessing process is the actor, the accessed process is the subject. This is what
+        # lets the comsvcs LSASS-dump rule be rewritten. NOTE: CallTrace is deliberately NOT
+        # mapped — the call stack of the access has NO clean OCSF home, and it is the
+        # load-bearing field of that detection. Its absence is the honest loss the rewrite
+        # reports and the faithfulness gate (step 4) explains, not a thing to paper over.
+        FieldMapping("SourceImage", "actor.process.file.path", EXACT,
+                     "Sysmon process_access `SourceImage` is the accessing process's "
+                     "executable path = OCSF `actor.process.file.path` (the actor)."),
+        FieldMapping("TargetImage", "process.file.path", EXACT,
+                     "Sysmon process_access `TargetImage` is the accessed process's executable "
+                     "path = OCSF `process.file.path` (the subject of the access)."),
     ),
 )
 
