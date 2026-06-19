@@ -138,29 +138,33 @@ def match_block(block, event: dict) -> bool:
     return False
 
 
-def _eval(node, blocks: dict, event: dict) -> bool:
+def eval_ast(node: tuple, names: list, block_eval) -> bool:
+    """Evaluate a parsed condition AST. ``names`` = the available block names (for quantifier globs);
+    ``block_eval(name) -> bool`` resolves a single named block. **Shared** by the raw evaluator
+    (:func:`eval_condition`, over raw dict blocks) and the IR interpreter (``rule_ir.eval_ir``, over parsed
+    molecule blocks) — so the boolean/quantifier semantics have ONE definition, not two that can drift."""
     kind = node[0]
     if kind == "and":
-        return all(_eval(n, blocks, event) for n in node[1])
+        return all(eval_ast(n, names, block_eval) for n in node[1])
     if kind == "or":
-        return any(_eval(n, blocks, event) for n in node[1])
+        return any(eval_ast(n, names, block_eval) for n in node[1])
     if kind == "not":
-        return not _eval(node[1], blocks, event)
+        return not eval_ast(node[1], names, block_eval)
     if kind == "ref":
-        name = node[1]
-        return name in blocks and match_block(blocks[name], event)
+        return block_eval(node[1])
     if kind == "quant":
         n, pat = node[1], node[2]
-        names = list(blocks) if pat == "them" else fnmatch.filter(list(blocks), pat)
-        matched = sum(1 for nm in names if match_block(blocks[nm], event))
-        return (len(names) > 0 and matched == len(names)) if n is None else matched >= n
+        sel = names if pat == "them" else fnmatch.filter(names, pat)
+        matched = sum(1 for nm in sel if block_eval(nm))
+        return (len(sel) > 0 and matched == len(sel)) if n is None else matched >= n
     raise ValueError(f"bad node {node!r}")
 
 
 def eval_condition(detection: dict, event: dict) -> bool:
     """Evaluate a detection's ``condition`` (general boolean over its named blocks) against an event."""
     blocks = {k: v for k, v in detection.items() if k != "condition"}
-    return _eval(parse_condition(str(detection.get("condition", ""))), blocks, event)
+    return eval_ast(parse_condition(str(detection.get("condition", ""))), list(blocks),
+                    lambda name: name in blocks and match_block(blocks[name], event))
 
 
 def rule_fires_general(rule: dict, event: dict) -> bool:

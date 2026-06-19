@@ -129,7 +129,15 @@ from detection.subgraph import (
     pattern_verdicts,
 )
 from detection.sigma_eval import block_matches, evaluability, evaluate_rule, is_evaluable, rule_fires
-from detection.condition import condition_parses, eval_condition, parse_condition, rule_fires_general
+from detection.condition import condition_parses, eval_ast, eval_condition, parse_condition, rule_fires_general
+from detection.rule_ir import (
+    Block,
+    Clause,
+    CompiledRule,
+    attest_ir_faithful,
+    compile_rule,
+    eval_ir,
+)
 from detection.audit import consume_sigma
 from detection.fidelity_scorecard import fidelity_scorecard, grounded_fidelity, technique_fidelity
 from detection.scenarios import Scenario, scenario_positives, t1003_001_scenarios, variant_coverage
@@ -162,7 +170,16 @@ __all__ = [
     "parse_condition",
     "condition_parses",
     "eval_condition",
+    "eval_ast",
     "rule_fires_general",
+    # rule IR — the COMPLETE typed detection IR (blocks + condition AST + full-mod molecules) + interpreter,
+    # proven faithful to the raw evaluator; the thing a fast emitter (Rust/vectorized) targets
+    "Clause",
+    "Block",
+    "CompiledRule",
+    "compile_rule",
+    "eval_ir",
+    "attest_ir_faithful",
     # audit — consume the Sigma corpus: classify (reasons=roadmap) + FCA-dedup → coverage scorecard
     "consume_sigma",
     # fidelity scorecard — of the rules that compile, which CATCH labeled instances (claims != catches)
