@@ -31,7 +31,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from detection.ocsf_adapter import EXACT, SourceAdapter
-from detection.rule_ir import Block, Clause, CompiledRule
+from detection.rule_ir import Block, Clause, CompiledRule, compile_rule, eval_ir
 from detection.vocab import OCSF
 
 # grade ordering for "worst grade wins" — a rule is only as faithful as its weakest field.
@@ -113,3 +113,55 @@ def ocsf_vocab(adapter: SourceAdapter):
     v = adapter.vocabulary()
     assert v.name == OCSF, f"adapter target is {v.name}, not ocsf"
     return v
+
+
+def attest_ocsf_agreement(rule_dicts: list[dict], events: list[dict], adapter: SourceAdapter) -> dict:
+    """Native-as-oracle faithfulness gate for OCSF normalization (step 4) — the acceptance test
+    for the whole slice, mirroring :func:`~detection.rule_ir.attest_ir_faithful` and
+    :func:`~detection.rust_emitter.attest_rust_agreement`.
+
+    Fire every rule on every event **both ways**: NATIVE (rule + event in the source
+    vocabulary) vs OCSF (rule rewritten via ``adapter`` + event normalized via ``adapter``).
+    Native is ground truth. The discipline that makes OCSF safe to turn on:
+
+    - A **faithful, all-exact** rewrite *must* agree on every event — an exact field-rename plus
+      an identity event copy compute the same match. A divergence there is **unexplained** and
+      **fails the gate** (a real faithfulness bug, localized to the (rule, event)).
+    - A **lossy** rewrite (a dropped no-OCSF-home field, or a non-``exact`` mapped field whose
+      event-side value was transformed — e.g. the eslogger argv join) *may* diverge, and the
+      divergence is **explained** by that tracked field — the cause is recorded, never silent.
+
+    ``attested`` iff there are **zero unexplained divergences**. Every other divergence is
+    enumerated with its tracked cause, so "what does OCSF lose vs native" is a list, not a guess.
+    """
+    native_irs = [compile_rule(r) for r in rule_dicts]
+    rewritten = [rewrite_rule_to_ocsf(ir, adapter) for ir in native_irs]
+    ocsf_events = [adapter.normalize(e) for e in events]
+
+    explained: list[dict] = []
+    unexplained: list[dict] = []
+    per_rule: list[dict] = []
+    for ir, rw in zip(native_irs, rewritten):
+        lossy = bool(rw.dropped) or rw.grade != EXACT          # faithful-exact rules must agree
+        cause = ("dropped:" + ",".join(rw.dropped)) if rw.dropped else f"lossy-grade:{rw.grade}"
+        n_div = 0
+        for j, (e, oe) in enumerate(zip(events, ocsf_events)):
+            nf, of = eval_ir(ir, e), eval_ir(rw.rule, oe)
+            if nf != of:
+                n_div += 1
+                rec = {"rule": ir.rule_id, "event": j, "native": nf, "ocsf": of,
+                       "cause": cause if lossy else "UNEXPLAINED (faithful-exact rule diverged)"}
+                (explained if lossy else unexplained).append(rec)
+        per_rule.append({"rule": ir.rule_id, "grade": rw.grade, "dropped": list(rw.dropped),
+                         "faithful": rw.faithful, "n_diverge": n_div})
+
+    checked = len(native_irs) * len(events)
+    return {
+        "vocab": {"events": adapter.vocabulary().name, "rules": adapter.vocabulary().name},
+        "n_rules": len(native_irs), "n_events": len(events), "checked": checked,
+        "agreements": checked - len(explained) - len(unexplained),
+        "explained_divergences": explained,
+        "unexplained_divergences": unexplained,
+        "per_rule": per_rule,
+        "attested": not unexplained,
+    }

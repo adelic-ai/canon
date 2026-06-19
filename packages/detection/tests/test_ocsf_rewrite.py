@@ -5,10 +5,18 @@ preserved); a faithful rewrite fires identically on OCSF events as the native ru
 events; a field with no OCSF home is dropped + reported, and the lossy rule then over-matches
 (the divergence the step-4 gate explains)."""
 
+from pathlib import Path
+
+import pytest
+
 from detection.ocsf_adapter import SYSMON_ADAPTER
-from detection.ocsf_rewrite import rewrite_rule_to_ocsf
+from detection.ocsf_rewrite import attest_ocsf_agreement, rewrite_rule_to_ocsf
 from detection.rule_ir import compile_rule, eval_ir
+from detection.sigma_eval import is_evaluable
+from detection.sigma_panel import SIGMA, gather
 from detection.vocab import OCSF, coheres
+
+OTRF = Path.home() / "data/otrf-security-datasets/LSASS_campaign_03/lsass_campaign_03.json"
 
 
 def _compile(detection: dict):
@@ -102,3 +110,64 @@ def test_rule_grade_is_worst_field():
 def test_rewritten_rules_cohere_with_ocsf_events():
     # both sides on the OCSF vocabulary → the round can fire a coherent pair
     assert coheres(SYSMON_ADAPTER.vocabulary(), OCSF)
+
+
+# ── step 4: the native-as-oracle faithfulness gate ───────────────────────────────────────
+_RULE_DICTS = [{"id": "proc-create", "detection": _PROC_CREATE},
+               {"id": "comsvcs", "detection": _COMSVCS}]
+
+
+def test_faithful_exact_rule_never_diverges_the_theorem():
+    # the gate's strongest claim: a faithful all-exact rewrite agrees on every event
+    events = [{"Image": "C:\\Windows\\System32\\rundll32.exe", "CommandLine": "rundll32 comsvcs.dll MiniDump"},
+              {"Image": "C:\\notepad.exe", "CommandLine": "notepad"},
+              {"Image": "C:\\rundll32.exe", "CommandLine": "rundll32 shell32.dll"}]
+    res = attest_ocsf_agreement([{"id": "proc-create", "detection": _PROC_CREATE}], events, SYSMON_ADAPTER)
+    assert res["attested"]
+    assert res["unexplained_divergences"] == [] and res["explained_divergences"] == []
+    assert res["agreements"] == res["checked"] == 3
+    assert res["per_rule"][0] == {"rule": "proc-create", "grade": "exact", "dropped": [],
+                                  "faithful": True, "n_diverge": 0}
+
+
+def test_gate_attests_with_divergences_explained_by_the_dropped_field():
+    # a benign rundll32→lsass access (no comsvcs.dll) — native comsvcs is silent, the
+    # OCSF-rewritten one over-matches. The gate still ATTESTS: the divergence is explained.
+    events = [{"TargetImage": "C:\\Windows\\System32\\lsass.exe",
+               "SourceImage": "C:\\Windows\\System32\\rundll32.exe",
+               "CallTrace": "ntdll.dll|KERNELBASE.dll"}]
+    res = attest_ocsf_agreement([{"id": "comsvcs", "detection": _COMSVCS}], events, SYSMON_ADAPTER)
+    assert res["attested"]                                  # no UNEXPLAINED divergence
+    assert len(res["explained_divergences"]) == 1
+    d = res["explained_divergences"][0]
+    assert d["native"] is False and d["ocsf"] is True       # the over-match, surfaced
+    assert d["cause"] == "dropped:CallTrace"                # attributed to the tracked field
+    assert res["unexplained_divergences"] == []
+
+
+def test_gate_runs_both_rules_and_reports_per_rule():
+    events = [{"Image": "C:\\rundll32.exe", "CommandLine": "rundll32 comsvcs.dll MiniDump"},
+              {"TargetImage": "C:\\lsass.exe", "SourceImage": "C:\\rundll32.exe", "CallTrace": "ntdll.dll"}]
+    res = attest_ocsf_agreement(_RULE_DICTS, events, SYSMON_ADAPTER)
+    assert res["attested"] and res["n_rules"] == 2 and res["checked"] == 4
+    by_rule = {r["rule"]: r for r in res["per_rule"]}
+    assert by_rule["proc-create"]["faithful"] and by_rule["proc-create"]["grade"] == "exact"
+    assert not by_rule["comsvcs"]["faithful"] and by_rule["comsvcs"]["dropped"] == ["CallTrace"]
+
+
+@pytest.mark.skipif(not (OTRF.exists() and SIGMA.exists()),
+                    reason="OTRF corpus / SigmaHQ rules not present")
+def test_attest_on_real_otrf_corpus():
+    """The acceptance test: fire the T1003.001 Sysmon rules native vs OCSF over real OTRF
+    events. Attested = no unexplained divergence; the comsvcs over-match is explained."""
+    from detection.subgraph import load_sysmon_events
+    events = load_sysmon_events(str(OTRF))[:2000]
+    rules = []
+    for _p, r in gather("T1003.001", root=SIGMA):
+        ls = r.get("logsource", {})
+        if ls.get("product") == "windows" and ls.get("category") in ("process_creation", "process_access") \
+                and is_evaluable(r):
+            rules.append(r)
+    assert rules, "expected some Sysmon process rules for T1003.001"
+    res = attest_ocsf_agreement(rules, events, SYSMON_ADAPTER)
+    assert res["attested"], res["unexplained_divergences"][:5]
