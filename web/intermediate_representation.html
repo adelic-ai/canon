@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canon — Intermediate Representation: the spine under canon</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --ink:#e6e8ee; --muted:#9aa3b2;
+    --line:#2a2f3a; --accent:#7db4ff; --accent2:#c79bff;
+    --good:#6fcf97; --warn:#f2c94c; --gap:#eb6f6f;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1080px;margin:0 auto;padding:48px 28px 96px}
+  h1{font-size:30px;margin:0 0 6px;letter-spacing:-.01em}
+  .sub{color:var(--muted);margin:0 0 4px;font-size:18px}
+  .stamp{color:var(--muted);font:13px/1.5 var(--mono);margin:0 0 32px}
+  h2{font-size:21px;margin:48px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+  h3{font-size:16px;margin:26px 0 6px;color:var(--accent2)}
+  p{margin:10px 0}
+  code{font-family:var(--mono);font-size:.88em;background:#1e222b;padding:1px 5px;border-radius:4px}
+  pre{background:#10131a;border:1px solid var(--line);border-radius:8px;padding:14px 16px;
+    overflow-x:auto;font-family:var(--mono);font-size:13px;line-height:1.55;color:#d4d9e4}
+  .note{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:8px;padding:14px 18px;margin:18px 0}
+  .note.gap{border-left-color:var(--gap)}
+  .note.key{border-left-color:var(--accent2)}
+  .note.good{border-left-color:var(--good)}
+  .muted{color:var(--muted)}
+  ul{margin:10px 0;padding-left:22px}
+  li{margin:7px 0}
+  strong{color:#fff}
+  table{border-collapse:collapse;width:100%;margin:18px 0;font-size:14px;background:var(--panel);
+    border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  th,td{text-align:left;padding:10px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#1c212b;color:var(--muted);font-weight:600;font-size:12px;
+    text-transform:uppercase;letter-spacing:.04em}
+  tr:last-child td{border-bottom:none}
+  td.k{font-weight:600;white-space:nowrap;color:var(--accent)}
+  .good{color:var(--good)} .gap{color:var(--gap)} .warn{color:var(--warn)}
+  .lede{font-size:17px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p style="font:13px/1.5 var(--mono,monospace);margin:0 0 22px"><a href="index.html" style="color:#7db4ff;text-decoration:none">← Canon index</a></p>
+  <h1>Intermediate Representation — the spine under canon</h1>
+  <p class="sub">Not what you write, not what runs — the middle form where meaning lives and analysis happens.</p>
+  <p class="stamp">canon · design · 2026-06-18 · <span class="muted">the DAG is an IR · the folds are passes</span></p>
+
+  <p class="lede">An <strong>intermediate representation</strong> is the normalized middle form between a <em>surface</em> (what
+  you write) and a <em>target</em> (what runs). The surface is sugar; the target is mechanics; the IR is where the
+  <strong>meaning</strong> sits in a shape you can compute over. Compilers discovered the idea — but the reason it keeps
+  reappearing is general, and it is the structural bet under all of canon. canon is not <em>using</em> an IR as a convenience.
+  <strong>canon is an IR project</strong>, and seeing that makes the whole architecture click into one picture.</p>
+
+  <h2>1 · What an IR buys — and why it keeps getting reinvented</h2>
+  <p>Four properties, each load-bearing, none cosmetic:</p>
+  <table>
+    <thead><tr><th>Property</th><th>What it buys</th></tr></thead>
+    <tbody>
+      <tr><td class="k">N×M → N+M</td>
+        <td>Many frontends, many backends, <em>one</em> middle. LLVM's whole reason to exist: instead of every language
+          targeting every chip (N×M translators), each side lowers to one IR and you write each side once (N+M). The
+          economic argument for the entire idea.</td></tr>
+      <tr><td class="k">normalization</td>
+        <td>Many surface ways to say the same thing collapse to <em>one</em> canonical form — so an analysis is written
+          once against the IR, not once per surface dialect.</td></tr>
+      <tr><td class="k">passes compose</td>
+        <td>Each transformation is <code>IR → IR</code>. Optimization, validation, annotation stack cleanly because they
+          share an input and output shape. The pass pipeline is the program.</td></tr>
+      <tr><td class="k">progressive lowering</td>
+        <td>Not one IR but a <em>stack</em> at descending abstraction (MLIR's thesis: many dialects, lowered step by step).
+          High-level IR for domain reasoning, low-level IR for execution — reason where it's cheap, execute where it's fast.</td></tr>
+    </tbody>
+  </table>
+  <p class="muted">Prior art to inherit, not reinvent: LLVM IR (N×M→N+M), MLIR (dialects + progressive lowering), GCC GIMPLE,
+  e-graphs / equality saturation (optimization as search over IR), tree-sitter (frontends), Substrait (a portable query
+  <em>plan</em> as a backend-neutral IR — already on canon's emitter roadmap).</p>
+
+  <h2>2 · The recognition — canon's authoritative object <em>is</em> an IR</h2>
+  <p>Read the governing architecture back through this lens and the translation is exact:</p>
+  <table>
+    <thead><tr><th>Compiler IR</th><th>canon</th></tr></thead>
+    <tbody>
+      <tr><td class="k">the IR itself</td>
+        <td>the lazy, <strong>content-addressed computation DAG</strong> — Entities (value-positions) and Activities
+          (op-firings). A Merkle/IPLD graph; identical sub-DAGs share an id.</td></tr>
+      <tr><td class="k">analysis / transform passes</td>
+        <td>the <strong>folds</strong> — value, provenance, custody, validity, well-formedness, guarantee, confidence,
+          temporal. Each is a <code>≤ₖ</code>-monotone read of the same DAG into the Belnap carrier. A fold <em>is</em> a pass.</td></tr>
+      <tr><td class="k">the stable interchange / "waist"</td>
+        <td>the <strong>CID</strong> (content identifier). One self-describing address that is simultaneously node-id,
+          <code>prov:Entity</code> IRI, and in-toto digest — the narrow waist every frontend and backend mates through.</td></tr>
+      <tr><td class="k">pass-manager guarantees</td>
+        <td>the acceptance test "add concern N without touching concern M" <em>is</em> <code>≤ₖ</code>-monotonicity of each
+          fold — a CI-checkable invariant, the formal version of "passes don't interfere."</td></tr>
+    </tbody>
+  </table>
+  <div class="note key">
+    <strong>This is the load-bearing reframe.</strong> "Every cross-cutting concern is a <code>≤ₖ</code>-monotone fold over one
+    content-addressed DAG" — canon's one structural idea — is the sentence <em>"every concern is a pass over one IR."</em> The
+    independence of folds (<a href="validation_fold_family.html">the validation-fold family</a>), the receipts-per-result
+    (<a href="justified_verdict_substrate.html">justified-verdict substrate</a>), the four-valued algebra
+    (<a href="belnap_carrier_and_monotonicity.html">Belnap carrier</a>) are all consequences of choosing a content-addressed
+    IR and writing the concerns as passes over it.
+  </div>
+
+  <h2>3 · Two altitudes — a stack of IRs, not one</h2>
+  <p>canon already has the MLIR shape: <strong>two IRs at different altitudes</strong>, with lowering between them.</p>
+  <pre>domain frontend          high IR                       low IR / target
+─────────────────        ───────────────────────       ─────────────────────────
+Sigma / CAR rule    →    detection-IR (motif graph)  →  emitted predicate   →  fires over
+FIBO / ISO 20022    →    (molecule symbols, RDF)        (Python · SPARQL ·     the computation
+(a future frontend) →                                   Rust · SPL)            DAG (the low IR)</pre>
+  <ul>
+    <li>The <strong>detection IR</strong> (<a href="detection_ir_motif_ontology.html">motif/molecule ontology</a>) is the
+      <em>high</em> IR — domain logic as a graph of bonded gadgets (<code>spawn ⋈ access on ProcessGuid</code>), independent of
+      any one rule language or query engine. The relation is the invariant; the language is a phrasebook.</li>
+    <li>The <strong>computation DAG</strong> is the <em>low</em> IR — the content-addressed substrate the emitted predicate
+      actually fires over, and the object every fold reads. Provenance, custody, guarantee are passes <em>here</em>.</li>
+    <li><strong>Lowering is progressive and verified:</strong> Sigma → motif graph → emitted predicate → firing. Because
+      cross-language semantic equivalence is undecidable in general, each lowering step is <em>fidelity-attested against a
+      labeled corpus</em>, not assumed — language-agnosticism is a measured property, not a wish (see the detection-IR page §3).</li>
+  </ul>
+
+  <h2>4 · Frontends and backends — why one core serves many domains</h2>
+  <p>The N×M→N+M economics is exactly why canon's "domain-agnostic core + domain packages" works, and why the
+  finance idea from the same conversation is coherent rather than a force-fit:</p>
+  <ul>
+    <li><strong>Frontends (N):</strong> a domain package lowers its surface into the IR. <code>semantic-cyber</code> lowers
+      ATT&amp;CK/D3FEND/Sigma; a hypothetical <code>semantic-financial</code> would lower
+      <a href="finance_semantic_standards.html">FIBO / ISO&nbsp;20022 / XBRL</a>. They share a core <em>because they lower to the
+      same IR</em> — not because finance resembles cyber.</li>
+    <li><strong>Backends (M):</strong> emitters lower the IR out — the Python interpreter, a SPARQL knowledge surface, a
+      <a href="rust_hot_path_emitter.html">Rust hot-path emitter</a> (or, future-proofed, a Substrait plan over a vectorized
+      engine). Each is fidelity-gated before it is trusted.</li>
+  </ul>
+  <div class="note good">
+    <strong>The test of a real IR is a second frontend.</strong> Canon's domain-agnostic claim is, today, proven by exactly one
+    domain (cyber) — the same way its polyglot claim is proven by exactly one language binding (Python). A
+    <code>semantic-financial</code> frontend would be the second domain that turns "agnostic" from a design intent into a
+    measured property. The IR is the seam that makes that test cheap.
+  </div>
+
+  <h2>5 · The canon twist — the IR carries its own warrant</h2>
+  <p>A normal compiler IR is discarded after lowering; nobody asks an <code>add</code> instruction to justify itself. canon's
+  IR is <strong>content-addressed and tamper-evident</strong>, and one of its passes (<a href="process_provenance_graph.html">the
+  provenance fold</a>) <em>emits the justification as a peer object of the result</em>. So the IR is not only the analysis
+  surface — it is the <strong>audit trail</strong>. "How did you know?" has a content-addressed answer because the derivation
+  <em>is</em> a walk of the same IR. That is the property generic IRs do not have, and the reason canon's IR is also its
+  honesty machinery rather than a separate log.</p>
+
+  <h2>6 · Honest scope — what's an IR here, and what an IR can't buy</h2>
+  <ul>
+    <li><strong>Built:</strong> the computation DAG + the fold family (provenance Phases 0–4); the detection-IR first slice
+      (<code>detection/motif.py</code>, two molecules, two emitters, agreement attested on the OTRF corpus). The
+      <em>structure</em> of the stack is real.</li>
+    <li><strong>Designed, not yet realized:</strong> the full molecule vocabulary (earned per <code>≥2</code> real detections,
+      never speculated up front), additional emitters, and any second-domain frontend. A "stack of IRs" is the direction, not a
+      finished tower.</li>
+    <li><strong>An IR does not buy semantic equivalence.</strong> Structure ports because the graph is just data; semantics do
+      not (<code>ends_with</code> byte-vs-Unicode, streaming-vs-materialized windows, null/timezone handling). The IR buys
+      structural portability <em>plus a verification harness</em> — never guaranteed equivalence.</li>
+    <li><strong>An IR is not free.</strong> You pay a serialization boundary and a normalization design cost. canon draws the
+      core/periphery line exactly where that cost is worth it: tight folds over the live DAG stay in one runtime; per-result,
+      offline artifacts cross the CID seam.</li>
+  </ul>
+
+  <div class="note">
+    <strong>One line.</strong> An IR is one middle form that many surfaces lower into and many targets lower out of, with the
+    real work written once as passes over it. canon's content-addressed DAG is that form; the folds are those passes; the CID is
+    the waist — and because the IR is tamper-evident, it is also the warrant. The whole substrate is "compiler architecture, with
+    provenance as a first-class pass."
+  </div>
+</div>
+</body>
+</html>
