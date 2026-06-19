@@ -76,8 +76,24 @@ def _fields(block) -> frozenset:
 
 
 def signature(r: dict) -> tuple:
-    """The detection signature = (logsource, field-set keyed on) — the FCA attribute-set."""
+    """The detection signature = (logsource, field-set keyed on) — the FCA attribute-set.
+
+    Value-BLIND, so it OVER-COLLAPSES: rules reading the same fields with different values fold into one
+    concept (32 distinct macOS detections → 1). Use :func:`content_signature` for the value-aware key; this
+    one is retained for the field-set FCA lattice view only."""
     return (_logsource(r), _fields(r["detection"].get("selection")))
+
+
+def content_signature(r: dict, ir=None) -> tuple:
+    """Value-AWARE concept key — ``(logsource, content_digest of the compiled IR)``. The over-collapse fix
+    for :func:`signature`: two rules sharing a field-set but matching different VALUES get DISTINCT keys (the
+    32-macOS-rules→1 collapse becomes 32→32), so dedup/whittling keys on *what a rule matches*, not merely
+    *which fields it reads*. Pass a precompiled ``ir`` to skip recompiling (the round already has it). Still
+    blind to semantic equivalence between differently-structured rules — only the catch-set closes that."""
+    from detection.rule_ir import compile_rule
+    if ir is None:
+        ir = compile_rule(r)
+    return (_logsource(r), ir.content_digest())
 
 
 def _ls_match(r: dict, sel: dict) -> bool:

@@ -80,6 +80,19 @@ class CompiledRule:
                 "condition": self.condition}
         return evidence_digest(json.dumps(body, sort_keys=True, separators=(",", ":"), default=list))
 
+    def content_digest(self) -> str:
+        """A value-AWARE content hash of what this rule MATCHES — its normalized blocks (kind + clauses as
+        (field, ops, values) + keywords) and condition AST — but EXCLUDING ``rule_id`` (unlike :attr:`cid`).
+
+        This is the over-collapse fix for the field-set FCA key (``sigma_panel.signature``): two rules that
+        read the same fields with DIFFERENT values hash differently, so the 32-macOS-rules→1 collapse becomes
+        32→32. Two rules with identical detection logic in different files hash the SAME (rule_id omitted), so
+        genuine duplicates still dedup. Ceiling: it is value-aware but still *structural* — it cannot see
+        semantic equivalence between differently-structured rules (e.g. ``endswith \\\\x.exe`` vs
+        ``contains x``, or the same target via different fields). Only the catch-set closes that."""
+        body = {"blocks": [b.as_tuple() for b in self.blocks], "condition": self.condition}
+        return evidence_digest(json.dumps(body, sort_keys=True, separators=(",", ":"), default=list))
+
     def to_dict(self) -> dict:
         """The wire form a non-Python emitter (the Rust crate) consumes: named blocks with parsed clauses +
         the condition AST (tuples serialize to JSON arrays)."""

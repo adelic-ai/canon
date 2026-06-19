@@ -59,6 +59,19 @@ def test_cid_is_stable_and_structural():
     assert compile_rule(NAMED).cid != compile_rule(SIMPLE).cid
 
 
+def test_content_digest_is_value_aware_and_rule_id_blind():
+    # value-aware: same field-set, DIFFERENT values → DISTINCT digests (the over-collapse fix)
+    v1 = compile_rule(_rule({"selection": {"CommandLine|contains": "comsvcs"}, "condition": "selection"}))
+    v2 = compile_rule(_rule({"selection": {"CommandLine|contains": "mimikatz"}, "condition": "selection"}))
+    assert v1.content_digest() != v2.content_digest()
+    # rule_id-blind: identical detection logic, different ids → SAME digest (unlike cid)
+    a = compile_rule({"id": "rule-a", "detection": {"selection": {"CommandLine|contains": "x"}, "condition": "selection"}})
+    b = compile_rule({"id": "rule-b", "detection": {"selection": {"CommandLine|contains": "x"}, "condition": "selection"}})
+    assert a.content_digest() == b.content_digest()          # genuine duplicates still dedup
+    assert a.cid != b.cid                                     # cid is contaminated by rule_id; content_digest isn't
+    assert len(a.content_digest()) == 64
+
+
 @pytest.mark.skipif(not (OTRF.exists() and SIGMA.exists()), reason="OTRF corpus / SigmaHQ rules not present")
 def test_ir_is_faithful_across_the_real_corpus():
     """The fold's proof at scale: the typed IR agrees with the raw evaluator on every evaluable T1003.001 rule

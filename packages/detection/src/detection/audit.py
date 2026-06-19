@@ -25,7 +25,7 @@ import yaml
 
 from detection.fidelity import _cid
 from detection.sigma_eval import evaluability
-from detection.sigma_panel import SIGMA, signature
+from detection.sigma_panel import SIGMA, content_signature, signature
 
 _ATTACK = re.compile(r"attack\.(t\d{4}(?:\.\d{3})?)", re.IGNORECASE)
 
@@ -56,7 +56,8 @@ def consume_sigma(root: Path = SIGMA) -> dict:
     logsources: Counter = Counter()
     tech_all: set[str] = set()
     tech_evaluable: set[str] = set()
-    classes: dict = defaultdict(list)          # FCA signature -> [rule ids]  (evaluable only)
+    classes: dict = defaultdict(list)          # field-set FCA signature -> [rule ids]  (evaluable only)
+    content_classes: dict = defaultdict(list)  # value-aware content signature -> [rule ids]
     evaluable = 0
 
     for p in Path(root).rglob("*.yml"):
@@ -77,13 +78,20 @@ def consume_sigma(root: Path = SIGMA) -> dict:
         if ok:
             evaluable += 1
             tech_evaluable |= techs
-            classes[signature(r)].append(r.get("id", p.name))
+            rid = r.get("id", p.name)
+            classes[signature(r)].append(rid)
+            try:
+                content_classes[content_signature(r)].append(rid)
+            except Exception:
+                content_classes[("uncompilable", rid)].append(rid)   # never silently merge an outlier
 
     distinct = len(classes)
+    distinct_content = len(content_classes)
     body = {
         "total": total,
         "evaluable": evaluable,
-        "distinct_detections": distinct,                        # after FCA dedup
+        "distinct_detections": distinct,                        # field-set dedup → redundancy UPPER bound
+        "distinct_detections_content": distinct_content,        # exact-content dedup → redundancy LOWER bound
         "reasons": dict(reasons),
         "techniques_total": len(tech_all),
         "techniques_evaluable": len(tech_evaluable),
@@ -91,8 +99,16 @@ def consume_sigma(root: Path = SIGMA) -> dict:
     return {
         **body,
         "evaluable_pct": round(100 * evaluable / total, 1) if total else 0.0,
+        # The two keys BRACKET true redundancy, neither measures it. Field-set OVER-collapses (value-blind:
+        # value-distinct detections sharing a field-set merge) → an UPPER bound. Exact-content collapses only
+        # byte-identical rules (≈none in a curated corpus) → a LOWER bound ≈1.0x. True redundancy (rules that
+        # CATCH the same instances) is between, and needs the catch-set — no structural key reaches it.
         "redundancy": {"collapsed": evaluable - distinct,
-                       "ratio": round(evaluable / distinct, 2) if distinct else 0.0},
+                       "ratio": round(evaluable / distinct, 2) if distinct else 0.0,
+                       "basis": "field-set — over-collapse-biased UPPER bound"},
+        "redundancy_content": {"collapsed": evaluable - distinct_content,
+                               "ratio": round(evaluable / distinct_content, 2) if distinct_content else 0.0,
+                               "basis": "exact-content — duplicate-only LOWER bound (truth needs catch-set)"},
         "techniques_gap": sorted(tech_all - tech_evaluable),
         "logsources_top": dict(logsources.most_common(15)),
         # the IR-breadth roadmap: non-ok reasons ranked by how many rules they block

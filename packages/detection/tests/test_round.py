@@ -26,14 +26,28 @@ def test_profile_infers_the_telemetry_surface():
 def test_select_whittles_to_applicable_best_peers():
     prof = environment_profile(_events())
     sel = select_detections(prof, ["T1003.001"])
-    # whittled: far fewer than the ~79 rules claiming T1003.001 (FCA concepts, applicable-only, best-peer)
+    # whittled below the full set claiming T1003.001 (applicable-only + true content-duplicates collapsed),
+    # but content-aware: value-distinct detections are KEPT, not over-collapsed.
     rules = sel
-    assert 0 < len(rules) < 40
+    assert 0 < len(rules) < 79
     # only applicable detections selected — every chosen rule's required fields are in the profile
     from detection.rule_ir import compile_rule
     from detection.round import _required_fields
     present = set(prof["fields"])
     assert all(_required_fields(compile_rule(s["rule"])) <= present for s in sel)
+
+
+def test_content_key_recovers_detections_the_field_set_key_dropped():
+    """The recall fix: the value-aware concept key keeps value-distinct detections that the old field-set
+    key collapsed into one (and thus silently dropped at best-peer selection). So content-aware selection
+    yields strictly MORE detections than a field-set re-grouping of the same selected rules."""
+    from detection.rule_ir import compile_rule
+    from detection.sigma_panel import signature
+    prof = environment_profile(_events())
+    sel = select_detections(prof, ["T1003.001"])                  # content-aware (the round's key)
+    field_set_concepts = {signature(s["rule"]) for s in sel}      # how many the field-set key would keep
+    # content-aware kept more distinct detections than the field-set key would — recovered, not dropped
+    assert len(sel) > len(field_set_concepts)
 
 
 def test_round_fires_and_ranks():

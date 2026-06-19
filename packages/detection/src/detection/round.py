@@ -22,7 +22,7 @@ from pathlib import Path
 from detection.orchestrator import TECH_TACTIC
 from detection.rule_ir import compile_rule, eval_ir
 from detection.sigma_eval import is_evaluable
-from detection.sigma_panel import SIGMA, gather, signature
+from detection.sigma_panel import SIGMA, content_signature, gather
 from detection.vocab import NATIVE, OCSF, require_coherent, vocab_name
 
 # tactic → severity (curated, tactic-based; extensible). Severity ≠ confidence: this is "how bad if real".
@@ -54,9 +54,14 @@ def _specificity(ir) -> int:
 
 def select_detections(profile: dict, techniques, *, sigma_root: Path = SIGMA) -> list[dict]:
     """Whittle to the subset to fire: for each technique, the evaluable rules whose required telemetry is
-    present (applicable to the profile), grouped into FCA concepts (same logsource+field-set), keeping the
-    **best-ranked peer** per concept. Best-peer here = most specific (clause count) — the "rule with the most
-    important features"; a fidelity/clean-catcher ranking slots in where labels exist."""
+    present (applicable to the profile), grouped into **content-aware concepts** (logsource + a value-aware
+    digest of the compiled IR — see ``content_signature``), keeping the **best-ranked peer** per concept.
+
+    The content key matters for *recall*: the old field-set key was value-blind, so rules reading the same
+    fields with different values collapsed into one concept and only one best-peer fired — silently dropping
+    the others (the 32-macOS-detections→1 hazard, in the firing path). Keying on content keeps value-distinct
+    detections as distinct concepts, so each fires. Best-peer = most specific (clause count); a
+    fidelity/clean-catcher ranking slots in where labels exist."""
     present = set(profile["fields"])
     chosen: dict = {}                                        # FCA signature -> best (technique, rule, name, score)
     for tech in techniques:
@@ -67,7 +72,7 @@ def select_detections(profile: dict, techniques, *, sigma_root: Path = SIGMA) ->
             req = _required_fields(ir)
             if req and not req <= present:                   # not applicable: required telemetry absent here
                 continue
-            sig = signature(r)
+            sig = content_signature(r, ir)              # value-aware: distinct values → distinct concepts
             score = _specificity(ir)
             if sig not in chosen or score > chosen[sig][3]:
                 chosen[sig] = (tech, r, p.name, score)
