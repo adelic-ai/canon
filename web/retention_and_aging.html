@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canon — Retention &amp; aging: what survives when the raw telemetry is gone</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --ink:#e6e8ee; --muted:#9aa3b2;
+    --line:#2a2f3a; --accent:#7db4ff; --accent2:#c79bff;
+    --good:#6fcf97; --warn:#f2c94c; --gap:#eb6f6f;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1080px;margin:0 auto;padding:48px 28px 96px}
+  h1{font-size:30px;margin:0 0 6px;letter-spacing:-.01em}
+  .sub{color:var(--muted);margin:0 0 4px;font-size:18px}
+  .stamp{color:var(--muted);font:13px/1.5 var(--mono);margin:0 0 32px}
+  h2{font-size:21px;margin:48px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+  h3{font-size:16px;margin:26px 0 6px;color:var(--accent2)}
+  p{margin:10px 0}
+  code{font-family:var(--mono);font-size:.88em;background:#1e222b;padding:1px 5px;border-radius:4px}
+  pre{background:#10131a;border:1px solid var(--line);border-radius:8px;padding:14px 16px;
+    overflow-x:auto;font-family:var(--mono);font-size:13px;line-height:1.55;color:#d4d9e4}
+  .note{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:8px;padding:14px 18px;margin:18px 0}
+  .note.gap{border-left-color:var(--gap)}
+  .note.key{border-left-color:var(--accent2)}
+  .note.good{border-left-color:var(--good)}
+  .muted{color:var(--muted)}
+  ul{margin:10px 0;padding-left:22px}
+  li{margin:7px 0}
+  strong{color:#fff}
+  table{border-collapse:collapse;width:100%;margin:18px 0;font-size:14px;background:var(--panel);
+    border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  th,td{text-align:left;padding:10px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#1c212b;color:var(--muted);font-weight:600;font-size:12px;
+    text-transform:uppercase;letter-spacing:.04em}
+  tr:last-child td{border-bottom:none}
+  td.k{font-weight:600;white-space:nowrap;color:var(--accent)}
+  .good{color:var(--good)} .gap{color:var(--gap)} .warn{color:var(--warn)}
+  .lede{font-size:17px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p style="font:13px/1.5 var(--mono,monospace);margin:0 0 22px"><a href="index.html" style="color:#7db4ff;text-decoration:none">← Canon index</a></p>
+  <h1>Retention &amp; aging — what survives when the raw telemetry is gone</h1>
+  <p class="sub">Don't keep the firehose. Decide what raw events fold into before they drop — and stay honest about what can no longer be reconstructed.</p>
+  <p class="stamp">canon · design · 2026-06-19 · <span class="muted">verdicts carry their own warrant · the horizon is a NONE boundary</span></p>
+
+  <p class="lede">A continuous monitor over a forgetful source (<a href="live_stream_ingest.html">Endpoint Security /
+  <code>eslogger</code> retains nothing</a>) accumulates raw events without bound. You cannot keep the firehose. So the real
+  question is <em>not</em> "how long do we keep raw events" but <strong>"what do raw events fold into before we drop them, and
+  how do we stay honest about what we can no longer reconstruct."</strong> The source forgets immediately; retention is the
+  workspace's job; and canon's edge over a normal SIEM's retention policy is two things a SIEM doesn't do — surviving verdicts
+  carry their own justification, and the retention horizon is an honest NONE boundary, not a silent wall.</p>
+
+  <h2>1 · The lifecycle — raw shrinks into derived</h2>
+  <pre>hot  (trailing window, recent raw)  ──fold──▶  warm (cells + baselines + verdicts)  ──age──▶  cold (verdicts + materialized provenance)
+     the battery computes here                 raw rows dropped, statistics kept             re-derivation impossible → queries = NONE-bounded</pre>
+  <p>Three things survive aging, in increasing compression:</p>
+  <table>
+    <thead><tr><th>Survivor</th><th>What it is</th><th>Why it survives</th></tr></thead>
+    <tbody>
+      <tr><td class="k">verdicts</td>
+        <td>the justified outputs, content-addressed</td>
+        <td><strong>Only if justification is materialized, not pointed-at.</strong> A verdict that embeds its receipts (matched
+          fields, W-record, the statistic) survives the raw events aging out; one that points into a log that later rolls becomes
+          an <em>unjustifiable assertion</em> the moment the log is deleted.</td></tr>
+      <tr><td class="k">baselines</td>
+        <td>the fold of raw into "normal" — aggregate cells, not raw rows</td>
+        <td>The battery's value <em>is</em> a calibrated model of normal. Keep the calibration (the <code>FanoutCell</code>
+          per-(entity, time-bin) statistic); drop the events that produced it — another order of magnitude smaller, still enough
+          to compute rarity.</td></tr>
+      <tr><td class="k">the horizon</td>
+        <td>a recorded coverage boundary</td>
+        <td>Past it, re-derivation is impossible. A question about last month is a <span class="gap">coverage NONE</span>
+          (telemetry aged out), never a clean FALSE — recorded, not a silent wall.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>2 · Verdicts survive — but only if justification is materialized</h2>
+  <p>The load-bearing architectural commitment: <em>"justification is not metadata — it is the same object as the result."</em>
+  Operationally that becomes a retention rule. <strong>When a raw event is load-bearing for a verdict, its relevant fields are
+  promoted into the verdict's provenance before the raw row becomes collectible.</strong> In content-addressed-DAG terms this is
+  Merkle GC — pin-and-sweep, a named wheel:</p>
+  <ul>
+    <li>verdicts are <strong>pin roots</strong>;</li>
+    <li>a raw node still reachable from a live verdict is <strong>pinned</strong> — not swept, even past the horizon;</li>
+    <li>raw nodes unreachable from any pin root and past the horizon are <strong>collectible</strong>.</li>
+  </ul>
+  <div class="note key">
+    <strong>The materialization-on-pin step is the one genuinely new mechanism.</strong> The rest — pin-and-sweep, windowed
+    recompute — is named prior art. Promoting a load-bearing raw event's fields <em>into</em> the verdict before GC is what makes
+    a verdict outlive its inputs without becoming an unjustifiable claim.
+  </div>
+
+  <h2>3 · Past the horizon — NONE, not FALSE</h2>
+  <p>Once raw (and then cells) are gone you cannot re-derive or re-query that window. So the retention horizon is a
+  <strong>first-class, recorded coverage boundary</strong>: "answerable back to date X; before X is NONE." A feed gap
+  <em>within</em> the window (the monitor was down) is likewise a NONE for that window — and a live, unbroken feed is intact
+  chain-of-custody, so feed-liveness = custody supplies the signal. This is the
+  <a href="live_stream_ingest.html">enterprise-ingest "fragmented retention → honest-NONE coverage"</a> story at n=1.</p>
+
+  <h2>4 · Aging is also <em>desirable</em> — and it is the flagged risk</h2>
+  <p>Aging is not only storage management; it is <strong>relevance</strong>. You <em>want</em> the baseline to forget old
+  behavior so "normal" tracks the current environment — a binary that was rare six months ago and is now ubiquitous should stop
+  alarming. The sliding reference window is what keeps the calibration current. But this is precisely the architecture's flagged
+  soft spot — conformal / baseline under distribution-shift and contaminated reference is unsolved:</p>
+  <table>
+    <thead><tr><th>Hazard</th><th>What happens</th><th>Mitigation</th></tr></thead>
+    <tbody>
+      <tr><td class="k gap">self-poisoning</td>
+        <td>a slow-burn attacker who ramps gradually gets folded into "normal" as the window slides</td>
+        <td>exclude flagged-anomalous and <code>Both</code> cells from baseline updates — don't let the thing you're hunting
+          calibrate the hunter</td></tr>
+      <tr><td class="k warn">drift false-alarms</td>
+        <td>legitimate environment change reads as anomaly until the window catches up</td>
+        <td>recorded as an assumption on the verdict; the per-result tier demotes when the reference window is suspect</td></tr>
+    </tbody>
+  </table>
+  <p>Neither is solved. Both must be <strong>recorded assumptions</strong> on any baseline-derived verdict, not papered over.</p>
+
+  <h2>5 · The <code>Both</code> queue — retained before it ages</h2>
+  <p>The rare, contradictory (<code>Both</code>), or flagged cells are the <strong>highest-value things to retain longer and
+  label</strong> — precisely because they are what the baseline would otherwise forget. They go to the active-learning queue
+  before aging out. Aging a flagged cell silently into "normal" is the worst case; promoting it is the best.</p>
+
+  <h2>6 · Honest scope</h2>
+  <ul>
+    <li><strong>Built:</strong> nothing here. The streaming reader, the workspace store, and the GC/fold policy do not exist
+      yet; this records the design before the build.</li>
+    <li><strong>Depends on:</strong> the fold-then-drop step (raw → cells) needs the live source binding to exist first
+      (<a href="live_stream_ingest.html">live stream ingest</a>).</li>
+    <li><strong>Workspace config:</strong> retention horizons live in the workspace manifest
+      (<code>{hot_window, warm_horizon, cold_keeps_verdicts}</code> per source) — multi-tenant by construction, different
+      engagements keep different amounts.</li>
+  </ul>
+
+  <div class="note">
+    <strong>One line.</strong> The source forgets immediately, so the workspace retains a shrinking, increasingly-derived trace
+    (raw → cells → verdicts + materialized provenance); the horizon is an honest NONE boundary; and surviving verdicts carry
+    their own justification, so they don't rot when their inputs do. This page is the <em>outflow</em>;
+    <a href="live_stream_ingest.html">live stream ingest</a> is the intake.
+  </div>
+</div>
+</body>
+</html>

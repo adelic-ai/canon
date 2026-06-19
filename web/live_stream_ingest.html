@@ -136,7 +136,7 @@
         <td><span class="good">resume, not gap</span> — reader tails from a checkpointed offset; events written while down
           are still on disk → replayed; producer/consumer decoupled</td>
         <td><strong>Chosen.</strong> The only gap is genuine downtime, recorded as a NONE. Growth is already governed by
-          <a href="retention_and_aging.html">retention&nbsp;&amp;&nbsp;aging</a>.</td></tr>
+          <a href="retention_and_aging.html">retention&nbsp;&amp;&nbsp;aging</a> governs it.</td></tr>
       <tr><td class="k">Unix socket</td>
         <td>needs a spool to survive reader restarts</td>
         <td>True backpressure, but more parts for no NONE-honesty gain over the file.</td></tr>
