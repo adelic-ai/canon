@@ -27,7 +27,8 @@ def test_evaluability_attributes_each_reason():
     assert evaluability(rule(selection={"a": {"nested": 1}}, condition="selection"))[1] == "nested-selection"
     assert evaluability(rule(keywords=["foo", "bar"], condition="keywords")) == (True, "ok")   # keyword block now compiles
     assert evaluability(rule(weird=None, condition="weird"))[1] == "unsupported-block"          # None block: not yet
-    assert evaluability(rule(selection={"a|re": ".*x"}, condition="selection"))[1] == "unsupported-modifier"  # |re abstains, not mis-fires
+    assert evaluability(rule(selection={"a|re": ".*x"}, condition="selection")) == (True, "ok")   # |re now supported
+    assert evaluability(rule(selection={"a|base64": "x"}, condition="selection"))[1] == "unsupported-modifier"  # base64 abstains, not mis-fires
     assert evaluability({"correlation": {"type": "event_count"}})[1] == "correlation"
     assert evaluability({"title": "no detection"})[1] == "no-detection"
 

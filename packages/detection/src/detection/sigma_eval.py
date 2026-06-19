@@ -116,21 +116,85 @@ def _op(mods: set[str]) -> str:
     return "eq"
 
 
+@lru_cache(maxsize=4096)
+def _re_compiled(pattern: str, ignorecase: bool):
+    return re.compile(pattern, re.IGNORECASE if ignorecase else 0)
+
+
+def _re_search(pattern: str, ignorecase: bool, text: str) -> bool:
+    """``|re`` — regex search (case-sensitive by default per Sigma; ``|i`` adds IGNORECASE). NOT ascii-folded;
+    the regex author controls case."""
+    try:
+        return _re_compiled(pattern, ignorecase).search(text) is not None
+    except re.error:
+        return False
+
+
+def _cidr_match(ip_str: str, cidr: str) -> bool:
+    """``|cidr`` — is the event IP inside the rule's subnet."""
+    import ipaddress
+    try:
+        return ipaddress.ip_address(ip_str.strip()) in ipaddress.ip_network(cidr.strip(), strict=False)
+    except ValueError:
+        return False
+
+
+def _num_cmp(val, pat, op: str) -> bool:
+    """``|gt|gte|lt|lte`` — numeric comparison (non-numeric operands → no match)."""
+    try:
+        x, y = float(val), float(pat)
+    except (TypeError, ValueError):
+        return False
+    return {"gt": x > y, "gte": x >= y, "lt": x < y, "lte": x <= y}[op]
+
+
+@lru_cache(maxsize=8192)
+def _compiled_windash(pattern_lower: str, op: str):
+    """``|windash`` — like the glob compile, but each ``-`` in the pattern matches any CLI dash variant
+    (``- / – — ―``), the trick attackers use to evade flag-string detection."""
+    out, i = [], 0
+    while i < len(pattern_lower):
+        c = pattern_lower[i]
+        if c == "\\" and i + 1 < len(pattern_lower) and pattern_lower[i + 1] in "*?\\":
+            out.append(re.escape(pattern_lower[i + 1])); i += 2
+        elif c == "*":
+            out.append(".*"); i += 1
+        elif c == "?":
+            out.append("."); i += 1
+        elif c == "-":
+            out.append("[-/–—―]"); i += 1
+        else:
+            out.append(re.escape(c)); i += 1
+    body = "".join(out)
+    body = {"contains": f".*{body}.*", "startswith": f"{body}.*", "endswith": f".*{body}"}.get(op, body)
+    return re.compile(body, re.DOTALL)
+
+
 def field_matches(event_val, spec, mods: set[str]) -> bool:
     """One ``field|mods: spec`` clause. A list ``spec`` is OR unless ``|all`` makes it AND.
 
-    Per the IR semantics profile (``design/detection_ir_semantics.md``): **ASCII-only** case-fold (not
-    full-Unicode) and **Sigma glob** matching — ``*``/``?`` are wildcards, compiled to an anchored, DOTALL
-    regex via :func:`glob_regex_body`, with literals (incl. regex metacharacters and backslash paths)
-    escaped. ``fullmatch`` anchors both ends; the modifier supplies the surrounding ``.*``."""
+    Default match (per ``design/detection_ir_semantics.md``): **ASCII-only** case-fold + **Sigma glob**
+    (``*``/``?`` → anchored DOTALL regex via :func:`glob_regex_body`). Value-transform / alternate-match
+    modifiers handled here: ``re`` (regex), ``cidr`` (subnet), ``gt|gte|lt|lte`` (numeric), ``windash``
+    (CLI-dash variants). Modifiers not handled abstain upstream (``evaluability`` → ``unsupported-modifier``)
+    rather than mis-fire."""
+    patterns = spec if isinstance(spec, list) else [spec]
+    combine = all if "all" in mods else any
+
+    if "re" in mods:                                    # regex — not ascii-folded; |i = case-insensitive
+        text = str(event_val)
+        return combine(_re_search(str(p), "i" in mods, text) for p in patterns)
+    if "cidr" in mods:
+        return combine(_cidr_match(str(event_val), str(p)) for p in patterns)
+    num_op = next((m for m in ("gte", "lte", "gt", "lt") if m in mods), None)
+    if num_op:
+        return combine(_num_cmp(event_val, p, num_op) for p in patterns)
+
     ev = _ascii_lower(str(event_val))
     op = _op(mods)
-    patterns = spec if isinstance(spec, list) else [spec]
-
-    def one(p) -> bool:
-        return _compiled(_ascii_lower(str(p)), op).fullmatch(ev) is not None
-
-    return all(one(p) for p in patterns) if "all" in mods else any(one(p) for p in patterns)
+    if "windash" in mods:
+        return combine(_compiled_windash(_ascii_lower(str(p)), op).fullmatch(ev) is not None for p in patterns)
+    return combine(_compiled(_ascii_lower(str(p)), op).fullmatch(ev) is not None for p in patterns)
 
 
 def block_matches(block: dict, event: dict) -> bool:
@@ -142,7 +206,8 @@ def block_matches(block: dict, event: dict) -> bool:
     return True
 
 
-_SUPPORTED_MODS = {"contains", "startswith", "endswith", "all", "eq"}   # field_matches handles these (+ bare eq, +glob)
+_SUPPORTED_MODS = {"contains", "startswith", "endswith", "all", "eq",   # glob + default
+                   "re", "i", "cidr", "gt", "gte", "lt", "lte", "windash"}   # value-transform / alt-match mods
 
 
 def _map_reason(m: dict) -> str | None:
