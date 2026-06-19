@@ -34,6 +34,19 @@ def _cid(obj) -> str:
     return evidence_digest(json.dumps(obj, sort_keys=True, separators=(",", ":")))
 
 
+def _referenced_fields(rule: dict) -> set[str]:
+    """The event field names a rule's detection blocks key on (the bit before any ``|`` modifier)."""
+    det = rule.get("detection", {})
+    fields: set[str] = set()
+    for name, block in det.items():
+        if name == "condition":
+            continue
+        for m in (block if isinstance(block, list) else [block]):
+            if isinstance(m, dict):
+                fields.update(str(k).split("|")[0] for k in m)
+    return fields
+
+
 def attest_fidelity(
     rule: dict,
     positives: list[dict],
@@ -100,12 +113,19 @@ def attest_fidelity(
         },
     }
     if coverage in ("false", "both"):                            # a miss owes a structural cause
-        att["cause"] = {
-            "kind": "allowlist" if suppressed else "logic-gap",  # filter over-exclusion vs selection not matching
-            "detail": (f"real instances matched `selection` but were suppressed by {suppressed}"
-                       if suppressed else
-                       "the rule's `selection` did not match the technique's instances on this corpus"),
-            **({"locus": suppressed[0]} if suppressed else {}),
-        }
+        referenced = _referenced_fields(rule)
+        missed_events = [e for e, _ in missed]
+        if suppressed:                                            # matched, then a filter excluded it
+            kind = "allowlist"
+            detail = f"real instances matched `selection` but were suppressed by {suppressed}"
+        elif missed_events and all(not (referenced & set(e.keys())) for e in missed_events):
+            kind = "missing-telemetry"                           # the rule's fields aren't in these events (wrong channel)
+            detail = ("the rule keys on fields absent from these instances — wrong observation channel, not a "
+                      f"logic gap (rule fields: {sorted(referenced)[:6]})")
+        else:
+            kind = "logic-gap"                                   # fields present, values don't match
+            detail = "the rule's `selection` fields are present but its values did not match these instances"
+        att["cause"] = {"kind": kind, "detail": detail,
+                        **({"locus": suppressed[0]} if suppressed else {})}
     att["provenance"] = _cid({"attestation": rule.get("id"), "corpus": corpus_cid, "evidence": evidence_cid})
     return att
