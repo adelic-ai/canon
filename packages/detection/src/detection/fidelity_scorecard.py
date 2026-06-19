@@ -70,6 +70,45 @@ def fidelity_scorecard(cases: list[dict]) -> dict:
     }
 
 
+def grounded_fidelity(technique: str, scenarios, background: list[dict], *, sigma_root: Path = SIGMA) -> dict:
+    """Two-sided fidelity over a GROUNDED corpus (synthetic attacks injected into a real benign background):
+    **recall** (rules catching the injected malicious events) AND **false positives** (rules firing on the
+    benign background). The real background is what turns one-sided catch-rate into precision + recall; a
+    ``clean_catcher`` catches the attack AND stays silent on the benign population.
+
+    Honest caveat: over a real corpus, the FP count is an UPPER BOUND — the "benign" background may contain
+    unlabeled real activity (e.g. OTRF's own campaign), so a counted false-positive may be a true detection of
+    something we didn't label. Use a clean/synthetic background for exact FP semantics."""
+    from synthcyber import grounded_scenario_corpus
+
+    from detection.sigma_eval import evaluate_rule, is_evaluable
+
+    corpus = grounded_scenario_corpus(scenarios, background)
+    malicious = [e for e, lab in zip(corpus["events"], corpus["labels"]) if lab]
+    benign = [e for e, lab in zip(corpus["events"], corpus["labels"]) if not lab]
+    rules = [(p, r) for p, r in gather(technique, root=sigma_root) if is_evaluable(r)]
+
+    rows = []
+    for p, r in rules:
+        catches = any(evaluate_rule(r, e)["fires"] for e in malicious)
+        fps = sum(1 for e in benign if evaluate_rule(r, e)["fires"])
+        rows.append({"rule": p.name, "catches": catches, "false_positives": fps})
+
+    catching = [x for x in rows if x["catches"]]
+    return {
+        "technique": technique,
+        "n_malicious": len(malicious),
+        "n_benign": len(benign),
+        "rules_evaluable": len(rules),
+        "rules_catching": len(catching),                                       # recall side
+        "rules_with_false_positives": len([x for x in rows if x["false_positives"] > 0]),  # precision side
+        "clean_catchers": sorted(x["rule"] for x in catching if x["false_positives"] == 0),  # catch + no FP
+        "rows": rows,
+        "cid": _cid({"technique": technique, "n_malicious": len(malicious), "n_benign": len(benign),
+                     "rows": sorted((x["rule"], x["catches"], x["false_positives"]) for x in rows)}),
+    }
+
+
 def otrf_lsass_t1003_case(path: str) -> dict:
     """The one solid real-data labeled case on hand: the comsvcs T1003.001 instance in an OTRF LSASS corpus
     (selected by the recorded `_comsvcs_positive` selector)."""

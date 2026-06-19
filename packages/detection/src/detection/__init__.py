@@ -131,7 +131,7 @@ from detection.subgraph import (
 from detection.sigma_eval import block_matches, evaluability, evaluate_rule, is_evaluable, rule_fires
 from detection.condition import condition_parses, eval_condition, parse_condition, rule_fires_general
 from detection.audit import consume_sigma
-from detection.fidelity_scorecard import fidelity_scorecard, technique_fidelity
+from detection.fidelity_scorecard import fidelity_scorecard, grounded_fidelity, technique_fidelity
 from detection.scenarios import Scenario, scenario_positives, t1003_001_scenarios, variant_coverage
 from detection.sigma_panel import (
     corroborate,
@@ -168,6 +168,7 @@ __all__ = [
     # fidelity scorecard — of the rules that compile, which CATCH labeled instances (claims != catches)
     "technique_fidelity",
     "fidelity_scorecard",
+    "grounded_fidelity",
     # scenarios — correct-by-construction multi-channel/variant labeled instances (the fidelity dataset-gen slice)
     "Scenario",
     "t1003_001_scenarios",
