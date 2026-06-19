@@ -23,6 +23,7 @@ from detection.orchestrator import TECH_TACTIC
 from detection.rule_ir import compile_rule, eval_ir
 from detection.sigma_eval import is_evaluable
 from detection.sigma_panel import SIGMA, gather, signature
+from detection.vocab import NATIVE, require_coherent, vocab_name
 
 # tactic → severity (curated, tactic-based; extensible). Severity ≠ confidence: this is "how bad if real".
 _TACTIC_SEVERITY = {
@@ -88,11 +89,18 @@ def _fire_hits(compiled, events: list[dict], *, use_rust: bool) -> tuple[list[in
     return [sum(1 for e in events if eval_ir(ir, e)) for ir in compiled], "python"
 
 
-def evaluate_round(events: list[dict], techniques, *, sigma_root: Path = SIGMA, use_rust: bool = True) -> dict:
+def evaluate_round(events: list[dict], techniques, *, sigma_root: Path = SIGMA, use_rust: bool = True,
+                   events_vocab=NATIVE, rules_vocab=NATIVE) -> dict:
     """Fire a whittled round at a log: profile → select (applicable, best-peer) → fire over the events →
     locate (tactic) → rank by severity. Fires through the native Rust emitter when built (``use_rust``), with
     a Python ``eval_ir`` fallback for rust-unsupported clauses — same verdicts, faster path. Returns the
-    profile, the selected count, the engine used, and ranked verdicts."""
+    profile, the selected count, the engine used, and ranked verdicts.
+
+    ``events_vocab``/``rules_vocab`` name the field vocabulary of each side; the round refuses to fire an
+    incoherent pair (see ``detection.vocab``). Both default to ``native`` — the identity setting, so the
+    existing native-Sigma path is unchanged — and OCSF/bespoke normalization is the opt-in that swaps a side
+    onto a shared target vocab."""
+    require_coherent(events_vocab, rules_vocab)             # refuse a mismatched pair before firing
     profile = environment_profile(events)
     selected = select_detections(profile, techniques, sigma_root=sigma_root)
     compiled = [compile_rule(s["rule"]) for s in selected]
@@ -107,5 +115,6 @@ def evaluate_round(events: list[dict], techniques, *, sigma_root: Path = SIGMA, 
                              "n_hits": n, "severity": _TACTIC_SEVERITY.get(tactic, "medium")})
     verdicts.sort(key=lambda v: (_SEV_RANK.get(v["severity"], 2), v["n_hits"]), reverse=True)
     return {"profile": {"n_events": profile["n_events"], "n_fields": len(profile["fields"])},
+            "vocab": {"events": vocab_name(events_vocab), "rules": vocab_name(rules_vocab)},
             "techniques_in_scope": list(techniques), "engine": engine,
             "n_selected": len(selected), "n_fired": len(verdicts), "verdicts": verdicts}
