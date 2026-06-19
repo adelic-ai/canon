@@ -122,7 +122,8 @@ from detection.subgraph import (
     match_pattern,
     pattern_verdicts,
 )
-from detection.sigma_eval import block_matches, evaluate_rule, is_evaluable, rule_fires
+from detection.sigma_eval import block_matches, evaluability, evaluate_rule, is_evaluable, rule_fires
+from detection.audit import consume_sigma
 from detection.sigma_panel import (
     corroborate,
     corroboration_coverage,
@@ -147,6 +148,9 @@ __all__ = [
     "evaluate_rule",
     "block_matches",
     "is_evaluable",
+    "evaluability",
+    # audit — consume the Sigma corpus: classify (reasons=IR roadmap) + FCA-dedup → coverage scorecard
+    "consume_sigma",
     # subgraph — structural multi-EID pattern detection (the structural paradigm; emits canonical verdicts)
     "MotifSpec",
     "PatternSpec",

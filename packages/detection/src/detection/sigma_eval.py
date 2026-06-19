@@ -140,18 +140,44 @@ def block_matches(block: dict, event: dict) -> bool:
     return True
 
 
-def is_evaluable(rule: dict) -> bool:
-    """True iff this evaluator can faithfully run the rule: a ``selection`` (optionally
-    ``and not ... filter``) condition over a flat field-map selection (no nested blocks)."""
+def evaluability(rule: dict) -> tuple[bool, str]:
+    """Whether the motif matcher can faithfully run the rule, **and why not** — the reason drives the Sigma
+    audit's IR-breadth roadmap (which construct blocks the most rules). Reasons, in classification order:
+
+    * ``correlation`` — a Sigma correlation rule (multi-rule, windowed): a stateful fold, not a per-event
+      match (compiles to the subgraph/temporal primitives, not the matcher);
+    * ``aggregation`` — a ``| count()/sum()/near`` condition: a stateful group-fold (compiles to the fanout
+      primitive, not the matcher);
+    * ``no-detection`` / ``no-selection`` — missing the structures we evaluate;
+    * ``nested-selection`` — selection values are nested maps (not flat field-maps);
+    * ``condition-unsupported`` — a boolean condition outside ``selection [and not 1 of filter*]`` (the
+      condition-parser widening target);
+    * ``ok`` — compiles to a firing motif graph.
+    """
+    if rule.get("correlation") is not None or rule.get("type") == "correlation":
+        return False, "correlation"
     det = rule.get("detection")
     if not isinstance(det, dict):
-        return False
+        return False, "no-detection"
     cond = str(det.get("condition", "")).strip()
-    ok_cond = cond == "selection" or (cond.startswith("selection and not") and "filter" in cond)
+    low = cond.lower()
+    if "|" in cond and any(a in low for a in ("count(", "sum(", "avg(", "min(", "max(", " near ")):
+        return False, "aggregation"
     sel = det.get("selection")
-    if not ok_cond or not isinstance(sel, dict):
-        return False
-    return all(not isinstance(v, dict) for v in sel.values())   # flat field-maps only
+    if not isinstance(sel, dict):
+        return False, "no-selection"
+    if any(isinstance(v, dict) for v in sel.values()):
+        return False, "nested-selection"
+    ok_cond = cond == "selection" or (cond.startswith("selection and not") and "filter" in cond)
+    if not ok_cond:
+        return False, "condition-unsupported"
+    return True, "ok"
+
+
+def is_evaluable(rule: dict) -> bool:
+    """True iff the motif matcher can faithfully run the rule — a ``selection`` (optionally ``and not 1 of
+    filter*``) condition over a flat field-map selection. See :func:`evaluability` for the reason."""
+    return evaluability(rule)[0]
 
 
 def evaluate_rule(rule: dict, event: dict) -> dict:
