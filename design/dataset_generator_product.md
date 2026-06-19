@@ -87,6 +87,49 @@ technique into a mechanism). It is **not** the data source: the generator is the
 correct-by-construction substrate; the LLM's drafts are *reviewed and made deterministic* before they generate
 data. Same proposer-vs-verifier split as everywhere — LLM proposes pieces; the generator produces labeled data.
 
+## 7a. Real-data grounding (the realism path; no ML) — BUILT
+
+Hand-authored scenarios have a realism ceiling (a person/LLM inventing event fields). The fix is to **derive
+plausibility from real open-source logs** (`~/data`: OTRF Sysmon, faker-kerberos, flaws-cloudtrail), via
+`synthcyber.grounding`:
+
+- **benign background** — inject the correct-by-construction attack into a *real normal population* (`ground`),
+  the population an anomaly is relative to;
+- **field profile** — real fields + value distributions (`field_profile`) that inform plausible values, with
+  `plausible_fill` deterministically using real values for non-signature fields (signature fields untouched —
+  realism must never overwrite the attack).
+
+The label stays by construction; realism comes from real data. This needs **no ML** — it is sampling +
+empirical statistics, and is the prerequisite for ML (without grounding, a generative model produces confident
+nonsense).
+
+## 7b. ML — proposer-side amplifier, three roles (layer 2)
+
+ML improves *both* the data and the scenarios, but **always as the proposer, never the verifier** — the label
+stays correct-by-construction and the *detector* stays deterministic (no ML deciding catch/miss; that would put
+an LLM back in the verdict path):
+
+1. **Realistic fill** — a generative/density model fit to real logs → novel-but-plausible events/backgrounds
+   beyond what raw sampling gives.
+2. **Adversarial test-cases** — perturb a real malicious event to find where a rule *stops* firing (its
+   boundary). Measures fidelity at the margins; this is the `machine_checked` in-tolerance-manipulation thread
+   as a *test generator*. Validated against the deterministic detector, on test data.
+3. **Campaign scenarios** — a sequence model generates multi-step kill-chain campaigns → **end-to-end system
+   tests** of detection *plus* the chain/HMM (the abduction-loop / attack-graph direction).
+
+Validation guards the whole loop: generated corpora are checked against real distributions (not overfit to
+flatter the detectors) and against the fidelity scorecard (rules behave as on real data).
+
+## 7c. Dual-use boundary — generator vs red-team tool
+
+The generator and a red-team tool **share an attacker-behavior model but are different artifacts pointing
+opposite ways.** A red-team tool emits *executable attacks* against *real systems*, optimized to evade/compromise;
+the generator emits *labeled telemetry* (the artifacts an attack would leave) into a *test corpus*, to *measure
+detection*. It never executes anything on a live host or produces an exploit — it produces logs. The adversarial
+test-case role (§7b.2) is the nearest to offense, but it is **purple-team detection-hardening**: finding *your
+own* blind spots on *test data* to fix them, not evading others' defenses on real targets. **Canon stays on the
+defensive side of this line; the offensive side (execution, live targeting, evasion-for-bypass) is out of scope.**
+
 ## 8. Interface
 
 - **library** — compose generators in code: `corpus = compose([kerberoast(instances=50, drift=0.3), noise(n=400)])`.

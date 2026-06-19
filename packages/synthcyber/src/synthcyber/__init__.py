@@ -12,6 +12,7 @@ layer-2 product (difficulty/realism knobs, OCSF serializer, git catalog, bounded
 """
 
 from synthcyber.adversarial import AdversarialCase, adversarial_corpus
+from synthcyber.grounding import field_profile, ground, load_events, plausible_fill
 from synthcyber.recipe import compose, recipe_cid
 from synthcyber.scenarios import Scenario, scenario_positives, t1003_001_scenarios
 
@@ -23,4 +24,9 @@ __all__ = [
     "adversarial_corpus",
     "recipe_cid",
     "compose",
+    # real-data grounding — derive plausible scenarios from real open-source logs (no ML; ML is layer-2)
+    "load_events",
+    "field_profile",
+    "plausible_fill",
+    "ground",
 ]
