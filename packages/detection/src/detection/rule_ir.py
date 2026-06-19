@@ -80,6 +80,18 @@ class CompiledRule:
                 "condition": self.condition}
         return evidence_digest(json.dumps(body, sort_keys=True, separators=(",", ":"), default=list))
 
+    def to_dict(self) -> dict:
+        """The wire form a non-Python emitter (the Rust crate) consumes: named blocks with parsed clauses +
+        the condition AST (tuples serialize to JSON arrays)."""
+        return {
+            "rule_id": self.rule_id,
+            "blocks": [{"name": b.name, "kind": b.kind,
+                        "maps": [[{"field": c.field, "mods": list(c.mods), "values": list(c.values)} for c in m]
+                                 for m in b.maps],
+                        "keywords": list(b.keywords)} for b in self.blocks],
+            "condition": self.condition,
+        }
+
 
 def _parse_clause(key: str, spec) -> Clause:
     field, *mods = key.split("|")
