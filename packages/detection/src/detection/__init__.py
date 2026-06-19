@@ -85,6 +85,12 @@ from detection.cross_model import (
 from detection.coverage_space import LocationCoverage, lsass_location_coverage
 from detection.fidelity import attest_fidelity
 from detection.adversarial import AdversarialCase, adversarial_corpus, attest_corpus
+from detection.admission import (
+    Neighbor,
+    evaluate_against_neighbors,
+    situate_d3fend,
+    structural_relation,
+)
 from detection.baseline import blend_baselines, credibility_estimates, learn_entity_baseline
 from detection.workspace import (
     Ruleset,
@@ -163,6 +169,11 @@ __all__ = [
     "AdversarialCase",
     "adversarial_corpus",
     "attest_corpus",
+    # admission — evaluate a candidate detection's logic against neighbors (structural + fidelity + D3FEND)
+    "Neighbor",
+    "structural_relation",
+    "evaluate_against_neighbors",
+    "situate_d3fend",
     # motif IR — a detection as a molecule graph; two verified emitters (Python + SPARQL), agreement attested
     "FieldMatch",
     "Suppression",
