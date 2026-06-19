@@ -129,6 +129,7 @@ from detection.subgraph import (
     pattern_verdicts,
 )
 from detection.sigma_eval import block_matches, evaluability, evaluate_rule, is_evaluable, rule_fires
+from detection.condition import condition_parses, eval_condition, parse_condition, rule_fires_general
 from detection.audit import consume_sigma
 from detection.sigma_panel import (
     corroborate,
@@ -155,7 +156,12 @@ __all__ = [
     "block_matches",
     "is_evaluable",
     "evaluability",
-    # audit — consume the Sigma corpus: classify (reasons=IR roadmap) + FCA-dedup → coverage scorecard
+    # condition — general boolean conditions over named blocks (all of/1 of/and/or/not) → firing code
+    "parse_condition",
+    "condition_parses",
+    "eval_condition",
+    "rule_fires_general",
+    # audit — consume the Sigma corpus: classify (reasons=roadmap) + FCA-dedup → coverage scorecard
     "consume_sigma",
     # subgraph — structural multi-EID pattern detection (the structural paradigm; emits canonical verdicts)
     "MotifSpec",

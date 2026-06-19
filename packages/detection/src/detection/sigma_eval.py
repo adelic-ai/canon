@@ -16,6 +16,8 @@ import re
 import string
 from functools import lru_cache
 
+from detection.condition import condition_parses, eval_condition, match_block
+
 _ASCII_LOWER = str.maketrans(string.ascii_uppercase, string.ascii_lowercase)
 
 
@@ -141,18 +143,20 @@ def block_matches(block: dict, event: dict) -> bool:
 
 
 def evaluability(rule: dict) -> tuple[bool, str]:
-    """Whether the motif matcher can faithfully run the rule, **and why not** — the reason drives the Sigma
-    audit's IR-breadth roadmap (which construct blocks the most rules). Reasons, in classification order:
+    """Whether the evaluator can faithfully run the rule, **and why not** — the reason drives the Sigma
+    audit's roadmap (which construct blocks the most rules). Reasons, in classification order:
 
     * ``correlation`` — a Sigma correlation rule (multi-rule, windowed): a stateful fold, not a per-event
-      match (compiles to the subgraph/temporal primitives, not the matcher);
+      match (compiles to the subgraph/temporal primitives, handled separately);
     * ``aggregation`` — a ``| count()/sum()/near`` condition: a stateful group-fold (compiles to the fanout
-      primitive, not the matcher);
-    * ``no-detection`` / ``no-selection`` — missing the structures we evaluate;
-    * ``nested-selection`` — selection values are nested maps (not flat field-maps);
-    * ``condition-unsupported`` — a boolean condition outside ``selection [and not 1 of filter*]`` (the
-      condition-parser widening target);
-    * ``ok`` — compiles to a firing motif graph.
+      primitive, handled separately);
+    * ``no-detection`` / ``no-condition`` / ``no-blocks`` — missing the structures we evaluate;
+    * ``nested-selection`` — a block's values are nested maps (not flat field-maps);
+    * ``unsupported-block`` — a block that is a keyword list / scalar (whole-event substring search), not yet
+      compiled;
+    * ``condition-unsupported`` — a boolean condition outside the supported grammar (see
+      :mod:`detection.condition`);
+    * ``ok`` — compiles to firing code (general boolean condition over flat-field-map named blocks).
     """
     if rule.get("correlation") is not None or rule.get("type") == "correlation":
         return False, "correlation"
@@ -160,16 +164,23 @@ def evaluability(rule: dict) -> tuple[bool, str]:
     if not isinstance(det, dict):
         return False, "no-detection"
     cond = str(det.get("condition", "")).strip()
-    low = cond.lower()
-    if "|" in cond and any(a in low for a in ("count(", "sum(", "avg(", "min(", "max(", " near ")):
+    if not cond:
+        return False, "no-condition"
+    if "|" in cond and any(a in cond.lower() for a in ("count(", "sum(", "avg(", "min(", "max(", " near ")):
         return False, "aggregation"
-    sel = det.get("selection")
-    if not isinstance(sel, dict):
-        return False, "no-selection"
-    if any(isinstance(v, dict) for v in sel.values()):
-        return False, "nested-selection"
-    ok_cond = cond == "selection" or (cond.startswith("selection and not") and "filter" in cond)
-    if not ok_cond:
+    blocks = {k: v for k, v in det.items() if k != "condition"}
+    if not blocks:
+        return False, "no-blocks"
+    for b in blocks.values():                                   # every block must be a flat field-map / list-of-maps
+        if isinstance(b, dict):
+            if any(isinstance(v, dict) for v in b.values()):
+                return False, "nested-selection"
+        elif isinstance(b, list):
+            if not all(isinstance(m, dict) and not any(isinstance(v, dict) for v in m.values()) for m in b):
+                return False, "unsupported-block"
+        else:
+            return False, "unsupported-block"
+    if not condition_parses(cond):
         return False, "condition-unsupported"
     return True, "ok"
 
@@ -181,14 +192,16 @@ def is_evaluable(rule: dict) -> bool:
 
 
 def evaluate_rule(rule: dict, event: dict) -> dict:
-    """Full result: did ``selection`` match, which ``filter*`` blocks suppressed it, does it fire."""
+    """Full result for a rule on an event. ``fires`` is the **general** boolean condition over the rule's
+    named blocks (:func:`detection.condition.eval_condition`). The ``selection``/``suppressed_by`` fields are
+    kept for cause analysis (fidelity uses ``suppressed_by`` to tell an allowlist suppression from a selection
+    gap): whether a ``selection`` block matched, and which ``filter*`` blocks matched on this event."""
     det = rule["detection"]
-    selection = block_matches(det["selection"], event)
-    filters = {k: block_matches(v, event) for k, v in det.items()
-               if k.startswith("filter") and isinstance(v, dict)}
-    suppressed_by = [k for k, hit in filters.items() if hit]
-    return {"selection": selection, "suppressed_by": suppressed_by,
-            "fires": selection and not suppressed_by}          # `selection and not 1 of filter*`
+    fires = eval_condition(det, event)
+    suppressed_by = [k for k, v in det.items() if k.startswith("filter") and match_block(v, event)]
+    sel = det.get("selection")
+    selection = match_block(sel, event) if sel is not None else None
+    return {"selection": selection, "suppressed_by": suppressed_by, "fires": fires}
 
 
 def rule_fires(rule: dict, event: dict) -> bool:

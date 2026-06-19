@@ -19,9 +19,13 @@ def test_evaluability_attributes_each_reason():
     def rule(**det):
         return {"detection": det}
     assert evaluability(rule(selection={"a|endswith": "x"}, condition="selection")) == (True, "ok")
+    # the condition parser now compiles named-block boolean/quantifier conditions → ok (the coverage win)
+    assert evaluability(rule(selection={"a": "x"}, condition="1 of selection*")) == (True, "ok")
+    assert evaluability(rule(s1={"a": "x"}, s2={"b": "y"}, condition="s1 and not s2")) == (True, "ok")
     assert evaluability(rule(selection={"a": "x"}, condition="selection | count() by b > 5"))[1] == "aggregation"
-    assert evaluability(rule(selection={"a": "x"}, condition="1 of selection*"))[1] == "condition-unsupported"
+    assert evaluability(rule(selection={"a": "x"}, condition="selection and"))[1] == "condition-unsupported"
     assert evaluability(rule(selection={"a": {"nested": 1}}, condition="selection"))[1] == "nested-selection"
+    assert evaluability(rule(keywords=["foo", "bar"], condition="keywords"))[1] == "unsupported-block"
     assert evaluability({"correlation": {"type": "event_count"}})[1] == "correlation"
     assert evaluability({"title": "no detection"})[1] == "no-detection"
 
