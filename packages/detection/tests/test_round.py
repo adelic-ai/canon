@@ -77,10 +77,10 @@ def test_rust_and_python_rounds_agree():
     assert key(py) == key(rs)
 
 
-def test_off_switch_native_vs_ocsf_and_the_calltrace_overmatch():
-    """Step 5: the OTRF round runs native (switch OFF) or OCSF (switch ON, via the Sysmon adapter) — same
-    engine, vocab per run. In OCSF mode the comsvcs rule loses CallTrace (no OCSF home) → it over-matches,
-    and the verdict carries that as its rewrite warrant. This is the worked example of *when to leave OCSF off*."""
+def test_off_switch_native_vs_ocsf_carries_no_home_fields():
+    """Step 5 + the OCSF lift: the OTRF round runs native (switch OFF) or OCSF (switch ON) — same engine,
+    vocab per run. The no-core-home fields (CallTrace/GrantedAccess/OriginalFileName) are carried in OCSF's
+    `unmapped` rather than dropped, so the comsvcs rule fires FAITHFULLY under OCSF — no over-match."""
     from detection.ocsf_adapter import SYSMON_ADAPTER
     from detection.vocab import OCSF
     events = _events()[:2500]
@@ -89,17 +89,16 @@ def test_off_switch_native_vs_ocsf_and_the_calltrace_overmatch():
                           adapter=SYSMON_ADAPTER, use_rust=False)
     assert native["vocab"] == {"events": "native", "rules": "native"}
     assert ocsf["vocab"] == {"events": "ocsf", "rules": "ocsf"}
-    # every OCSF verdict carries its rewrite warrant
     assert all("rewrite" in v for v in ocsf["verdicts"])
-    # the sparse Sysmon adapter can't represent some selected rules at all in OCSF → honest NONEs (skipped,
-    # not fired-on-everything). That non-zero count IS the "leave OCSF off" signal at the round level.
+    # other-logsource rules (registry/file/image_load) have NO Sysmon-process mappings → still unevaluable,
+    # skipped as honest NONEs (not fired-on-everything).
     assert ocsf["n_unevaluable"] > 0
-    # CallTrace (no OCSF home) surfaces as a dropped field on a fired verdict (a process_access rule)
-    assert any("CallTrace" in v["rewrite"]["dropped"] for v in ocsf["verdicts"])
-    # the comsvcs rule fires in both; under OCSF it is flagged lossy (not faithful)
+    # CallTrace is now CARRIED (in unmapped), not dropped — no fired verdict reports it dropped
+    assert not any("CallTrace" in v["rewrite"]["dropped"] for v in ocsf["verdicts"])
+    # the comsvcs rule fires in both and is FAITHFUL under OCSF (nothing dropped) — no over-match
     nat_cs = [v for v in native["verdicts"] if "comsvcs" in v["rule"]]
     ocsf_cs = [v for v in ocsf["verdicts"] if "comsvcs" in v["rule"]]
     assert nat_cs and ocsf_cs
-    assert any(not v["rewrite"]["faithful"] for v in ocsf_cs)
-    # over-match: under OCSF the comsvcs rule fires on at least as many events as native (a field was dropped)
-    assert max(v["n_hits"] for v in ocsf_cs) >= max(v["n_hits"] for v in nat_cs)
+    assert all(v["rewrite"]["faithful"] for v in ocsf_cs)
+    # no over-match: under OCSF the comsvcs rule fires on the SAME events as native (carried CallTrace)
+    assert max(v["n_hits"] for v in ocsf_cs) == max(v["n_hits"] for v in nat_cs)

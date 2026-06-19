@@ -67,35 +67,36 @@ def test_faithful_rewrite_fires_identically_on_ocsf_events():
     assert eval_ir(rw.rule, SYSMON_ADAPTER.normalize(hit)) is True
 
 
-def test_no_ocsf_home_field_is_dropped_and_reported_not_silent():
+def test_no_core_home_field_is_carried_in_unmapped_not_dropped():
+    from detection.ocsf_adapter import CARRIED
     rw = rewrite_rule_to_ocsf(_compile(_COMSVCS), SYSMON_ADAPTER)
-    # CallTrace has no OCSF home → dropped + reported, rule flagged unfaithful
-    assert rw.dropped == ("CallTrace",)
-    assert not rw.faithful and rw.grade == "unfaithful"
-    # the mappable fields still crossed (exact)
-    mapped_fields = {nf for nf, _, _ in rw.mapped}
-    assert mapped_fields == {"TargetImage", "SourceImage"}
-    assert all(g == "exact" for _, _, g in rw.mapped)
-    # the rewritten rule no longer references CallTrace
+    # CallTrace has no CORE OCSF home → carried verbatim in unmapped (NOT dropped, NOT silent)
+    assert rw.dropped == ()
+    assert rw.faithful                       # nothing dropped → the rule still fires correctly
+    # the CallTrace clause now reads unmapped.CallTrace; the mappable fields crossed too
     fields = {c.field for b in rw.rule.blocks for m in b.maps for c in m}
+    assert "unmapped.CallTrace" in fields
     assert "process.file.path" in fields and "actor.process.file.path" in fields
-    assert not any("CallTrace" in f for f in fields)
+    # CallTrace is graded `carried` — match-faithful, not cross-source-normalized; it's the rule's worst edge
+    assert SYSMON_ADAPTER.why("CallTrace").grade == CARRIED
+    assert rw.grade == CARRIED
 
 
-def test_dropping_the_load_bearing_field_makes_the_rule_over_match():
-    """The honest consequence of the loss: native comsvcs requires CallTrace contains
-    comsvcs.dll; the OCSF-rewritten rule lost CallTrace, so it fires on ANY rundll32→lsass
-    access — a divergence (over-match), surfaced, that the step-4 faithfulness gate enumerates."""
+def test_carried_field_eliminates_the_over_match():
+    """The fix: native comsvcs requires CallTrace contains comsvcs.dll; carrying CallTrace in unmapped
+    lets the OCSF-rewritten rule read it too, so it fires on exactly the same events — no over-match."""
     native_rule = _compile(_COMSVCS)
     rw = rewrite_rule_to_ocsf(native_rule, SYSMON_ADAPTER)
     # a rundll32→lsass access WITHOUT comsvcs.dll in the call stack (benign-shaped)
-    ev = {"TargetImage": "C:\\Windows\\System32\\lsass.exe",
-          "SourceImage": "C:\\Windows\\System32\\rundll32.exe",
-          "CallTrace": "C:\\Windows\\SYSTEM32\\ntdll.dll+0x9c5b4|C:\\Windows\\System32\\KERNELBASE.dll"}
-    # native rule: does NOT fire (CallTrace lacks comsvcs.dll)
-    assert eval_ir(native_rule, ev) is False
-    # OCSF-rewritten rule: DOES fire (CallTrace clause was dropped) → over-match
-    assert eval_ir(rw.rule, SYSMON_ADAPTER.normalize(ev)) is True
+    benign = {"TargetImage": "C:\\Windows\\System32\\lsass.exe",
+              "SourceImage": "C:\\Windows\\System32\\rundll32.exe",
+              "CallTrace": "C:\\Windows\\SYSTEM32\\ntdll.dll+0x9c5b4|C:\\Windows\\System32\\KERNELBASE.dll"}
+    hit = {**benign, "CallTrace": "ntdll.dll|C:\\Windows\\system32\\comsvcs.dll+0x1234"}
+    # native and OCSF agree on BOTH — carried CallTrace means no over-match
+    assert eval_ir(native_rule, benign) is False
+    assert eval_ir(rw.rule, SYSMON_ADAPTER.normalize(benign)) is False     # was True (over-match) before the carry
+    assert eval_ir(native_rule, hit) is True
+    assert eval_ir(rw.rule, SYSMON_ADAPTER.normalize(hit)) is True
 
 
 def test_rule_grade_is_worst_field():
@@ -130,19 +131,17 @@ def test_faithful_exact_rule_never_diverges_the_theorem():
                                   "faithful": True, "n_diverge": 0}
 
 
-def test_gate_attests_with_divergences_explained_by_the_dropped_field():
-    # a benign rundll32→lsass access (no comsvcs.dll) — native comsvcs is silent, the
-    # OCSF-rewritten one over-matches. The gate still ATTESTS: the divergence is explained.
+def test_gate_has_no_divergence_when_the_no_home_field_is_carried():
+    # a benign rundll32→lsass access (no comsvcs.dll). Before the carry, the OCSF rule over-matched
+    # (an explained divergence). Now CallTrace rides in unmapped → the rule reads it → NO divergence.
     events = [{"TargetImage": "C:\\Windows\\System32\\lsass.exe",
                "SourceImage": "C:\\Windows\\System32\\rundll32.exe",
                "CallTrace": "ntdll.dll|KERNELBASE.dll"}]
     res = attest_ocsf_agreement([{"id": "comsvcs", "detection": _COMSVCS}], events, SYSMON_ADAPTER)
-    assert res["attested"]                                  # no UNEXPLAINED divergence
-    assert len(res["explained_divergences"]) == 1
-    d = res["explained_divergences"][0]
-    assert d["native"] is False and d["ocsf"] is True       # the over-match, surfaced
-    assert d["cause"] == "dropped:CallTrace"                # attributed to the tracked field
-    assert res["unexplained_divergences"] == []
+    assert res["attested"]
+    assert res["explained_divergences"] == [] and res["unexplained_divergences"] == []
+    # the comsvcs rule is faithful — CallTrace carried, nothing dropped
+    assert res["per_rule"][0]["faithful"] and res["per_rule"][0]["dropped"] == []
 
 
 def test_gate_runs_both_rules_and_reports_per_rule():
@@ -152,7 +151,9 @@ def test_gate_runs_both_rules_and_reports_per_rule():
     assert res["attested"] and res["n_rules"] == 2 and res["checked"] == 4
     by_rule = {r["rule"]: r for r in res["per_rule"]}
     assert by_rule["proc-create"]["faithful"] and by_rule["proc-create"]["grade"] == "exact"
-    assert not by_rule["comsvcs"]["faithful"] and by_rule["comsvcs"]["dropped"] == ["CallTrace"]
+    # comsvcs is now faithful too — CallTrace carried in unmapped, nothing dropped; its grade is `carried`
+    assert by_rule["comsvcs"]["faithful"] and by_rule["comsvcs"]["dropped"] == []
+    assert by_rule["comsvcs"]["grade"] == "carried"
 
 
 @pytest.mark.skipif(not (OTRF.exists() and SIGMA.exists()),

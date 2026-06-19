@@ -113,6 +113,42 @@ rules that read unpopulated attributes. **Bespoke** lands here too: where the ge
 on a field load-bearing *for this environment*, tighten it environment-specifically. The schema is
 generic; the grounding is per-environment.
 
+### Corollary 2b — lift OCSF into a canonical profile (the data-plane mirror of IR-as-canonical)
+
+OCSF is a lossy *target*: the faithfulness gate proved that `CallTrace`, `GrantedAccess`,
+`OriginalFileName` have no core-schema home. Dropping them is honest but destructive (the rule
+over-matches). The fix is the **data-plane mirror of the rule-plane argument**:
+
+```
+rule plane:  Sigma / KQL / SPL  →  the IR                    (canonical, closed superset — expressive enough)
+data plane:  Sysmon / eslogger  →  OCSF  →  canon-OCSF-profile (canonical superset — expressive enough)
+```
+
+Just as the IR is a faithful superset of Sigma, the data plane wants a canonical schema that is a
+faithful **superset of OCSF** — and OCSF supplies the mechanism, so you **extend, don't fork** (the same
+prior-art caution; mint-don't-vendor / shared-vocab federation, the KINAITICS lesson). The sanctioned
+slots, by what they carry:
+
+- **`unmapped`** — raw source fields with no core home, kept verbatim (`unmapped.CallTrace`,
+  `unmapped.GrantedAccess`, `unmapped.OriginalFileName`). **Match-faithful** (the value is verbatim, so a
+  rewritten rule reading `unmapped.CallTrace|contains: comsvcs.dll` fires correctly and the over-match
+  disappears) but **not cross-source-normalized** (two sources' `unmapped` keys don't line up unless they
+  agree by hand). This is the immediate, low-effort fix.
+- **`enrichments`** — *derived/added* context, not raw source fields: the precomputed statistical atoms
+  (`cmd_line_entropy`, `entropy_pvalue`) the closure argument needs (`{name, value, provider, type}`).
+- **`profiles` / `extensions` / `observables`** — the proper **typed** lift: define
+  `process.call_stack`, `process.granted_access`, etc. as a *canon profile* on top of OCSF, giving these
+  fields cross-source typing (a real attribute, not a catch-all key). The heavier build; this is what
+  makes `unmapped` carries graduate into normalized, cross-source attributes.
+
+**The faithfulness gate is the spec.** `attest_ocsf_agreement` already enumerates exactly which fields
+OCSF drops — that dropped-field list *is* the specification of the canon profile. Gate measures the loss;
+the loss list specs the extension. And this **generalizes bespoke**: bespoke was per-engagement, ad-hoc,
+per-field; the profile is the standard version — promote the recurring load-bearing no-home fields into a
+reusable OCSF extension instead of re-hand-wiring them each engagement. Grade ladder gains a
+**`carried`** (`unmapped`) rung: faithful-for-matching, not-normalized-cross-source — between a real
+mapping and a drop.
+
 ## Status / buildables
 
 - **Built:** `compile_rule` (Sigma → IR, structure-preserving); atom factoring (`detection/atoms.py` —

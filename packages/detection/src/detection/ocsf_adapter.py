@@ -60,6 +60,14 @@ def _get_path(event: dict, path: str) -> Any:
 # (bundles extra, e.g. DOMAIN\user into a bare name); ``narrow`` = carries less.
 EXACT, CLOSE, BROAD, NARROW = "exact", "close", "broad", "narrow"
 
+# ``carried`` is a different axis: the source field has NO core-OCSF home, so it rides verbatim in
+# OCSF's sanctioned ``unmapped`` catch-all (``unmapped.<Field>``). It is MATCH-FAITHFUL (the value is
+# verbatim, so a rule reading it fires correctly and does NOT over-match) but NOT cross-source-normalized
+# (two sources' unmapped keys don't line up by themselves). It is the immediate, OCSF-valid alternative
+# to dropping a no-home field; the typed cross-source lift (a canon profile attribute like
+# ``process.call_stack``) is the follow-on. See design/ir_canonical_ruleset.md Corollary 2b.
+CARRIED = "carried"
+
 # The OCSF schema version + class this slice targets. Pinned so the vocabulary names a
 # concrete shape; schema variants under the ``ocsf`` name are the mapping layer's concern.
 OCSF_SCHEMA = "1.3.0/process_activity"
@@ -282,13 +290,34 @@ SYSMON_ADAPTER = SourceAdapter(
                      "is carried verbatim (so a rule's substring match still fires faithfully), "
                      "but the structural shape is wrong — broad. A real array transform would "
                      "break the rule's string match, so faithfulness is preferred over shape here."),
-        # GENUINE NO-OCSF-HOMES (deliberately unmapped, recorded for honesty — the off-case):
-        #   CallTrace      — the call stack of a process_access; OCSF has no stack-trace attribute.
-        #   GrantedAccess  — the access-rights mask of a process_access; OCSF has no access-mask attribute.
-        #   OriginalFileName — the PE OriginalFilename; OCSF file has `name`/`internal_name` but no
-        #                      original_name, and neither is the same PE field — no clean home.
-        # These are the load-bearing discriminators of LSASS-dump detection; dropping them is why
-        # the slice keeps OCSF OFF-able (fidelity/forensic-exact → run native). See module note.
+        # NO CORE-OCSF HOME → CARRIED verbatim in OCSF's sanctioned `unmapped` catch-all (extend, don't
+        # fork — design/ir_canonical_ruleset.md Corollary 2b). These are the load-bearing discriminators
+        # of LSASS-dump detection (CallTrace ≈ comsvcs; GrantedAccess ≈ the read mask). Carrying them in
+        # `unmapped.<Field>` is match-faithful (a rewritten rule reads the verbatim value → fires
+        # correctly, no over-match) but not cross-source-normalized; the typed lift (a canon profile
+        # attribute) is the follow-on. The faithfulness gate's dropped-field list is the spec for that lift.
+        FieldMapping("CallTrace", "unmapped.CallTrace", CARRIED,
+                     "Sysmon process_access `CallTrace` (the call stack of the access) has no core OCSF "
+                     "attribute — carried verbatim in `unmapped`. Match-faithful (a rule reading it fires "
+                     "correctly), not cross-source-normalized. Typed lift → a canon `process.call_stack` "
+                     "profile attribute."),
+        FieldMapping("GrantedAccess", "unmapped.GrantedAccess", CARRIED,
+                     "Sysmon process_access `GrantedAccess` (the access-rights mask) has no core OCSF "
+                     "attribute — carried verbatim in `unmapped`. Typed lift → `process.granted_access`."),
+        FieldMapping("OriginalFileName", "unmapped.OriginalFileName", CARRIED,
+                     "Sysmon `OriginalFileName` (the PE OriginalFilename) has no core OCSF home (`file.name` "
+                     "is the on-disk name, `file.internal_name` is a different PE field) — carried verbatim "
+                     "in `unmapped`. Typed lift → a canon `process.file.original_name` profile attribute."),
+        # process_access actor fields with real OCSF homes (the accessing/parent process = the actor)
+        FieldMapping("SourceCommandLine", "actor.process.cmd_line", EXACT,
+                     "Sysmon process_access `SourceCommandLine` is the accessing process's command line = "
+                     "OCSF `actor.process.cmd_line`."),
+        FieldMapping("SourceUser", "actor.user.name", BROAD,
+                     "Sysmon process_access `SourceUser` is the accessing process's `DOMAIN\\user` = OCSF "
+                     "`actor.user.name` (bundles the domain — broad, like `User`)."),
+        FieldMapping("ParentUser", "actor.process.user.name", BROAD,
+                     "Sysmon `ParentUser` is the parent process's `DOMAIN\\user` = OCSF "
+                     "`actor.process.user.name` (the actor process's user; bundles the domain — broad)."),
     ),
 )
 

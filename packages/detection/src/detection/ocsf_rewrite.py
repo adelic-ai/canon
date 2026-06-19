@@ -35,7 +35,10 @@ from detection.rule_ir import Block, Clause, CompiledRule, compile_rule, eval_ir
 from detection.vocab import OCSF
 
 # grade ordering for "worst grade wins" — a rule is only as faithful as its weakest field.
-_GRADE_RANK = {"exact": 0, "close": 1, "broad": 2, "narrow": 2}
+# grade ranks for "worst grade wins". ``carried`` (a field riding in OCSF ``unmapped`` — match-faithful
+# but not cross-source-normalized) is the weakest normalization that still fires correctly: ranked above
+# the real mappings, below an outright drop (which makes the rule unfaithful).
+_GRADE_RANK = {"exact": 0, "close": 1, "broad": 2, "narrow": 2, "carried": 3}
 
 
 @dataclass(frozen=True)
