@@ -25,6 +25,18 @@ def test_every_key_variant_is_caught_across_channels():
     assert len(channels_with_a_catch) >= 2, channels_with_a_catch
 
 
+def test_grounding_preserves_detection_end_to_end():
+    """Wiring check: ground the scenarios in a benign background, then score fidelity over the injected
+    malicious events — the signature survives grounding (contextual fields filled, signature untouched), so
+    the catching rules still fire. The realistic background is along for the ride (FP surface)."""
+    from synthcyber import grounded_scenario_corpus, t1003_001_scenarios
+    background = [{"Computer": "DC", "User": "svc", "Image": "C:\\Windows\\System32\\svchost.exe"}] * 10
+    g = grounded_scenario_corpus(t1003_001_scenarios(), background)
+    malicious = [e for e, lab in zip(g["events"], g["labels"]) if lab]
+    f = technique_fidelity("T1003.001", malicious, corpus_id="grounded", corpus_cid="cid:grounded")
+    assert f["rules_catching"] >= 3                         # signature survived grounding → still caught
+
+
 def test_multichannel_corpus_beats_single_channel_for_fidelity():
     f = technique_fidelity("T1003.001", scenario_positives(t1003_001_scenarios()),
                            corpus_id="synthetic/T1003.001", corpus_cid="cid:synthetic")

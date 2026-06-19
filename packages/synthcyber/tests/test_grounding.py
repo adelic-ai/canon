@@ -7,7 +7,13 @@ from pathlib import Path
 
 import pytest
 
-from synthcyber.grounding import field_profile, ground, load_events, plausible_fill
+from synthcyber.grounding import (
+    field_profile,
+    ground,
+    grounded_scenario_corpus,
+    load_events,
+    plausible_fill,
+)
 
 
 def test_load_events_json_array_and_jsonl(tmp_path):
@@ -44,6 +50,20 @@ def test_ground_injects_attack_into_benign_background_with_correct_labels():
     assert g["n_background"] == 2 and g["n_attack"] == 1
     assert g["labels"] == [False, False, True]                  # by construction: injected = malicious
     assert g["events"][-1] == attack[0]
+
+
+def test_grounded_scenario_corpus_fills_and_injects():
+    from synthcyber.scenarios import t1003_001_scenarios
+    background = [{"Computer": "WIN-DC01", "User": "alice", "Image": "svchost.exe"} for _ in range(5)]
+    sc = t1003_001_scenarios()
+    g = grounded_scenario_corpus(sc, background)
+    assert g["n_background"] == 5
+    assert g["n_attack"] == sum(len(s.events) for s in sc)
+    assert len(g["attack_meta"]) == g["n_attack"] and g["attack_meta"][0]["technique"] == "T1003.001"
+    mal = [e for e, lab in zip(g["events"], g["labels"]) if lab]
+    # signature preserved AND a real contextual field filled from the background
+    assert any("CallTrace" in e or "TargetFilename" in e for e in mal)
+    assert any(e.get("Computer") == "WIN-DC01" for e in mal)        # filled (attack events had no Computer)
 
 
 _OTRF = Path.home() / "data/otrf-security-datasets/LSASS_campaign_03/lsass_campaign_03.json"

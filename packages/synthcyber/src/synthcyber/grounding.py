@@ -74,3 +74,26 @@ def ground(attack_events: list[dict], background: list[dict]) -> dict:
     labels = [False] * len(background) + [True] * len(attack_events)
     return {"events": events, "labels": labels,
             "n_background": len(background), "n_attack": len(attack_events)}
+
+
+def grounded_scenario_corpus(scenarios, background: list[dict], *, min_present: float = 0.5) -> dict:
+    """Wire grounding into the scenario builder: ground a scenario set in a real benign ``background``. Each
+    attack event's MISSING contextual fields are filled from the background's real field profile (the common
+    fields that aren't part of the attack signature), then the filled attack events are injected into the
+    background → a realistic labeled corpus.
+
+    The signature fields the scenario set are preserved (so detection still fires); only contextual fields
+    (Computer, User, …) are added, so the attack looks like it came from the same environment as the
+    background. Returns ``ground``'s corpus plus ``attack_meta`` — ``attack_meta[i] = {technique, variant,
+    channel}`` for the i-th injected (malicious) event, so a consumer can score fidelity per variant/channel.
+    ``scenarios`` is duck-typed (any object with ``.events/.technique/.variant/.channel``)."""
+    profile = field_profile(background)
+    common = [f for f, p in profile.items() if p["present_frac"] >= min_present]
+    attack_events, attack_meta = [], []
+    for s in scenarios:
+        for e in s.events:
+            attack_events.append(plausible_fill(e, profile, common))
+            attack_meta.append({"technique": s.technique, "variant": s.variant, "channel": s.channel})
+    corpus = ground(attack_events, background)
+    corpus["attack_meta"] = attack_meta
+    return corpus
