@@ -139,6 +139,7 @@ from detection.rule_ir import (
     eval_ir,
 )
 from detection.audit import consume_sigma
+from detection.round import environment_profile, evaluate_round, select_detections
 from detection.fidelity_scorecard import fidelity_scorecard, grounded_fidelity, technique_fidelity
 from detection.scenarios import Scenario, scenario_positives, t1003_001_scenarios, variant_coverage
 from detection.sigma_panel import (
@@ -182,6 +183,10 @@ __all__ = [
     "attest_ir_faithful",
     # audit — consume the Sigma corpus: classify (reasons=roadmap) + FCA-dedup → coverage scorecard
     "consume_sigma",
+    # round — fire a whittled round at a log: profile → select (applicable, best-peer) → fire → locate → rank
+    "environment_profile",
+    "select_detections",
+    "evaluate_round",
     # fidelity scorecard — of the rules that compile, which CATCH labeled instances (claims != catches)
     "technique_fidelity",
     "fidelity_scorecard",
