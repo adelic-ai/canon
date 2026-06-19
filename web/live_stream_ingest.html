@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canon — Live stream ingest: reading a forgetful source</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --ink:#e6e8ee; --muted:#9aa3b2;
+    --line:#2a2f3a; --accent:#7db4ff; --accent2:#c79bff;
+    --good:#6fcf97; --warn:#f2c94c; --gap:#eb6f6f;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1080px;margin:0 auto;padding:48px 28px 96px}
+  h1{font-size:30px;margin:0 0 6px;letter-spacing:-.01em}
+  .sub{color:var(--muted);margin:0 0 4px;font-size:18px}
+  .stamp{color:var(--muted);font:13px/1.5 var(--mono);margin:0 0 32px}
+  h2{font-size:21px;margin:48px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+  h3{font-size:16px;margin:26px 0 6px;color:var(--accent2)}
+  p{margin:10px 0}
+  code{font-family:var(--mono);font-size:.88em;background:#1e222b;padding:1px 5px;border-radius:4px}
+  pre{background:#10131a;border:1px solid var(--line);border-radius:8px;padding:14px 16px;
+    overflow-x:auto;font-family:var(--mono);font-size:13px;line-height:1.55;color:#d4d9e4}
+  .note{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:8px;padding:14px 18px;margin:18px 0}
+  .note.gap{border-left-color:var(--gap)}
+  .note.key{border-left-color:var(--accent2)}
+  .note.good{border-left-color:var(--good)}
+  .muted{color:var(--muted)}
+  ul{margin:10px 0;padding-left:22px}
+  li{margin:7px 0}
+  strong{color:#fff}
+  table{border-collapse:collapse;width:100%;margin:18px 0;font-size:14px;background:var(--panel);
+    border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  th,td{text-align:left;padding:10px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#1c212b;color:var(--muted);font-weight:600;font-size:12px;
+    text-transform:uppercase;letter-spacing:.04em}
+  tr:last-child td{border-bottom:none}
+  td.k{font-weight:600;white-space:nowrap;color:var(--accent)}
+  .good{color:var(--good)} .gap{color:var(--gap)} .warn{color:var(--warn)}
+  .lede{font-size:17px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p style="font:13px/1.5 var(--mono,monospace);margin:0 0 22px"><a href="index.html" style="color:#7db4ff;text-decoration:none">← Canon index</a></p>
+  <h1>Live stream ingest — reading a forgetful source</h1>
+  <p class="sub">The source remembers nothing. Continuous capture is the only history — and "detect live" is two different jobs.</p>
+  <p class="stamp">canon · design · 2026-06-19 · <span class="muted">eslogger · per-event verifier vs windowed surfacer · the daemon</span></p>
+
+  <p class="lede">macOS Endpoint Security — the kernel event API <code>eslogger</code> taps — is a <strong>real-time
+  subscription that retains nothing</strong>. Each event is handed to subscribed clients the instant it happens, then
+  dropped. There is no buffer, no ring, no look-back. So the question is never "how long does the source keep data" (zero) but
+  <em>"what do we capture, and what does live detection even mean over a stream."</em> The answer splits cleanly — and the split
+  is the same verifier/surfacer line that runs through all of canon.</p>
+
+  <h2>1 · The source forgets — capture is the only history</h2>
+  <p>Kill the reader and the stream stops cold. Events before the subscription, or during any window when no client was
+  subscribed, were never delivered and are <strong>unrecoverable</strong>. (<code>osquery</code>'s <code>es_process_events</code>
+  is the same live model; Unified Logging persists but is thinner — no full command lines; OpenBSM persists only if
+  configured.) You keep exactly what you capture.</p>
+  <div class="note key">
+    <strong>A gap is a NONE, not a FALSE.</strong> Any window when the monitor was down is honest <em>missing telemetry</em>,
+    never "nothing happened." That is precisely the <strong>feed-liveness</strong> signal the temporal fold already wants: a
+    live, unbroken feed <em>is</em> intact chain-of-custody. canon even models it today —
+    <code>ingest.attest(…, feed_live=True)</code> exists; a real stream supplies the signal instead of hardcoding it.
+  </div>
+
+  <h2>2 · Raw ingest is trivial — "detect live" is two shapes</h2>
+  <p>Reading the stream is easy: <code>eslogger exec</code> emits NDJSON (one event per line); read line-by-line, normalize each
+  through the eslogger→OCSF adapter, feed it onward. What is <em>not</em> one thing is "detect live" — it splits exactly along the
+  verifier/surfacer axis:</p>
+  <table>
+    <thead><tr><th>Path</th><th>Shape</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Sigma round<br><span class="muted">verifier</span></td>
+        <td><span class="good">per-event, streamable</span></td>
+        <td>Each rule is a predicate on one event. As each event arrives: normalize → evaluate the selected rules → emit a
+          verdict on a hit. No window, no accumulated state. Works on a single event.</td></tr>
+      <tr><td class="k">Battery<br><span class="muted">surfacer</span></td>
+        <td><span class="warn">windowed micro-batch</span></td>
+        <td>A rarity-against-population statistic — one event has no rarity. Runs over a sliding trailing window, recomputed each
+          interval. "Live" = re-run over the trailing window, not score each event. <em>Not a limitation — it is what a
+          statistical surfacer is.</em></td></tr>
+    </tbody>
+  </table>
+
+  <h2>3 · The reader loop</h2>
+  <pre>eslogger exec ──(root)──▶  NDJSON  ──(unprivileged reader)──▶  normalize (eslogger→OCSF)
+                                                                │
+                                        ┌───────────────────────┴───────────────────────┐
+                                per-event: fire the Sigma round        every interval: run the battery
+                                → verdict on a hit (streamable)        over the trailing window (micro-batch)
+                                                                │
+                                                       emit verdicts → workspace store</pre>
+  <p>The body is a generator that follows the source like <code>tail -f</code> — <code>iter_ndjson(path)</code> yielding parsed
+  events as lines arrive — feeding the two consumers. The per-event consumer is stateless; the windowed consumer holds the
+  trailing window, the only in-memory state.</p>
+
+  <h2>4 · Continuous = a daemon: one stateful engine process, bound to a workspace</h2>
+  <p>"Run it continuously" means a <strong>long-running process</strong>, not the batch CLI we run today (invoke → load list →
+  fire → exit). It is:</p>
+  <ul>
+    <li><strong>the same engine code</strong> — you don't fork or re-checkout canon; you host the library in a persistent
+      process whose loop is the reader above;</li>
+    <li><strong>detached from any interactive session</strong> — it must outlive the shell that started it, so it runs under a
+      process manager;</li>
+    <li><strong>stateful</strong> — the trailing window and the feed-liveness signal live in the process; batch runs
+      reconstruct everything each time, a daemon accumulates;</li>
+    <li><strong>bound to a workspace</strong> — the per-host state (baselines, verdict store, vocab/adapter pins, retention
+      horizons) is workspace, not engine. One engine process pointed at one workspace = one <strong>instance</strong>. N hosts →
+      N instances → N workspaces, one engine. For a single Mac, a single daemon.</li>
+  </ul>
+  <div class="note good">
+    <strong>On macOS: launchd, with a privilege split that is also good hygiene.</strong> A root <strong>LaunchDaemon</strong>
+    runs <code>eslogger exec</code> and writes the stream (collection; needs root + Full Disk Access). An unprivileged
+    <strong>LaunchAgent</strong> runs the canon reader, tailing it (analysis; never root). Two managed services, one pipe (a file
+    or FIFO) between them — the analysis process never holds root.
+  </div>
+
+  <h2>5 · How we wire it — the transport (the concrete "how")</h2>
+  <p>The topology leaves one load-bearing decision: <em>what carries bytes from the root producer to the unprivileged
+  reader.</em> Three options, judged against canon's own rule — <strong>a gap must be an honest NONE, never silently-lost
+  data:</strong></p>
+  <table>
+    <thead><tr><th>Transport</th><th>Restart behavior</th><th>Verdict</th></tr></thead>
+    <tbody>
+      <tr><td class="k">FIFO<br><span class="muted">named pipe</span></td>
+        <td><span class="gap">silent gap</span> — writes drop when no reader is attached; no replay; small buffer stalls
+          <code>eslogger</code> under backpressure</td>
+        <td>Zero disk, but loses data across restart with no record — the wrong trade.</td></tr>
+      <tr><td class="k">Append file<br><span class="muted">+ byte-offset</span></td>
+        <td><span class="good">resume, not gap</span> — reader tails from a checkpointed offset; events written while down
+          are still on disk → replayed; producer/consumer decoupled</td>
+        <td><strong>Chosen.</strong> The only gap is genuine downtime, recorded as a NONE. Growth is already governed by
+          <a href="retention_and_aging.html">retention&nbsp;&amp;&nbsp;aging</a>.</td></tr>
+      <tr><td class="k">Unix socket</td>
+        <td>needs a spool to survive reader restarts</td>
+        <td>True backpressure, but more parts for no NONE-honesty gain over the file.</td></tr>
+    </tbody>
+  </table>
+  <pre>LaunchDaemon (root):   eslogger exec  &gt;&gt;  $WORKSPACE/stream/exec.ndjson   (append; rotated)
+LaunchAgent  (user):   reader tails exec.ndjson from a checkpointed byte offset
+                       → on each complete line: normalize → per-event Sigma fire
+                       → on an interval timer:  battery over the trailing window
+                       → fsync the offset after a processed batch (the resume point)</pre>
+  <ul>
+    <li><strong>Restart = resume, not gap.</strong> The checkpointed offset is the durable position; after a crash the reader
+      seeks there. Events written while down are on disk → replayed. Only downtime that exceeds retention (the file rotated past
+      the offset) is a real gap — recorded as a NONE, not hidden.</li>
+    <li><strong>Partial lines:</strong> a line commits (and the offset advances) only on a trailing newline.</li>
+    <li><strong>Rotation:</strong> the checkpoint is <code>(file-id, byte-offset)</code>; the reader finishes the old inode,
+      then picks up the new file at offset 0.</li>
+    <li><strong>Backpressure:</strong> decoupled — if the reader lags the file grows and it catches up; <code>eslogger</code>
+      never blocks. The lag (offset vs file size) is itself a feed-health signal.</li>
+  </ul>
+
+  <h2>6 · Intake and outflow — this doc and its pair</h2>
+  <p>A continuous monitor accumulates without bound, and the source gives no help. This page is the <strong>intake</strong>; its
+  pair, <a href="retention_and_aging.html">retention &amp; aging</a>, is the <strong>outflow</strong> — what the accumulated
+  state folds into before it is dropped: raw events → aggregate cells + baselines → verdicts with materialized provenance, with
+  the retention horizon recorded as a NONE boundary. The hot trailing window the battery reads here is the first stage of that
+  lifecycle.</p>
+
+  <h2>7 · Honest scope</h2>
+  <ul>
+    <li><strong>Built:</strong> nothing here. <code>evaluate_round</code> and the battery are batch (<code>list[dict]</code> in);
+      there is no stream reader, no daemon, no workspace store. The eslogger→OCSF adapter is the one piece that exists.</li>
+    <li><strong>Smallest first step:</strong> the reader loop run <em>by hand</em> against a live <code>eslogger</code> stream —
+      per-event Sigma firing only, no window state — to prove the intake. The launchd plists and the windowed battery come
+      after the loop does what it should.</li>
+    <li><strong>Feed-liveness wiring:</strong> the reader is where <code>feed_live</code> stops being hardcoded — a stalled read
+      or a closed pipe <em>is</em> the NONE the temporal fold consumes.</li>
+    <li><strong>The off-switch still applies per-source.</strong> The high-fidelity Windows cred-access fields
+      (<code>CallTrace</code>, <code>GrantedAccess</code>) have no OCSF home, so a streamed source feeding fidelity-critical
+      detections runs <em>native</em>, not normalized — the reader honors the same per-source vocab choice as a batch round.</li>
+  </ul>
+
+  <div class="note">
+    <strong>One line.</strong> The source remembers nothing, so capture is the only history and a gap is an honest NONE;
+    per-event rules stream as verifiers while the statistical battery runs as a windowed surfacer; and "continuous" is a single
+    stateful engine process — a launchd daemon bound to a workspace, collection split from analysis by a pipe.
+  </div>
+</div>
+</body>
+</html>
