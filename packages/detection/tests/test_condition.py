@@ -51,6 +51,17 @@ def test_list_block_is_or_of_maps():
     assert eval_condition(det, {"Image": "x\\c.exe"}) is False
 
 
+def test_keyword_block_searches_whole_event():
+    # a keyword LIST is an OR of whole-event substring searches (across any field value)
+    det = {"keywords": ["mimikatz", "sekurlsa::"], "condition": "keywords"}
+    assert eval_condition(det, {"CommandLine": "x.exe sekurlsa::logonpasswords"}) is True   # matches a keyword
+    assert eval_condition(det, {"Image": "C:\\mimiKATZ.exe"}) is True                        # ASCII case-insensitive
+    assert eval_condition(det, {"CommandLine": "benign.exe"}) is False                       # no keyword present
+    # a scalar keyword works too, and wildcards apply
+    assert eval_condition({"k": "rundll32*comsvcs", "condition": "k"},
+                          {"CmdLine": "c:\\rundll32.exe ...comsvcs.dll,foo"}) is True
+
+
 def test_precedence_not_binds_tighter_than_and_or():
     # "a or not b and c"  ==  a or ((not b) and c)
     ast = parse_condition("a or not b and c")

@@ -142,6 +142,21 @@ def block_matches(block: dict, event: dict) -> bool:
     return True
 
 
+_SUPPORTED_MODS = {"contains", "startswith", "endswith", "all", "eq"}   # field_matches handles these (+ bare eq, +glob)
+
+
+def _map_reason(m: dict) -> str | None:
+    """``None`` if a field-map block is faithfully evaluable, else why not. Guards against silently
+    mis-evaluating a clause: a nested value, or a modifier (``|re``/``|base64``/``|cidr``/``|gt``…) that
+    ``field_matches`` would wrongly treat as a literal — those must abstain, not fire incorrectly."""
+    for k, v in m.items():
+        if isinstance(v, dict):
+            return "nested-selection"
+        if set(str(k).split("|")[1:]) - _SUPPORTED_MODS:
+            return "unsupported-modifier"
+    return None
+
+
 def evaluability(rule: dict) -> tuple[bool, str]:
     """Whether the evaluator can faithfully run the rule, **and why not** — the reason drives the Sigma
     audit's roadmap (which construct blocks the most rules). Reasons, in classification order:
@@ -171,14 +186,21 @@ def evaluability(rule: dict) -> tuple[bool, str]:
     blocks = {k: v for k, v in det.items() if k != "condition"}
     if not blocks:
         return False, "no-blocks"
-    for b in blocks.values():                                   # every block must be a flat field-map / list-of-maps
+    for b in blocks.values():                                   # blocks: flat field-map, list-of-maps, or keyword(s)
         if isinstance(b, dict):
-            if any(isinstance(v, dict) for v in b.values()):
-                return False, "nested-selection"
+            r = _map_reason(b)
+            if r:
+                return False, r
         elif isinstance(b, list):
-            if not all(isinstance(m, dict) and not any(isinstance(v, dict) for v in m.values()) for m in b):
-                return False, "unsupported-block"
-        else:
+            if b and all(isinstance(m, dict) for m in b):
+                for m in b:
+                    r = _map_reason(m)
+                    if r:
+                        return False, r
+            elif not all(isinstance(m, (str, int, float, bool)) for m in b):
+                return False, "unsupported-block"               # mixed/odd list (not maps, not keywords)
+            # else: a keyword list of scalars → ok
+        elif not isinstance(b, (str, int, float, bool)):        # a scalar keyword is ok; None/other is not
             return False, "unsupported-block"
     if not condition_parses(cond):
         return False, "condition-unsupported"

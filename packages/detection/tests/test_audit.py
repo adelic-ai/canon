@@ -25,7 +25,9 @@ def test_evaluability_attributes_each_reason():
     assert evaluability(rule(selection={"a": "x"}, condition="selection | count() by b > 5"))[1] == "aggregation"
     assert evaluability(rule(selection={"a": "x"}, condition="selection and"))[1] == "condition-unsupported"
     assert evaluability(rule(selection={"a": {"nested": 1}}, condition="selection"))[1] == "nested-selection"
-    assert evaluability(rule(keywords=["foo", "bar"], condition="keywords"))[1] == "unsupported-block"
+    assert evaluability(rule(keywords=["foo", "bar"], condition="keywords")) == (True, "ok")   # keyword block now compiles
+    assert evaluability(rule(weird=None, condition="weird"))[1] == "unsupported-block"          # None block: not yet
+    assert evaluability(rule(selection={"a|re": ".*x"}, condition="selection"))[1] == "unsupported-modifier"  # |re abstains, not mis-fires
     assert evaluability({"correlation": {"type": "event_count"}})[1] == "correlation"
     assert evaluability({"title": "no detection"})[1] == "no-detection"
 
@@ -70,4 +72,5 @@ def test_consume_real_corpus_is_internally_consistent():
     assert 0 < rep["evaluable"] <= rep["total"]
     assert rep["distinct_detections"] <= rep["evaluable"]      # dedup never invents detections
     assert rep["techniques_evaluable"] <= rep["techniques_total"]
-    assert rep["ir_roadmap"]                                   # there ARE non-compilable constructs to chart
+    assert isinstance(rep["ir_roadmap"], list)                # the roadmap (may be empty if fully consumed)
+    assert rep["evaluable_pct"] > 80                          # the condition+keyword parsers consume the bulk

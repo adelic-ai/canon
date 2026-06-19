@@ -111,15 +111,30 @@ def condition_parses(cond: str) -> bool:
         return False
 
 
+def _keyword_hit(kw: str, event: dict) -> bool:
+    """A Sigma **keyword** matches if it appears (case-insensitive contains-glob) in ANY field value of the
+    event — the whole-event substring search Sigma keyword lists do over the raw log."""
+    from detection.sigma_eval import field_matches
+    return any(field_matches(v, kw, {"contains"}) for v in event.values())
+
+
 def match_block(block, event: dict) -> bool:
-    """Match one detection block against an event: a ``dict`` is an AND across its field clauses; a ``list``
-    of dicts is an OR across those maps (Sigma's list-of-maps). Field semantics come from
-    :func:`detection.sigma_eval.field_matches` (imported lazily to avoid an import cycle)."""
+    """Match one detection block against an event:
+
+    * ``dict`` — AND across its field clauses (a field-map);
+    * ``list`` of dicts — OR across those maps (Sigma's list-of-maps);
+    * ``list`` of strings / a scalar — a **keyword** block: OR of whole-event substring searches.
+
+    Field semantics come from :func:`detection.sigma_eval.field_matches` (imported lazily — import cycle)."""
     from detection.sigma_eval import block_matches
     if isinstance(block, dict):
         return block_matches(block, event)
     if isinstance(block, list):
-        return any(isinstance(m, dict) and block_matches(m, event) for m in block)
+        if block and all(isinstance(m, dict) for m in block):
+            return any(block_matches(m, event) for m in block)         # list of field-maps (OR)
+        return any(_keyword_hit(str(kw), event) for kw in block)       # keyword list (OR)
+    if isinstance(block, (str, int, float, bool)):
+        return _keyword_hit(str(block), event)                         # single keyword
     return False
 
 
