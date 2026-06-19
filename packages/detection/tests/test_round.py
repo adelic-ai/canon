@@ -46,3 +46,18 @@ def test_round_fires_and_ranks():
     # ranked: severities are non-increasing
     ranks = [{"high": 3, "medium": 2, "low": 1}[v["severity"]] for v in fired]
     assert ranks == sorted(ranks, reverse=True)
+
+
+def test_rust_and_python_rounds_agree():
+    """Wiring check: firing the round through the Rust emitter gives the SAME verdicts as the Python path
+    (Rust is proven faithful; rust-unsupported clauses fall back to eval_ir)."""
+    from detection.rust_emitter import rust_available
+    events = _events()[:2500]
+    py = evaluate_round(events, ["T1003.001"], use_rust=False)
+    rs = evaluate_round(events, ["T1003.001"], use_rust=True)
+    assert py["engine"] == "python"
+    if rust_available():
+        assert rs["engine"] in ("rust", "rust+fallback")
+    # identical verdicts regardless of engine — same rule, same hit counts, same order
+    key = lambda r: [(v["rule"], v["n_hits"]) for v in r["verdicts"]]
+    assert key(py) == key(rs)

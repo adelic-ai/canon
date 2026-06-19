@@ -73,22 +73,39 @@ def select_detections(profile: dict, techniques, *, sigma_root: Path = SIGMA) ->
     return [{"technique": t, "rule": r, "name": name} for (t, r, name, _s) in chosen.values()]
 
 
-def evaluate_round(events: list[dict], techniques, *, sigma_root: Path = SIGMA) -> dict:
+def _fire_hits(compiled, events: list[dict], *, use_rust: bool) -> tuple[list[int], str]:
+    """Per-rule hit count over the events, and which engine fired. The fast path is the native Rust emitter
+    (one batched call for all rules × events); rules Rust can't yet handle (re/cidr/gt-lt/windash) fall back to
+    the Python ``eval_ir`` — proven-equal for the rest, so the result is identical either way. Returns
+    ``(hits, engine)``."""
+    if use_rust:
+        from detection.rust_emitter import eval_rust, rust_available
+        if rust_available():
+            results, supported = eval_rust(compiled, events)
+            hits = [sum(results[i]) if sup else sum(1 for e in events if eval_ir(compiled[i], e))
+                    for i, sup in enumerate(supported)]
+            return hits, ("rust+fallback" if not all(supported) else "rust")
+    return [sum(1 for e in events if eval_ir(ir, e)) for ir in compiled], "python"
+
+
+def evaluate_round(events: list[dict], techniques, *, sigma_root: Path = SIGMA, use_rust: bool = True) -> dict:
     """Fire a whittled round at a log: profile → select (applicable, best-peer) → fire over the events →
-    locate (tactic) → rank by severity. Returns the profile, the selected count, and ranked verdicts (one per
-    selected detection that fired, with how many events it hit)."""
+    locate (tactic) → rank by severity. Fires through the native Rust emitter when built (``use_rust``), with
+    a Python ``eval_ir`` fallback for rust-unsupported clauses — same verdicts, faster path. Returns the
+    profile, the selected count, the engine used, and ranked verdicts."""
     profile = environment_profile(events)
     selected = select_detections(profile, techniques, sigma_root=sigma_root)
+    compiled = [compile_rule(s["rule"]) for s in selected]
+    hits, engine = _fire_hits(compiled, events, use_rust=use_rust)
+
     verdicts = []
-    for sel in selected:
-        ir = compile_rule(sel["rule"])
-        n_hits = sum(1 for e in events if eval_ir(ir, e))
-        if n_hits:
+    for sel, n in zip(selected, hits):
+        if n:
             tactic = TECH_TACTIC.get(sel["technique"], "?")
             verdicts.append({"technique": sel["technique"], "tactic": tactic,
                              "rule": sel["name"], "rule_id": sel["rule"].get("id", "?"),
-                             "n_hits": n_hits, "severity": _TACTIC_SEVERITY.get(tactic, "medium")})
+                             "n_hits": n, "severity": _TACTIC_SEVERITY.get(tactic, "medium")})
     verdicts.sort(key=lambda v: (_SEV_RANK.get(v["severity"], 2), v["n_hits"]), reverse=True)
     return {"profile": {"n_events": profile["n_events"], "n_fields": len(profile["fields"])},
-            "techniques_in_scope": list(techniques),
+            "techniques_in_scope": list(techniques), "engine": engine,
             "n_selected": len(selected), "n_fired": len(verdicts), "verdicts": verdicts}
