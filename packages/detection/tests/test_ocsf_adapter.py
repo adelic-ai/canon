@@ -59,9 +59,11 @@ def test_grades_record_loss_and_are_shown_on_demand():
     # close where there is minor loss (GUID format / ps truncation)
     assert SYSMON_ADAPTER.why("ProcessGuid").grade == CLOSE
     assert PS_ADAPTER.why("comm").grade == CLOSE
-    # lossy_fields surfaces exactly the non-exact edges to check for load-bearingness
+    # lossy_fields surfaces the non-exact edges to check for load-bearingness; the exact
+    # edges (Image, ProcessId, paths, CurrentDirectory) are not in it.
     lossy = {m.source_field for m in SYSMON_ADAPTER.lossy_fields()}
-    assert lossy == {"ProcessGuid", "User"}
+    assert {"ProcessGuid", "User"} <= lossy
+    assert not ({"Image", "ProcessId", "TargetImage", "SourceImage", "CurrentDirectory"} & lossy)
     # a field with no OCSF home returns None from why()
     assert SYSMON_ADAPTER.why("Hostname") is None
 

@@ -88,6 +88,7 @@ class FieldMapping:
     rationale: str
     transform: Callable[[Any], Any] | None = None
     grade_of: Callable[[dict], str] | None = None
+    source: str | None = None      # provenance: where the field pair came from / was cross-checked
 
     @property
     def lossless(self) -> bool:
@@ -230,11 +231,13 @@ SYSMON_ADAPTER = SourceAdapter(
                      "`process.cmd_line`."),
         FieldMapping("ProcessId", "process.pid", EXACT,
                      "Sysmon `ProcessId` = OCSF `process.pid` (carried verbatim; Sysmon "
-                     "renders it as a string)."),
+                     "renders it as a string).",
+                     source="cross-checked vs AWS Security Lake windows-sysmon (ProcessId→process.pid)"),
         FieldMapping("ProcessGuid", "process.uid", CLOSE,
                      "Sysmon `ProcessGuid` is a globally-unique process identifier; OCSF "
                      "`process.uid` is a generic unique id. Semantics align, format differs "
-                     "(GUID vs opaque string) — close, not exact."),
+                     "(GUID vs opaque string) — close, not exact.",
+                     source="cross-checked vs AWS Security Lake windows-sysmon (ProcessGuid→process.uid)"),
         FieldMapping("ParentImage", "actor.process.file.path", EXACT,
                      "Sysmon `ParentImage` is the spawning process's executable path = OCSF "
                      "`actor.process.file.path`."),
@@ -260,6 +263,32 @@ SYSMON_ADAPTER = SourceAdapter(
         FieldMapping("TargetImage", "process.file.path", EXACT,
                      "Sysmon process_access `TargetImage` is the accessed process's executable "
                      "path = OCSF `process.file.path` (the subject of the access)."),
+        # process_creation fields with verified OCSF homes (paths confirmed against the live
+        # OCSF process/file object schema; AWS Security Lake's windows-sysmon mapping does NOT
+        # map these, so they are hand-authored, not borrowed).
+        FieldMapping("CurrentDirectory", "process.working_directory", EXACT,
+                     "Sysmon `CurrentDirectory` = OCSF `process.working_directory`."),
+        FieldMapping("IntegrityLevel", "process.integrity", CLOSE,
+                     "Sysmon `IntegrityLevel` (e.g. 'High'/'System') = OCSF `process.integrity` "
+                     "(string). Close: OCSF also has an enum `integrity_id`; the label crosses "
+                     "into the free-text `integrity`, not the enum."),
+        FieldMapping("Description", "process.file.desc", CLOSE,
+                     "Sysmon `Description` is the PE FileDescription version-info string; OCSF "
+                     "`process.file.desc` is 'the file description as returned by the filesystem'. "
+                     "Definitionally adjacent (both the human description of the file) — close."),
+        FieldMapping("Hashes", "process.file.hashes", BROAD,
+                     "Sysmon `Hashes` is a delimited STRING ('SHA256=..,MD5=..'); OCSF "
+                     "`process.file.hashes` is an ARRAY of Fingerprint objects. The raw string "
+                     "is carried verbatim (so a rule's substring match still fires faithfully), "
+                     "but the structural shape is wrong — broad. A real array transform would "
+                     "break the rule's string match, so faithfulness is preferred over shape here."),
+        # GENUINE NO-OCSF-HOMES (deliberately unmapped, recorded for honesty — the off-case):
+        #   CallTrace      — the call stack of a process_access; OCSF has no stack-trace attribute.
+        #   GrantedAccess  — the access-rights mask of a process_access; OCSF has no access-mask attribute.
+        #   OriginalFileName — the PE OriginalFilename; OCSF file has `name`/`internal_name` but no
+        #                      original_name, and neither is the same PE field — no clean home.
+        # These are the load-bearing discriminators of LSASS-dump detection; dropping them is why
+        # the slice keeps OCSF OFF-able (fidelity/forensic-exact → run native). See module note.
     ),
 )
 
