@@ -13,6 +13,7 @@ members = [
     "provenance",
     "semantic-core",
     "semantic-cyber",
+    "synthcyber",
 ]
 
 [manifest.dependency-groups]
@@ -47,6 +48,7 @@ dependencies = [
     { name = "forge-core" },
     { name = "numpy" },
     { name = "provenance" },
+    { name = "synthcyber" },
 ]
 
 [package.metadata]
@@ -54,6 +56,7 @@ requires-dist = [
     { name = "forge-core", editable = "packages/forge-core" },
     { name = "numpy", specifier = ">=1.26" },
     { name = "provenance", editable = "packages/provenance" },
+    { name = "synthcyber", editable = "packages/synthcyber" },
 ]
 
 [[package]]
@@ -679,6 +682,11 @@ requires-dist = [
     { name = "semantic-core", editable = "packages/semantic-core" },
 ]
 provides-extras = ["dev"]
+
+[[package]]
+name = "synthcyber"
+version = "0.1.0"
+source = { editable = "packages/synthcyber" }
 
 [[package]]
 name = "typing-extensions"

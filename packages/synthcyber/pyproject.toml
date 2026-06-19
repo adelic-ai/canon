@@ -1,0 +1,13 @@
+[project]
+name = "synthcyber"
+version = "0.1.0"
+description = "Synthetic, correct-by-construction labeled cyber datasets. Standalone; canon is one consumer."
+requires-python = ">=3.11"
+dependencies = []                       # the generator depends on NOTHING from canon (the engine/workspace boundary)
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/synthcyber"]
