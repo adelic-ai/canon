@@ -76,9 +76,15 @@ def ground_lattice(rules: list[tuple[str, dict]], instances: list[dict]) -> dict
     :func:`detection.rule_lattice.relation` of their positive clause-sets (``exact`` / ``narrower`` /
     ``broader`` / ``related`` / ``none``).
 
-    The result lives in the off-diagonal: a **co-catch pair with structural ``none``** is a behavioral
-    synonymy the structure *misses*; a structurally-``exact`` pair that does **not** co-catch is a structural
-    *over-claim*. Diagonal agreement (co-catch ↔ structurally-related) is the lattice earning its edges.
+    The ideal diagonal is **structurally-``exact`` ↔ behaviorally-``co-catch``** (the dedup claim is right).
+    Both off-diagonals are surfaced explicitly:
+
+    - **under-grouped** (structure's false-negative): a ``co-catch`` pair that is **not** structurally
+      ``exact`` (``related``/``broader``/``narrower`` = connected-but-not-deduped, or ``none`` = wholly
+      missed) — behavioral synonymy that dedup-by-``exactMatch`` would split.
+    - **over-grouped** (structure's false-positive): a structurally-``exact`` pair that does **not**
+      ``co-catch`` — dedup over-claims (typically because ``clause_set`` reads positive selection only, so
+      two rules with identical selectors but different *filters* look exact yet behave differently).
     """
     irs: dict[str, object] = {}
     for rid, rule in rules:
@@ -102,7 +108,10 @@ def ground_lattice(rules: list[tuple[str, dict]], instances: list[dict]) -> dict
                           "why": why(csets[a], csets[b])})
 
     co_catch = [p for p in pairs if p["behavioral"] == "co-catch"]
-    missed = [p for p in co_catch if p["structural"] == "none"]   # behavioral synonymy, no structural edge
+    exact = [p for p in pairs if p["structural"] == "exact"]
+    agree = [p for p in pairs if p["behavioral"] == "co-catch" and p["structural"] == "exact"]
+    under = [p for p in co_catch if p["structural"] != "exact"]   # co-catch, not exact: synonymy dedup splits
+    over = [p for p in exact if p["behavioral"] != "co-catch"]    # exact, not co-catch: dedup over-claims
     return {
         "n_instances": len(instances),
         "n_catchers": len(catchers),
@@ -110,8 +119,10 @@ def ground_lattice(rules: list[tuple[str, dict]], instances: list[dict]) -> dict
         "crosstab": {beh: dict(cols) for beh, cols in crosstab.items()},
         "headline": {
             "co_catch_pairs": len(co_catch),
-            "with_structural_edge": len(co_catch) - len(missed),
-            "missed_by_structure": [(p["a"], p["b"]) for p in missed],
+            "exact_pairs": len(exact),
+            "agree_exact_cocatch": len(agree),                    # diagonal: dedup claim validated behaviorally
+            "under_grouped": [(p["a"], p["b"], p["structural"]) for p in under],   # structure false-negative
+            "over_grouped": [(p["a"], p["b"], p["behavioral"]) for p in over],     # structure false-positive
         },
         "pairs": pairs,
         "cid": _cid({"n_instances": len(instances),
@@ -140,4 +151,33 @@ def otrf_lsass_t1003_grounding(path: str, *, sigma_root=None) -> dict:
         "positive_cid": _cid(positive),
         "grouping": group_by_catch_set(rules, [positive]),
         "grounding": ground_lattice(rules, [positive]),
+    }
+
+
+def splunk_t1558_003_grounding(base: str, *, sigma_root=None) -> dict:
+    """Multi-instance grounding on splunk/attack_data **T1558.003 (Kerberoasting)** — the broadening past n=1.
+    Labeled instances = the 4769 RC4-encrypted (``TicketEncryptionType == 0x17``) Kerberos TGS-request events
+    across the corpus's ``windows-xml.log`` captures (the technique's telemetry signature), deduped by event
+    CID. Unlike the OTRF n=1, rules split on *which subset* they catch (a ``ServiceName != krbtgt`` filter, a
+    machine-account ``$`` filter, RC4-only vs not), so the catch-set has multiple behavioral classes and both
+    off-diagonal cells of :func:`ground_lattice` get real signal."""
+    from pathlib import Path
+
+    from detection.evtx_xml import load_evtx_xml
+    from detection.sigma_panel import SIGMA, gather
+
+    root = sigma_root or SIGMA
+    events: list[dict] = []
+    for xml in sorted(Path(base).rglob("windows-xml.log")):
+        events.extend(load_evtx_xml(xml))
+    rc4 = [e for e in events if e.get("EventID") == "4769" and e.get("TicketEncryptionType") == "0x17"]
+    instances = list({_cid(e): e for e in rc4}.values())          # dedup by content CID
+    rules = [(r.get("id", p.name), r) for p, r in gather("T1558.003", root=root)]
+    return {
+        "technique": "T1558.003",
+        "corpus": "splunk/attack_data T1558.003",
+        "n_raw_4769_rc4": len(rc4),
+        "n_instances": len(instances),
+        "grouping": group_by_catch_set(rules, instances),
+        "grounding": ground_lattice(rules, instances),
     }

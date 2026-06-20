@@ -60,8 +60,9 @@ def test_ground_lattice_exact_agrees_and_disjoint_has_no_edge():
     assert gr["crosstab"]["co-catch"] == {"exact": 1}
     # a,c and b,c: disjoint behavior ↔ no structural edge (disjoint clause-sets)
     assert gr["crosstab"]["disjoint"] == {"none": 2}
-    assert gr["headline"]["co_catch_pairs"] == 1
-    assert gr["headline"]["missed_by_structure"] == []
+    assert gr["headline"]["agree_exact_cocatch"] == 1
+    assert gr["headline"]["under_grouped"] == []
+    assert gr["headline"]["over_grouped"] == []
 
 
 def test_ground_lattice_surfaces_synonymy_the_structure_misses():
@@ -74,8 +75,28 @@ def test_ground_lattice_surfaces_synonymy_the_structure_misses():
     assert gr["n_catchers"] == 2
     assert gr["crosstab"] == {"co-catch": {"none": 1}}   # co-catch, but structurally unrelated
     assert gr["headline"]["co_catch_pairs"] == 1
-    assert gr["headline"]["with_structural_edge"] == 0
-    assert gr["headline"]["missed_by_structure"] == [("e", "f")]
+    assert gr["headline"]["under_grouped"] == [("e", "f", "none")]   # synonymy structure wholly missed
+    assert gr["headline"]["over_grouped"] == []
+
+
+def test_ground_lattice_surfaces_over_group_filter_blind():
+    """The OTHER off-diagonal (over-group): two rules with IDENTICAL positive selection but a differing
+    FILTER. ``clause_set`` reads positive selection only, so the lattice calls them ``exact`` — yet they
+    behave differently (the filter suppresses one instance for one rule). exact × not-co-catch = the dedup
+    false-positive — the filter-blindness the content_digest backlog tracks, pinned behaviorally."""
+    foo_evil = {"Image": "c:\\foo.exe", "CommandLine": "do evil things"}
+    foo_clean = {"Image": "c:\\foo.exe", "CommandLine": "clean ops"}
+    p = _rule("p", "Image|endswith", "\\foo.exe")                    # catches both
+    q = {"id": "q",
+         "detection": {"selection": {"Image|endswith": "\\foo.exe"},
+                       "filter": {"CommandLine|contains": "evil"},
+                       "condition": "selection and not filter"},
+         "logsource": {"category": "process_creation", "product": "windows"}}   # filter suppresses foo_evil
+    gr = ground_lattice([("p", p), ("q", q)], [foo_evil, foo_clean])
+    assert gr["n_catchers"] == 2
+    assert gr["crosstab"] == {"overlap": {"exact": 1}}              # exact structure, overlapping behavior
+    assert gr["headline"]["over_grouped"] == [("p", "q", "overlap")]
+    assert gr["headline"]["under_grouped"] == []
 
 
 # ── real n=1 grounding: skip-if-absent (engine/workspace boundary — data is path-ref'd, never committed) ──
@@ -92,7 +113,29 @@ def test_otrf_n1_grounding_two_catchers_related_not_exact():
     assert g["n_instances"] == 1 and g["n_rules"] == 79
     assert gr["n_catchers"] == 2                          # the 2 catchers (matches the fidelity scorecard)
     assert len(g["silent"]) == 77
-    # the 2 co-catch, and the lattice connects them as `related` (overlap) — NOT `exact`: dedup alone would
-    # have missed this behavioral synonymy, so the graded edges are load-bearing.
+    # the 2 co-catch, and the lattice connects them as `related` (overlap) — NOT `exact`: dedup-by-exactMatch
+    # would split this behavioral synonymy (under-group), so the graded edges are load-bearing.
     assert gr["crosstab"] == {"co-catch": {"related": 1}}
-    assert gr["headline"]["missed_by_structure"] == []
+    assert gr["headline"]["under_grouped"] == [(gr["catchers"][0], gr["catchers"][1], "related")]
+    assert gr["headline"]["over_grouped"] == []
+
+
+# ── multi-instance grounding on splunk/attack_data T1558.003 (Kerberoasting) — LFS data, skip-if-absent ──
+_KERB = Path("/Users/shunhonda/data/splunk-attack-data/datasets/attack_techniques/T1558.003")
+_KERB_XML = [_KERB / "kerberoasting_spn_request_with_rc4_encryption" / "windows-xml.log",
+             _KERB / "unusual_number_of_kerberos_service_tickets_requested" / "windows-xml.log"]
+
+
+@pytest.mark.skipif(not (all(p.exists() for p in _KERB_XML) and _SIGMA.exists()),
+                    reason="splunk T1558.003 LFS data or Sigma ruleset absent (path-ref'd workspace data)")
+def test_splunk_t1558_003_corroborates_under_group_on_second_technique():
+    from detection.catch_set import splunk_t1558_003_grounding
+    r = splunk_t1558_003_grounding(str(_KERB), sigma_root=_SIGMA)
+    assert r["n_raw_4769_rc4"] == 160 and r["n_instances"] == 69    # 160 RC4 4769 events → 69 distinct
+    gr = r["grounding"]
+    assert gr["n_catchers"] == 2                                    # the 2 windows/security 4769 rules
+    # SAME pattern as OTRF on a second, independent technique: co-catch synonyms the lattice calls `related`,
+    # not `exact` → under-group corroborated. (No exact-clause-set rule family here → over-group unexercised.)
+    assert gr["crosstab"] == {"co-catch": {"related": 1}}
+    assert len(gr["headline"]["under_grouped"]) == 1
+    assert gr["headline"]["over_grouped"] == []
