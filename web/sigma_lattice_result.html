@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canon — The Sigma rule lattice: what the corpus actually looks like</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --ink:#e6e8ee; --muted:#9aa3b2;
+    --line:#2a2f3a; --accent:#7db4ff; --accent2:#c79bff;
+    --good:#6fcf97; --warn:#f2c94c; --gap:#eb6f6f;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1080px;margin:0 auto;padding:48px 28px 96px}
+  h1{font-size:30px;margin:0 0 6px;letter-spacing:-.01em}
+  .sub{color:var(--muted);margin:0 0 4px;font-size:18px}
+  .stamp{color:var(--muted);font:13px/1.5 var(--mono);margin:0 0 32px}
+  h2{font-size:21px;margin:48px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+  h3{font-size:16px;margin:26px 0 6px;color:var(--accent2)}
+  p{margin:10px 0}
+  code{font-family:var(--mono);font-size:.88em;background:#1e222b;padding:1px 5px;border-radius:4px}
+  pre{background:#10131a;border:1px solid var(--line);border-radius:8px;padding:14px 16px;
+    overflow-x:auto;font-family:var(--mono);font-size:13px;line-height:1.55;color:#d4d9e4}
+  .note{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:8px;padding:14px 18px;margin:18px 0}
+  .note.gap{border-left-color:var(--gap)}
+  .note.key{border-left-color:var(--accent2)}
+  .note.good{border-left-color:var(--good)}
+  .muted{color:var(--muted)}
+  ul{margin:10px 0;padding-left:22px}
+  li{margin:7px 0}
+  strong{color:#fff}
+  table{border-collapse:collapse;width:100%;margin:18px 0;font-size:14px;background:var(--panel);
+    border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  th,td{text-align:left;padding:10px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#1c212b;color:var(--muted);font-weight:600;font-size:12px;
+    text-transform:uppercase;letter-spacing:.04em}
+  tr:last-child td{border-bottom:none}
+  td.k{font-weight:600;white-space:nowrap;color:var(--accent)}
+  td.n{font-family:var(--mono);text-align:right;white-space:nowrap}
+  .good{color:var(--good)} .gap{color:var(--gap)} .warn{color:var(--warn)}
+  .lede{font-size:17px}
+  .fam{color:var(--accent);font-weight:600}
+  .var{color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p style="font:13px/1.5 var(--mono,monospace);margin:0 0 22px"><a href="index.html" style="color:#7db4ff;text-decoration:none">← Canon index</a></p>
+  <h1>The Sigma rule lattice — what the corpus actually looks like</h1>
+  <p class="sub">Not clean categories. A graded relation graph: a few true synonyms, a thin subsumption skeleton, and a dense web of loose overlap.</p>
+  <p class="stamp">canon · result · 2026-06-20 · <span class="muted">332 structured rules · T1003.001 + T1547.001 + T1059.001 · the SKOS-graded rule lattice</span></p>
+
+  <p class="lede">The flat field-set "FCA" key grouped rules into "concepts" by which fields they read — and
+  <em>over-collapsed</em>, folding value-distinct detections into one. The content-aware <strong>SKOS-graded
+  lattice</strong> instead relates every pair by what it <em>matches</em>: <code>exactMatch</code> (true synonym),
+  <code>broadMatch</code>/<code>narrowMatch</code> (subsumption — a navigable order), <code>relatedMatch</code>
+  (overlap, IDF-graded). Run over 332 structured rules across three techniques, here is what the corpus
+  <em>actually</em> is.</p>
+
+  <h2>The shape — dedup is rare; structure is graded overlap</h2>
+  <table>
+    <thead><tr><th>Relation</th><th>SKOS</th><th class="n">edges</th><th>meaning</th></tr></thead>
+    <tbody>
+      <tr><td class="k">exact</td><td><code>skos:exactMatch</code></td><td class="n">2</td>
+        <td>true synonyms — the <em>only</em> real dedup (2 pairs, below)</td></tr>
+      <tr><td class="k">broader</td><td><code>skos:broadMatch</code></td><td class="n">16</td>
+        <td>a general rule subsumes a stricter one</td></tr>
+      <tr><td class="k">narrower</td><td><code>skos:narrowMatch</code></td><td class="n">6</td>
+        <td>the stricter side of the same relation</td></tr>
+      <tr><td class="k gap">related</td><td><code>skos:relatedMatch</code></td><td class="n">633</td>
+        <td>share a clause or two, neither subsumes — <strong>96% of all edges</strong>, IDF-tightness median 0.14 (uniformly <em>loose</em>)</td></tr>
+    </tbody>
+  </table>
+  <div class="note key">
+    <strong>The headline finding.</strong> Of 657 relations, only <strong>2 are true synonyms</strong> and
+    ~22 are subsumption; the other <strong>633 are loose overlap.</strong> So the corpus does <em>not</em>
+    partition into clean categories — it's a web of rules that share a clause but each detect something
+    distinct. The flat field-set key would have collapsed much of that 633 into "equivalence classes" by
+    shared fields — <em>conflating overlap with equivalence.</em> The graded lattice is what tells them apart.
+  </div>
+
+  <h2>Categories that genuinely exist (1) — subsumption families</h2>
+  <p>The meaningful "category → members" mapping: a <span class="fam">general rule</span> and the
+  <span class="var">stricter variants</span> that narrow it by adding a specific malicious marker. The general
+  rule is the concept; each variant is a specialization (its matches ⊆ the general's).</p>
+  <table>
+    <thead><tr><th>General rule (the category)</th><th>Stricter variants (members)</th></tr></thead>
+    <tbody>
+      <tr><td class="fam">Non Interactive PowerShell Process Spawned</td>
+        <td class="var">ConvertTo-SecureString Cmdlet Usage · Exchange PowerShell Snap-Ins Usage ·
+          HackTool — CrackMapExec PowerShell Obfuscation · Invocation of Crypto-Classes from "Cryptography" ·
+          Malicious Base64-Encoded PowerShell Keywords … <span class="muted">(non-interactive PowerShell, each
+          narrowed by a specific command marker)</span></td></tr>
+      <tr><td class="fam">Remote Thread Creation Via PowerShell</td>
+        <td class="var">Potential Credential Dumping Attempt Via PowerShell · …Remote Thread · Remote Thread
+          Creation in Uncommon Target</td></tr>
+      <tr><td class="fam">Scheduled Task Executing Payload from Registry</td>
+        <td class="var">Scheduled Task Executing <em>Encoded</em> Payload from Registry</td></tr>
+      <tr><td class="fam">DumpMinitool Execution</td>
+        <td class="var">Suspicious DumpMinitool Execution</td></tr>
+    </tbody>
+  </table>
+  <div class="note good">
+    These read exactly right: <em>"non-interactive PowerShell"</em> is the broad surface, and each variant
+    pins a specific abuse (base64, CrackMapExec, crypto-classes). Firing strategy falls out of the order —
+    fire the <em>specific</em> variant for precision; the <em>general</em> rule is the recall fallback.
+  </div>
+
+  <h2>Categories that genuinely exist (2) — true synonyms (the only real dedup)</h2>
+  <table>
+    <thead><tr><th class="n">#</th><th>exactMatch class — identical matching content, different rule</th></tr></thead>
+    <tbody>
+      <tr><td class="n">1</td><td>Alternate PowerShell Hosts Pipe &nbsp;≡&nbsp; New PowerShell Instance Created</td></tr>
+      <tr><td class="n">2</td><td>Potential Credential Dumping Attempt Via PowerShell &nbsp;≡&nbsp; …Via PowerShell Remote Thread</td></tr>
+    </tbody>
+  </table>
+  <p class="muted">Two pairs out of 332 rules. "Dedup" — the thing the flat key claimed lots of — is almost
+  nonexistent at the content level. (Filter/allowlist differences are ignored here; a filter-aware
+  <code>content_digest</code> would split even these.)</p>
+
+  <h2>What the result means</h2>
+  <ul>
+    <li><strong>The corpus is a graph, not a partition.</strong> 96% of relations are loose overlap, so
+      "categorize Sigma" is the wrong frame — the lattice <em>relates</em>, it doesn't <em>cluster</em>. The
+      product is the relation graph (emitted as a <a href="intermediate_representation.html">SKOS RDF
+      graph</a>: <code>SELECT ?a ?b WHERE { ?a skos:broadMatch ?b }</code> for the subsumption skeleton).</li>
+    <li><strong>The subsumption families are the actionable structure</strong> — general surface + stricter
+      variants; the order tells you which to fire for precision vs recall.</li>
+    <li><strong>This is all <em>structural</em> (what rules match), not <em>behavioral</em> (what they
+      catch).</strong> Two rules can be lattice-"related" yet catch totally different instances, or
+      lattice-disjoint yet catch the same attack via different fields. The <strong>catch-set</strong>
+      grounding (run rules over labeled telemetry, group by co-caught instances) is what would
+      <em>correct</em> these edges — the keystone, gated on labeled data.</li>
+  </ul>
+
+  <div class="note">
+    <strong>One line.</strong> Across 332 rules the corpus is 2 synonyms, ~22 subsumption pairs, and 633 loose
+    overlaps — so Sigma doesn't dedup into categories; it forms a graded relation graph whose only clean
+    structure is the subsumption families (general rule → stricter variants), and whose true grouping awaits
+    catch-set grounding.
+  </div>
+</div>
+</body>
+</html>
