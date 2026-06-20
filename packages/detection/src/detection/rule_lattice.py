@@ -102,7 +102,10 @@ def tightness(a: frozenset, b: frozenset, idf: dict | None = None) -> float:
     union = a | b
     if not union:
         return 0.0
-    return _weight(a & b, idf) / _weight(union, idf)
+    denom = _weight(union, idf)
+    if denom == 0.0:                            # every clause is zero-IDF (ubiquitous) → IDF undefined here;
+        return 1.0 if a == b else len(a & b) / len(union)   # fall back to cardinality Jaccard
+    return _weight(a & b, idf) / denom
 
 
 def why(a: frozenset, b: frozenset) -> dict:
