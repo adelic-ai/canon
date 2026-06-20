@@ -52,8 +52,12 @@ Three findings:
   burst to nothing (entropy 0/4); only a grain matching the attack timescale works. A real deployment must
   pick/scan the grain.
 - **Synthetic data** (`faker-kerberos`), **n=4 attacks** — small and not real telemetry. The real-data
-  confirmation is `splunk/attack_data` T1558.003 (atomic-red-team-generated Kerberoasting) — fetch it to
-  close this caveat. Until then the result is "validated on labeled synthetic Kerberoasting."
+  confirmation on `splunk/attack_data` T1558.003 was **attempted and did NOT close the caveat** — see
+  [[cross_check_validation_t1558003_real]]. That capture is a pure-attack burst (159 events, 2 machine
+  accounts, no benign background), so conformal is underpowered and distinct-count wins — the *opposite* of
+  this result. It doesn't refute the finding; it **bounds the regime**: conformal-beats-threshold holds on a
+  **large standing population with benign background** (as here), not on isolated attack captures. Closing the
+  caveat needs real telemetry *with* a benign population (atomic-red-team captures structurally lack it).
 
 ## Conclusion
 
