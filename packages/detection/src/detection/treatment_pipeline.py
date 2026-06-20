@@ -61,9 +61,12 @@ class Manifest:
         return asdict(self)
 
 
-def treat(rules: list[dict], techniques, *, code_commit: str | None = None) -> dict:
+def treat(rules: list[dict], techniques, *, code_commit: str | None = None,
+          event_specs: list[dict] | None = None) -> dict:
     """Run the corpus-derivable treatment stages over ``rules`` (raw Sigma dicts) for ``techniques`` and
-    return the content-addressed result + its :class:`Manifest`. Non-evaluable rules are dropped at ingest."""
+    return the content-addressed result + its :class:`Manifest`. Non-evaluable rules are dropped at ingest.
+    ``event_specs`` (optional) turns on the coverage stage's event-gated **corroboration** layer; when given,
+    the coverage CID (and thus ``result_cid``) reflect it — making "we corroborated on these events" pinned."""
     evaluable = [r for r in rules if isinstance(r, dict) and is_evaluable(r)]
 
     # stage 0 — ingest + pin: the identity+logic of the ingested rules (pre-compile, syntax-stable)
@@ -76,8 +79,9 @@ def treat(rules: list[dict], techniques, *, code_commit: str | None = None) -> d
     categorize_cid = _cid({"counts": lattice["counts"],
                            "edges": sorted([a, rel, b, t] for a, rel, b, *rest in lattice["edges"]
                                            for t in [rest[0] if rest else None])})
-    # stage 5 — coverage: per-TTP structural layer report (primitive/atom/rule/concept; gaps=NONE)
-    coverage = coverage_report(evaluable, compiled, lattice, techniques)
+    # stage 5 — coverage: per-TTP structural layers (primitive/atom/rule/concept; gaps=NONE) + the
+    # event-gated corroboration layer (NONE unless event_specs supplied)
+    coverage = coverage_report(evaluable, compiled, lattice, techniques, event_specs=event_specs)
     coverage_cid = _cid(coverage)
 
     stage_cids = {
