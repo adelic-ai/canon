@@ -10,14 +10,33 @@ implication** of their predicates: ``a ⟹ b`` means *whenever a is True, b is T
     GrantedAccess > n ⟹ GrantedAccess >= n                           (numeric)
 
 It is computed from a finite implication-rule set over ``(field, op, value)`` — corpus-free, structural.
-Two uses (the "either don't run or are a check" split):
+Two uses, but framed correctly (a passing implication is a *tautology*, so the value is on the other side):
 
-- **Derive** — given the *generator* atoms' truth, an implied atom is True for free wherever its generator
-  fired (no evaluation). Shrinks the atom-eval set beyond dedup. *(One-sided: only the True direction — a
-  False generator leaves the looser atom unknown.)*
-- **Check** — the contrapositive is a soundness probe: if ``a ⟹ b`` and you observe ``a`` True **and** ``b``
-  False (or ``a excludes b`` and both True), that is a contradiction → a Belnap ``Both`` / self-falsification
-  alarm (the matcher or the implication is wrong).
+- **Derive = canonicalize.** Most implication edges are artifacts of *undisciplined format* — a rule that
+  redundantly tests one field two ways (``contains "comsvcs"`` *and* ``contains "comsvcs.dll"``), or writes
+  both the loose and tight side of one predicate. ``endswith X ⟹ contains X`` always holds, so the edge
+  carries no information *passing* — but it means the implied clause is **redundant** and can be dropped to
+  emit the minimal IR. (The count of droppable edges is also a *format-discipline metric* per rule.) The
+  derive direction additionally gives an implied atom's truth for free where its generator fired (a modest
+  eval saving on top of dedup; one-sided — a False generator leaves the looser atom unknown).
+- **Check = a normally-silent self-falsification probe.** The *violation* is the only informative event: if
+  ``a ⟹ b`` and you observe ``a`` True **and** ``b`` False (or ``a excludes b`` and both True), that is
+  *logically impossible* → a Belnap ``Both``. On faithful machinery over honest data, **expect zero** — so a
+  violation is rare and high-signal, and it means one of three things:
+  1. **canon is broken** — a matcher bug, a bad IR compile, or the two atoms extracted the field differently;
+  2. **the matching model diverged** — case/Unicode/encoding (the ``ends_with`` byte-vs-codepoint caveat), a
+     malformed field;
+  3. **the log was tampered** — an attacker who manipulated telemetry to evade a rule but **bungled it**
+     (changed some fields, left a correlated one inconsistent) trips the implication. This is the validity
+     fold's *"the anomaly malforming its own telemetry"* case, caught as an internal-consistency violation.
+
+So the implication lattice doubles as a *log-integrity* check: a self-consistent event satisfies its field
+implications; an incoherent one (sloppy tamper, or genuine corruption) violates them. The redundant
+*poor-discipline* edges give this for free but at luck-coverage; **designed** field-correlation invariants
+(``Image`` ↔ ``OriginalFileName``, ``ProcessGuid`` consistency across an event chain, ``EventID`` ↔
+field-presence, parent/child PID coherence) are the deliberate version — purpose-built tamper-traps, and
+learnable from clean telemetry. They catch the *bungled* tamper, not the careful one, but each correlated
+invariant raises the bar (the attacker must keep N fields mutually coherent).
 
 Conservative by construction: claims an edge only when the op/value relation provably holds (case-insensitive,
 matching Sigma); multi-value (OR) clauses and regex are left unrelated unless identical. Never a false
