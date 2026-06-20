@@ -1,9 +1,9 @@
 # The IR is the canonical ruleset — Sigma is a lowered frontend (the closure argument)
 
 **Status:** design, 2026-06-19. Captures the closure argument and its consequences from the
-atom-factoring / per-TTP discussion. The lowering (`compile_rule`) and atom factoring are
-**built**; the IR-as-canonical posture, statistical atoms as first-class IR, the native
-authoring surface, and the firing recommender are **not** (this names a deliberate fork).
+atom-factoring / per-TTP discussion. The lowering (`compile_rule`), atom factoring, the atom→TTP
+index, and Phase-B entailment are **built**; the IR-as-canonical posture, statistical atoms as
+first-class IR, and the native authoring surface are **not** (this names a deliberate fork).
 **Relates to:** [[per_ttp_coverage_layers]] (the atom/composition/catch-class model this extends),
 [[detection_ir_motif_ontology]] (the IR + emitters), [[self_validation_architecture]] (logic +
 warrant fused in the content-addressed artifact; the arithmetic primitives where the
@@ -91,9 +91,32 @@ inverted index (atoms × TTPs). It is not bookkeeping:
   (the 79-claim / 2-catch problem). The grounded version is "the TTPs whose *labeled instances* the atom
   fires on" (catch-set, synthcyber-gated). Two versions, the tag/IR/catch-set ladder again.
 
-**What it buys:** the index *is* the recommended firing scheme — fire the distinct atoms once (the
-artifact), then each fired atom's signed TTP-set routes to the candidate compositions, pruning to TTPs
-whose atoms actually fired; the specificity gives the confidence weight for free.
+**What it buys:** the index is the **pruning + weighting** key for Phase B (below) — each fired atom's
+signed TTP-set routes to candidate compositions (don't check the rest), and the specificity gives the
+confidence weight for free. It is *routing and weighting*, not a firing order.
+
+### Corollary 1b — Phase B is entailment (model-checking), not a firing order
+
+A correction worth pinning, because it is easy to get backwards. Phase A (the atom-truth artifact) is
+**comprehensive** — every distinct atom is evaluated once. So in Phase B the atoms are all *settled*;
+there is **no "fire atoms in an order."** Phase B asks, per rule/story `φ`, whether the model satisfies it
+(`M ⊨ φ`) — that is **model-checking**, and under a complete assignment it is just evaluation. Two levers,
+*neither* an atom firing order:
+
+- **Pruning** — a positive-monotone rule (no negation) can only fire where at least one of its atoms is
+  true; skip the rest. Rules *with* negation fire on absence (`not filter`), so they are never pruned. The
+  atom→TTP index is the technique-level version of this prune. *(Built: `detection/entailment.py`; on the
+  OTRF round, 81% of rule×event pairs pruned, faithful to `eval_ir`.)*
+- **Selectivity short-circuit** — decide a story by its **rarest** atom first (an AND fails fast). The key
+  is the atom's **fire-rate**, *not* its TTP-spread.
+
+So TTP-spread (specificity / IDF) is the **evidence weight**; fire-rate is the **cost key**; they are
+different axes and *neither* orders atom firing. **Atom firing order only exists if Phase A is made lazy**
+(don't materialize every atom). And lazy is the *non-scaling* mode: comprehensive atom materialization is
+an embarrassingly-parallel, predicate-pushed-down columnar scan — the thing that distributes; lazy serial
+decision-making is what doesn't. So at enterprise scale Phase A stays comprehensive (distributed columnar),
+and the only "lazy-ish" move is **cost-tiering** (cheap match-atoms over everything; expensive stat-atoms
+only on the candidate windows the cheap ones narrowed) — not a firing order.
 
 ## Corollary 2 — OCSF must be normalized to the real environment (a second reference frame)
 
@@ -153,12 +176,13 @@ mapping and a drop.
 
 - **Built:** `compile_rule` (Sigma → IR, structure-preserving); atom factoring (`detection/atoms.py` —
   the deduped atom-set + the atom-truth artifact, faithful to `eval_ir`); content-addressing (the
-  no-true-duplicates property).
-- **Immediate, low-regret:** the **atom→TTP inverted index** — annotate each atom with the signed
-  technique-set of the rules it came from (tag-claimed now; grounded via catch-set later). Gives routing
-  + specificity-weighting; builds directly on `collect_atoms`.
+  no-true-duplicates property); the **atom→TTP inverted index** (`detection/atom_index.py` — signed,
+  specificity/IDF, candidate routing); **Phase-B entailment** (`detection/entailment.py` — model-checking
+  over the artifact with pruning + selectivity short-circuit, faithful; 81% prune on the OTRF round).
 - **The fork (deliberate):** statistical atoms as first-class IR (entropy/MI/conformal as molecules of
-  primitives); a native-IR authoring surface (write rules incl. stat-atoms directly); the firing
-  recommender (graph-structured / killchain frontier-walk); OCSF-space applicability in the round.
+  primitives); a native-IR authoring surface (write rules incl. stat-atoms directly); OCSF-space
+  applicability in the round. *(The "firing recommender" framing is retired — Phase B is entailment, not a
+  firing order, Corollary 1b; the open piece is the kill-chain trajectory axis, which is sequencing across
+  events/tactics, not atom firing.)*
 - **Synthcyber-gated:** catch-set grounding (the true per-TTP variant count and the grounded atom→TTP
   weights).
