@@ -17,6 +17,7 @@ def test_treat_produces_a_manifest_with_staged_cids():
     assert res["n_evaluable"] == 3
     # corpus-derivable stages have CIDs; event/label-gated stages are honestly None
     assert m.stage_cids["ingest"] and m.stage_cids["compile"] and m.stage_cids["categorize"]
+    assert m.stage_cids["coverage"]                  # stage 5 — corpus-derivable structural coverage
     assert m.stage_cids["verify_with_events"] is None and m.stage_cids["ground"] is None
     assert m.result_cid and len(m.result_cid) == 64
     assert m.to_dict()["recipe"] == RECIPE          # serializes
@@ -41,10 +42,12 @@ def test_ablation_changing_a_rule_changes_the_result_and_localizes_the_stage():
     assert "ingest" in d["changed_stages"] and "compile" in d["changed_stages"]
 
 
-def test_ablation_localizes_to_a_single_stage_when_only_that_stage_moves():
-    # different technique label → same rules/lattice, so ingest/compile/categorize are identical;
-    # only the manifest's technique field differs (result_cid is built from stage CIDs, which are unchanged)
+def test_ablation_changing_technique_localizes_to_the_coverage_stage():
+    # different technique scope → ingest/compile/categorize are identical (same rules), but the per-TTP
+    # COVERAGE stage is technique-scoped, so it (and only it) moves → the localizer pins one stage.
     a = treat(_RULES, ["T1003.001"])["manifest"]
     b = treat(_RULES, ["T1059.001"])["manifest"]
-    assert a.result_cid == b.result_cid             # stage CIDs are technique-independent here
-    assert a.techniques != b.techniques             # but the pin records the different scope
+    d = diff_manifests(a, b)
+    assert d["result_changed"]
+    assert d["changed_stages"] == ["coverage"]      # a clean single-stage ablation
+    assert a.techniques != b.techniques

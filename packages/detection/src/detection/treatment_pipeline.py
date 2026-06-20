@@ -24,6 +24,7 @@ from dataclasses import asdict, dataclass
 
 from provenance import evidence_digest
 
+from detection.coverage import coverage_report
 from detection.rule_ir import compile_rule
 from detection.rule_lattice import build_lattice
 from detection.sigma_eval import is_evaluable
@@ -75,6 +76,9 @@ def treat(rules: list[dict], techniques, *, code_commit: str | None = None) -> d
     categorize_cid = _cid({"counts": lattice["counts"],
                            "edges": sorted([a, rel, b, t] for a, rel, b, *rest in lattice["edges"]
                                            for t in [rest[0] if rest else None])})
+    # stage 5 — coverage: per-TTP structural layer report (primitive/atom/rule/concept; gaps=NONE)
+    coverage = coverage_report(evaluable, compiled, lattice, techniques)
+    coverage_cid = _cid(coverage)
 
     stage_cids = {
         "ingest": corpus_cid,
@@ -82,10 +86,11 @@ def treat(rules: list[dict], techniques, *, code_commit: str | None = None) -> d
         "verify_with_events": None,     # gated: faithful firing needs events (attest_ir_faithful)
         "categorize": categorize_cid,
         "ground": None,                 # gated: catch-set needs labels (stage 4, Maude's lane)
+        "coverage": coverage_cid,       # corpus-derivable: structural per-TTP layers (catch-class deferred)
     }
     result_cid = _cid({k: v for k, v in stage_cids.items() if v is not None})
     manifest = Manifest(RECIPE, tuple(sorted(techniques)), code_commit, corpus_cid, stage_cids, result_cid)
-    return {"manifest": manifest, "lattice": lattice, "n_evaluable": len(compiled)}
+    return {"manifest": manifest, "lattice": lattice, "coverage": coverage, "n_evaluable": len(compiled)}
 
 
 def diff_manifests(a: Manifest, b: Manifest) -> dict:
