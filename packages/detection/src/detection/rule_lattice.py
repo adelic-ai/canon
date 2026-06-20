@@ -146,6 +146,22 @@ def build_lattice(rules: list[CompiledRule]) -> dict:
     return {"n_rules": len(sets), "n_edges": len(edges), "counts": dict(counts), "edges": edges}
 
 
+def to_turtle(lattice: dict, prefix: str = "urn:canon:rule:") -> str:
+    """Emit the lattice as a **SKOS RDF graph** (Turtle) — the queryable product artifact: each graded edge
+    becomes a ``skos:*Match`` triple between two rule IRIs, with the tightness as an annotation. Dependency-
+    free (string emit), like the Python motif emitter. ``exactMatch`` edges are the dedup classes;
+    ``broadMatch``/``narrowMatch`` the navigable subsumption order; ``closeMatch``/``relatedMatch`` the graded
+    overlap. A consumer can SPARQL it: e.g. ``SELECT ?a ?b WHERE { ?a skos:broadMatch ?b }`` for the
+    subsumption skeleton."""
+    rel2p = {"exact": "skos:exactMatch", "close": "skos:closeMatch", "narrower": "skos:narrowMatch",
+             "broader": "skos:broadMatch", "related": "skos:relatedMatch"}
+    out = ["@prefix skos: <http://www.w3.org/2004/02/skos/core#> .",
+           f"@prefix : <{prefix}> .", ""]
+    for a, rel, b, *_t in lattice["edges"]:                 # tightness is an EDGE property → kept in the dict
+        out.append(f":{a} {rel2p[rel]} :{b} .")             # (annotating it needs RDF-star/reification; later)
+    return "\n".join(out) + "\n"
+
+
 def exact_classes(lattice: dict) -> list[set[str]]:
     """The dedup classes = connected components under ``exactMatch`` edges (synonym equivalence classes).
     Everything else (broader/narrower/related) is the navigable order, NOT a collapse."""

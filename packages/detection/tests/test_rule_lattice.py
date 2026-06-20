@@ -12,6 +12,7 @@ from detection.rule_lattice import (
     exact_classes,
     relation,
     tightness,
+    to_turtle,
     why,
 )
 from detection.sigma_panel import SIGMA
@@ -78,6 +79,18 @@ def test_exact_classes_are_the_dedup_slice():
     # base and synonym form one exactMatch class; strict (narrower) is NOT collapsed into it
     assert any({"base", "syn"} <= cls for cls in classes)
     assert not any("strict" in cls for cls in classes)        # subsumption ≠ dedup
+
+
+def test_to_turtle_emits_skos_triples():
+    lat = build_lattice([_BASE, _STRICT, _SYNONYM])
+    ttl = to_turtle(lat)
+    assert "skos:exactMatch" in ttl and "skos:broadMatch" in ttl   # synonym + subsumption edges
+    assert "@prefix skos:" in ttl
+    # it's well-formed Turtle (parses)
+    import rdflib
+    g = rdflib.Graph()
+    g.parse(data=ttl, format="turtle")
+    assert len(g) == lat["n_edges"]                                # one triple per graded edge
 
 
 @pytest.mark.skipif(not SIGMA.exists(), reason="SigmaHQ rules not present")
