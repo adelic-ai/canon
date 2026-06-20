@@ -26,14 +26,18 @@ is the catch-set, stage 4. This lattice is what catch-set later *grounds*; corpu
 
 from __future__ import annotations
 
+import math
 from collections import Counter, defaultdict
 
 from detection.atom_index import block_polarities
 from detection.rule_ir import CompiledRule
 
 # relation of A relative to B → its SKOS mapping predicate
-SKOS = {"exact": "skos:exactMatch", "narrower": "skos:narrowMatch",
+SKOS = {"exact": "skos:exactMatch", "close": "skos:closeMatch", "narrower": "skos:narrowMatch",
         "broader": "skos:broadMatch", "related": "skos:relatedMatch"}
+
+# tightness above this band promotes a "related" edge to "close" (skos:closeMatch). Tunable.
+CLOSE_BAND = 0.6
 
 
 def clause_set(ir: CompiledRule) -> frozenset[tuple]:
@@ -67,6 +71,40 @@ def relation(a: frozenset, b: frozenset) -> str | None:
     return "related" if (a & b) else None
 
 
+def clause_idf(rules: list[CompiledRule]) -> dict[tuple, float]:
+    """Per-clause inverse document frequency over the corpus: ``log(N / df)`` where ``df`` is how many rules
+    contain the clause. A clause in *few* rules is specific/informative (high IDF); a ubiquitous clause
+    (``Image|endswith \\rundll32.exe``) is generic (low IDF). This is the weight that makes tightness an
+    information measure rather than a raw count."""
+    n = len(rules)
+    df: Counter = Counter()
+    for ir in rules:
+        for c in clause_set(ir):
+            df[c] += 1
+    return {c: math.log(n / d) for c, d in df.items()} if n else {}
+
+
+def _weight(clauses: frozenset, idf: dict | None) -> float:
+    """Mass of a clause-set: its size (cardinality) if unweighted, else the sum of clause IDFs (information)."""
+    if idf is None:
+        return float(len(clauses))
+    return sum(idf.get(c, 1.0) for c in clauses)
+
+
+def tightness(a: frozenset, b: frozenset, idf: dict | None = None) -> float:
+    """Graded overlap of two clause-sets in [0, 1] — the *tightness* axis SKOS needs (exact/close/loose),
+    distinct from the position axis (broad/narrow). Weighted Jaccard: ``mass(a∩b) / mass(a∪b)``.
+
+    With ``idf=None`` it is plain Jaccard (cardinality — how *many* clauses shared). With per-clause IDF
+    weights it is the **information** version: sharing a rare, discriminating clause counts far more than
+    sharing a ubiquitous one — the entropy-analog (the same cardinality-vs-distribution complementarity as
+    fan-out's distinct⟷entropy). 1.0 = identical, 0.0 = disjoint."""
+    union = a | b
+    if not union:
+        return 0.0
+    return _weight(a & b, idf) / _weight(union, idf)
+
+
 def why(a: frozenset, b: frozenset) -> dict:
     """The justification for an edge, shown on demand: the shared clauses and what each side has uniquely."""
     return {"shared": sorted(map(str, a & b)),
@@ -86,6 +124,7 @@ def build_lattice(rules: list[CompiledRule]) -> dict:
         for (f, _m, _v) in cs:
             idx[f].add(i)
 
+    idf = clause_idf(rules)                                    # information weights for the tightness grade
     edges: list[tuple] = []
     counts: Counter = Counter()
     for i, (rid_a, a) in enumerate(sets):
@@ -97,9 +136,13 @@ def build_lattice(rules: list[CompiledRule]) -> dict:
                 continue
             rid_b, b = sets[j]
             rel = relation(a, b)
-            if rel is not None:
-                edges.append((rid_a, rel, rid_b))
-                counts[rel] += 1
+            if rel is None:
+                continue
+            t = round(tightness(a, b, idf), 3)
+            if rel == "related" and t >= CLOSE_BAND:           # tightness GRADES the overlap web
+                rel = "close"
+            edges.append((rid_a, rel, rid_b, t))               # edges now carry their tightness
+            counts[rel] += 1
     return {"n_rules": len(sets), "n_edges": len(edges), "counts": dict(counts), "edges": edges}
 
 
@@ -119,7 +162,7 @@ def exact_classes(lattice: dict) -> list[set[str]]:
         parent[find(x)] = find(y)
 
     nodes: set[str] = set()
-    for a, rel, b in lattice["edges"]:
+    for a, rel, b, *_ in lattice["edges"]:
         nodes.add(a); nodes.add(b)
         if rel == "exact":
             union(a, b)

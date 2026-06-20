@@ -7,9 +7,11 @@ import pytest
 from detection.rule_ir import compile_rule
 from detection.rule_lattice import (
     build_lattice,
+    clause_idf,
     clause_set,
     exact_classes,
     relation,
+    tightness,
     why,
 )
 from detection.sigma_panel import SIGMA
@@ -52,7 +54,22 @@ def test_build_lattice_tallies_graded_edges_and_prunes_disjoint():
     assert c.get("broader", 0) + c.get("narrower", 0) >= 1   # base ⟷ strict subsumption
     # the disjoint rule shares no field → no edge to base/strict/synonym
     edges_with_dis = [e for e in lat["edges"] if "dis" in (e[0], e[2])]
-    assert all(e[0] == "ov" or e[2] == "ov" or False for e in edges_with_dis) or edges_with_dis == []
+    assert edges_with_dis == []
+    # every edge now carries a tightness in [0,1]
+    assert all(0.0 <= e[3] <= 1.0 for e in lat["edges"])
+
+
+def test_tightness_grades_overlap_and_idf_weights_by_specificity():
+    a = clause_set(_STRICT)            # {rundll32, comsvcs}
+    b = clause_set(_OVERLAP)           # {comsvcs, admin}
+    # plain Jaccard: share 1 of 3 distinct clauses
+    assert abs(tightness(a, b) - 1 / 3) < 1e-9
+    # a clause-set is fully tight with itself
+    assert tightness(a, a) == 1.0
+    # IDF weighting changes the score: weight the shared clause heavily vs the uniques
+    idf = clause_idf([_BASE, _STRICT, _SYNONYM, _OVERLAP, _DISJOINT])
+    assert 0.0 <= tightness(a, b, idf) <= 1.0
+    assert tightness(a, b, idf) != tightness(a, b)        # information-weighted ≠ cardinality
 
 
 def test_exact_classes_are_the_dedup_slice():
