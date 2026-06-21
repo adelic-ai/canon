@@ -102,6 +102,12 @@ def ground_lattice(rules: list[tuple[str, dict]], instances: list[dict]) -> dict
     for i, a in enumerate(catchers):
         for b in catchers[i + 1:]:
             beh = _behavioral(catch[a], catch[b])
+            # NOTE: this is the CLAUSE-SET proxy ON PURPOSE — deliberately NOT build_lattice's content_digest
+            # "exact". Grounding exists to catch where that lossy proxy OVER-claims: the over_grouped cell is a
+            # clause_set-"exact" pair that does NOT co-catch (filter/keyword-blind — identical selectors,
+            # different filters). Demoting to content_digest here would make over_grouped provably empty
+            # (content-identical ⟹ co-catch) and defeat the whole grounding. The inconsistency with
+            # build_lattice's exact is intentional: they answer different questions.
             struct = relation(csets[a], csets[b]) or "none"     # None = disjoint clause-sets / unstructured
             crosstab[beh][struct] += 1
             pairs.append({"a": a, "b": b, "behavioral": beh, "structural": struct,
@@ -158,9 +164,11 @@ def splunk_t1558_003_grounding(base: str, *, sigma_root=None) -> dict:
     """Multi-instance grounding on splunk/attack_data **T1558.003 (Kerberoasting)** — the broadening past n=1.
     Labeled instances = the 4769 RC4-encrypted (``TicketEncryptionType == 0x17``) Kerberos TGS-request events
     across the corpus's ``windows-xml.log`` captures (the technique's telemetry signature), deduped by event
-    CID. Unlike the OTRF n=1, rules split on *which subset* they catch (a ``ServiceName != krbtgt`` filter, a
-    machine-account ``$`` filter, RC4-only vs not), so the catch-set has multiple behavioral classes and both
-    off-diagonal cells of :func:`ground_lattice` get real signal."""
+    CID. The *intent* was multi-class splitting (rules differ on which subset they catch). The **observed**
+    result on this corpus: the kerberoast rules correctly reject the krbtgt-typo-spray variants, so only ~1
+    genuine instance is caught by anyone and the catch-set collapses back to ~n=1 — the over-group cell stays
+    empty (``exact_pairs=0``). Multi-class grouping needs a corpus where rules legitimately disagree on subsets
+    (different attack tools/channels); this run is honest about getting the under-group signal, not the over."""
     from pathlib import Path
 
     from detection.evtx_xml import load_evtx_xml

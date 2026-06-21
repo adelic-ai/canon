@@ -139,3 +139,4 @@ def test_splunk_t1558_003_corroborates_under_group_on_second_technique():
     assert gr["crosstab"] == {"co-catch": {"related": 1}}
     assert len(gr["headline"]["under_grouped"]) == 1
     assert gr["headline"]["over_grouped"] == []
+
