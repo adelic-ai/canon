@@ -22,8 +22,9 @@ generates unlimited, traceable designs. (Not ML — physics-as-computation, dete
    verdicts, not a pile of alerts.
 2. **A composable, faithful kernel.** canon: the IR / atom-basis + the provenance DAG + the faithfulness gates
    (emit→attest, Rust-agreement). The "atoms as kernel, evaluate once, compose" move is this. MATCH, maturing.
-3. **First-principles grounding.** canon: logic (sound) + empirical reality — but **NO closed physics**; the
-   fundamental domain difference (below).
+3. **First-principles grounding.** canon: a first-rate analytic foundation (the formal sciences) + empirical
+   reality — but **no closed empirical LAW** of the phenomenon (the divergence, below). The foundation is deep
+   and peer-to-physics; only the empirical-constraint layer is harder.
 4. **Determinism + full traceability — every output explains itself.** canon: the justified-verdict substrate;
    the warrant travels *fused* with the result. **STRONGEST alignment — arguably ahead of what the analogy
    even needs.**
@@ -47,16 +48,35 @@ reality (messy, no closed form). Two consequences set the real targets:
   benign — grounded validation. **This is why the data work (`bots-v3`) is not a side-quest; it IS the engine
   test stand.** Build toward firing the engine cheaply and often.
 
-## Logic as the physics of INFERENCE — not of the phenomenon
+## Two deep foundations — the formal sciences (analytic) and empirical reality (contingent)
 
-The reframe worth keeping, sharpened: Belnap (the 4-valued carrier), SKOS (graded relations), FCA (concept
-lattices), entailment, information theory, probability — these **are** canon's "physics," but of *inference and
-evidence*, not of attacks. They govern how to combine, propagate, and qualify evidence **soundly** (soundness +
-traceability). They make the empirical grounding *rigorous*; they do not replace it.
+Do **not** read the formal apparatus as a mere *lens* for processing data — that subordinates it, and gets the
+dependency backwards. The formal sciences are not downstream of physics; **physics is downstream of them**
+(Newton built calculus for mechanics; Riemannian geometry preceded GR; Hilbert spaces preceded QM; the
+mathematical structure routinely sources the physics). Logic and its family are a deep continent in their own
+right — proof theory, model theory, set/category theory, computability, the foundations edifice — explored as
+deeply as physics and **prior** to it in the order of foundation.
 
-> **The logic is the lens; the data is the light.** Building this formal structure rigorously *is* building the
-> physics — of reasoning — and it's the non-reinventing path *provided we use the established formal tools*
-> (below). "Logic is our physics" must not slide into "so we don't need the data."
+The family canon stands on, each member load-bearing: **logic** (propositional/modal/temporal/many-valued
+Belnap/non-monotonic — the carrier + entailment); **order & lattice theory, FCA, Galois connections** (the SKOS
+lattice); **information theory** (tightness/entropy/KL/MI); **probability, statistics, measure theory**
+(calibration, the abductive posterior); **type theory, category theory, computability** (the IR, composition,
+emitters); **decision & game theory** (the adversarial axis — the attacker *chooses*; SPRT is decision theory);
+**proof & model theory** (warrant-depth / machine_checked).
+
+The distinction between this family and physics is **not depth — it's mode of warrant.** The formal sciences
+give *analytic / necessary* truth (true by derivation, in all possible worlds — `Γ ⊨ φ`); physics gives
+*synthetic / contingent* truth (the world happens to be this way). Both deep, different *kinds* of truth — and
+this is exactly canon's own warrant-is-relational split (entailment exact, empirical graded). So canon stands on
+**two** deep foundations: the analytic family (necessary, prior, first-rate) *and* empirical grounding
+(contingent — the data/test-stand). Physics is one fusion of a deep analytic structure with a *clean* empirical
+law; canon is another fusion of the *same* analytic bedrock with a *messier* empirical constraint (adversarial,
+no closed law). The foundation isn't second-tier; only the empirical-constraint layer is harder.
+
+> So the corrected one-liner: canon does **not** lack physics — it has the foundational theory physics itself is
+> built on, and keeps the necessary (proof) and contingent (data) warrants cleanly distinct per node. What it
+> lacks vs physics is a *clean empirical law*, not deep theory. Build on the established formal tools (below);
+> ground them on real data (the test stand). Two foundations, both first-class.
 
 ## What canon is circling — the detection vision
 
@@ -158,5 +178,6 @@ physics-as-computation; canon's analog is logic-and-statistics-as-computation.
 
 Across the wands, the abductive posterior, the ML loop, and the resolution axes, it all reduces to the same two
 things: a **generative proposer** (Fable 5 — the imagination) and a **grounded metric on differently-shaped
-data** (the test stand — the data-shape problem). The formal structure is the lens; these two are the light and
-the calibration. **Build the test stand; the rest is structure on top.**
+data** (the test stand — the data-shape problem). The analytic foundation (the formal sciences) is first-rate and
+mostly in hand; these two are how the *other* foundation — the empirical one — actually gets built. **Build the
+test stand; you already have the bedrock.**
