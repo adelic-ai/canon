@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canon — An enterprise entrypoint: mine the detections and their allowlists</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --ink:#e6e8ee; --muted:#9aa3b2;
+    --line:#2a2f3a; --accent:#7db4ff; --accent2:#c79bff;
+    --good:#6fcf97; --warn:#f2c94c; --gap:#eb6f6f;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1000px;margin:0 auto;padding:48px 28px 96px}
+  h1{font-size:30px;margin:0 0 6px;letter-spacing:-.01em}
+  .sub{color:var(--muted);margin:0 0 4px;font-size:18px}
+  .stamp{color:var(--muted);font:13px/1.5 var(--mono);margin:0 0 32px}
+  h2{font-size:21px;margin:42px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+  p{margin:10px 0}
+  code{font-family:var(--mono);font-size:.88em;background:#1e222b;padding:1px 5px;border-radius:4px}
+  pre{background:#10131a;border:1px solid var(--line);border-radius:8px;padding:16px 18px;
+    overflow-x:auto;font-family:var(--mono);font-size:13px;line-height:1.7;color:#d4d9e4}
+  .note{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:8px;padding:14px 18px;margin:18px 0}
+  .note.key{border-left-color:var(--accent2)}
+  .note.idea{border-left-color:var(--warn)}
+  .muted{color:var(--muted)}
+  ul{margin:10px 0;padding-left:22px}
+  li{margin:8px 0}
+  strong{color:#fff}
+  .lede{font-size:17px}
+  .arrow{color:var(--accent2);font-weight:600}
+  .step{color:var(--accent);font-weight:600}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p style="font:13px/1.5 var(--mono,monospace);margin:0 0 22px"><a href="index.html" style="color:#7db4ff;text-decoration:none">← Canon index</a></p>
+  <h1>An enterprise entrypoint — mine the detections <em>and their allowlists</em></h1>
+  <p class="sub">Read the org's running Splunk and KQL correlation searches, harvest the allowlists they carry, and turn the org's own exclusions into enterprise-specific atoms — then entail ATT&amp;CK and the kill chain on them.</p>
+  <p class="stamp">canon · idea · 2026-06-21 · <span class="muted">an exploration, not a committed design</span></p>
+
+  <div class="note idea">
+    <strong>This is an idea.</strong> A way into an enterprise that uses only artifacts they already
+    run — no new sensors, no greenfield deployment. Written down to think with, not as a spec.
+  </div>
+
+  <p class="lede">Every enterprise already runs a corpus of detections — Splunk SPL correlation
+  searches, KQL/Defender/Sentinel analytics — and every one of those detections carries an
+  <strong>allowlist</strong>: the exclusions the operators added so the rule stops firing on
+  things they know are fine. That allowlist is a goldmine. It is the organization's own,
+  hand-curated declaration of <em>who and what is normal here</em>.</p>
+
+  <h2>The move</h2>
+  <pre>get every running detection            get each detection's allowlist
+  (Splunk SPL + KQL correlation         (the device accounts, the service
+   searches, all of them)         <span class="arrow">──▶</span>     users, the special-access human
+                                         users, the scanners, the jump hosts)
+
+        <span class="arrow">│</span> feed both into the substrate
+        <span class="arrow">▼</span>
+  a set of <span class="step">enterprise-specific atoms</span> to fire
+        <span class="arrow">│</span>
+        <span class="arrow">▼</span>
+  <span class="step">entail ATT&amp;CK + the kill chain</span> on them</pre>
+
+  <h2>What the allowlists give you</h2>
+  <p>The exclusions are an inventory the org maintains without realizing it's an inventory. Pulled
+  across the whole detection corpus, they name:</p>
+  <ul>
+    <li><strong>Device / machine accounts</strong> — the automated identities the environment runs on.</li>
+    <li><strong>Service users</strong> — the broad-access non-human accounts that everything depends on.</li>
+    <li><strong>Special-access human users</strong> — break-glass admins, privileged operators.</li>
+    <li><strong>The infrastructure of "normal"</strong> — scanners, vuln assessors, jump hosts, backup agents.</li>
+  </ul>
+  <div class="note key">
+    These are exactly the high-value, hard-to-enumerate identities — the privileged and automated
+    surface an attacker most wants to ride. The org has already written them down for you, one
+    allowlist entry at a time. Read as a positive map instead of a suppression list, the allowlist
+    becomes the <strong>watch set</strong>: the very accounts the SIEM tunes out are the ones whose
+    off-profile behavior matters most.
+  </div>
+
+  <h2>Into the substrate → enterprise-specific atoms</h2>
+  <p>Both halves go into canon: the detection <em>logic</em> (compiled to the IR) and the
+  allowlist-derived <em>identities</em>. Out comes a set of <strong>enterprise-specific atoms</strong> —
+  detection primitives shaped by this org's actual account taxonomy, not generic community rules.
+  The org's own context is baked into what fires and what doesn't.</p>
+
+  <h2>Then entail the frameworks</h2>
+  <p>With enterprise-specific atoms in hand, <strong>entail MITRE ATT&amp;CK and the kill chain on
+  them</strong> — place each atom in technique-and-tactic space, and let the kill-chain structure
+  connect them into trajectories. The result is a framework view grounded in <em>this</em>
+  enterprise's detections and identities, not an abstract coverage chart.</p>
+
+  <h2>Why it fits as an entrypoint</h2>
+  <ul>
+    <li><strong>Uses what they already run.</strong> The detections and allowlists exist; reading them
+      is low-friction and read-only on day one.</li>
+    <li><strong>Enterprise-grounded from the start.</strong> The output is tuned to the org's real
+      identity surface — the context that's normally tribal knowledge, surfaced from artifacts.</li>
+    <li><strong>Plays to canon's strengths.</strong> Detections → IR, atoms, and framework entailment
+      are the substrate's native moves; this just feeds them the richest enterprise-specific input
+      available without instrumenting anything new.</li>
+  </ul>
+
+  <div class="note">
+    <strong>One line.</strong> Walk in through the detections and their allowlists, turn the org's own
+    exclusions into enterprise-specific atoms, and entail ATT&amp;CK and the kill chain on what comes
+    out — an entrypoint built entirely from what the enterprise already runs.
+  </div>
+</div>
+</body>
+</html>
