@@ -62,6 +62,23 @@ is the default because it's versioned and discoverable.
 
 ## Handoff log (append-only, newest first)
 
+### 2026-06-21 · main · rigorous code review + verified-HIGH fixes
+`feat/sigma-treatment-pipeline` @ pushed. Fan-out review (5 agents, 1/module), every finding VERIFIED with a
+repro before acting. Fixed 5 HIGH/HIGH-ish, each with regression tests; full `tests/` 304 green:
+- rule_lattice: exactMatch now structure-aware (OR vs AND no longer false-synonym) + unreferenced blocks
+  excluded. NOTE: corpus-wide exact counts shift DOWN → the dedup-pass numbers (40 exact/31 classes) and the
+  lattice-product HTML (2 exact) are now stale-high; conclusion (over-grouping) is reinforced, counts not
+  regenerated.
+- treatment_pipeline: crash on duplicate/missing rule id fixed; code_commit docstring made honest (not in
+  result_cid).
+- assembly_diagnosis: empty-pattern ghost-match + keyword-only mislabel.
+- coverage: corroboration key holes (last-wins drop + base/sub mismatch).
+- atom_implication: UNSOUND glob exclusion (false tamper alarms), derive-overwrites-False, hex GrantedAccess.
+RESIDUAL (not fixed, lower sev): lattice O(n^2) on shared-clause corpora (scale ceiling); subsumption still
+flattens OR (proxy, only exact made faithful); treat None-stage result_cid/changed_stages asymmetry (MED);
+coverage families transitive double-count + gap-absence-vs-noncompile (MED/LOW); atom_impl equals⟹gte
+completeness. None block merge; flagged for a follow-up pass.
+
 ### 2026-06-20 · main · assembly-level non-fire diagnosis landed
 `feat/sigma-treatment-pipeline` @ `c58b9d0`. Built `assembly_diagnosis.py` (atom-reuse exoneration oracle) +
 6 tests + OTRF runner. Real comsvcs run (79 rules): 2 fire / 54 wrong-channel / 10 variant-miss / 1
