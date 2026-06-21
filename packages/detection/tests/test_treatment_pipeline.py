@@ -51,3 +51,19 @@ def test_ablation_changing_technique_localizes_to_the_coverage_stage():
     assert d["result_changed"]
     assert d["changed_stages"] == ["coverage"]      # a clean single-stage ablation
     assert a.techniques != b.techniques
+
+
+# --- regression: treat() must not crash on duplicate / missing rule ids (review HIGH) ---
+
+def test_treat_handles_duplicate_rule_ids():
+    dup = [{"id": "a", "detection": {"sel": {"Image|endswith": "\\x.exe"}, "condition": "sel"}},
+           {"id": "a", "detection": {"sel": {"Image|endswith": "\\y.exe"}, "condition": "sel"}}]
+    res = treat(dup, ["T1003.001"])                 # previously raised TypeError comparing dicts
+    assert res["manifest"].result_cid and res["n_evaluable"] == 2
+
+
+def test_treat_handles_missing_rule_ids():
+    none = [{"detection": {"sel": {"Image|endswith": "\\x.exe"}, "condition": "sel"}},
+            {"detection": {"sel": {"Image|endswith": "\\y.exe"}, "condition": "sel"}}]
+    res = treat(none, ["T1003.001"])                # two id-less rules both map to "?" → previously crashed
+    assert res["manifest"].result_cid and res["n_evaluable"] == 2

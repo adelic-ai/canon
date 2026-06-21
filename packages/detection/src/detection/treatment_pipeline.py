@@ -5,8 +5,11 @@ pipeline; this is the orchestration that makes a run **reproducible** and **abla
 techniques)` runs the corpus-derivable stages — ingest/pin → compile→IR → categorize (the SKOS lattice) —
 content-addresses each, and emits a :class:`Manifest` pinning the inputs to a single ``result_cid``:
 
-- **Reproducible** — same rules + techniques (+ same code) → the *same* ``result_cid``. The end-result knows
-  the state that produced it.
+- **Reproducible** — same *stage outputs* → the *same* ``result_cid``: the end-result is addressed by what
+  the stages produced. ``code_commit`` is recorded as metadata (the state that produced it) but is **not**
+  folded into ``result_cid`` — a no-op refactor that changes no stage output keeps the same address (so the
+  address tracks the artifact, not the commit; a code change that *does* move a stage is localized by that
+  stage, below).
 - **Ablatable** — change one stage (a rule, a better lattice metric) → that stage's CID changes → the
   ``result_cid`` changes, and :func:`diff_manifests` localizes *which* stage moved. That diff-the-result loop
   is the ML-ish experiment loop with provenance instead of vibes.
@@ -69,8 +72,10 @@ def treat(rules: list[dict], techniques, *, code_commit: str | None = None,
     the coverage CID (and thus ``result_cid``) reflect it — making "we corroborated on these events" pinned."""
     evaluable = [r for r in rules if isinstance(r, dict) and is_evaluable(r)]
 
-    # stage 0 — ingest + pin: the identity+logic of the ingested rules (pre-compile, syntax-stable)
-    corpus_cid = _cid(sorted((r.get("id", "?"), r.get("detection")) for r in evaluable))
+    # stage 0 — ingest + pin: the identity+logic of the ingested rules (pre-compile, syntax-stable).
+    # Sort key uses _cid(detection) not the raw dict — duplicate/missing ids would otherwise tie and fall
+    # through to comparing un-orderable detection dicts (TypeError).
+    corpus_cid = _cid(sorted((r.get("id", "?"), _cid(r.get("detection"))) for r in evaluable))
     # stage 1 — compile → IR: the typed firing logic (each rule's content-addressed IR)
     compiled = [compile_rule(r) for r in evaluable]
     compile_cid = _cid(sorted(ir.cid for ir in compiled))
