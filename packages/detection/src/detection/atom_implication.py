@@ -39,8 +39,11 @@ learnable from clean telemetry. They catch the *bungled* tamper, not the careful
 invariant raises the bar (the attacker must keep N fields mutually coherent).
 
 Conservative by construction: claims an edge only when the op/value relation provably holds (case-insensitive,
-matching Sigma); multi-value (OR) clauses and regex are left unrelated unless identical. Never a false
-implication — same discipline as ``structural_relation``.
+matching Sigma). Left unrelated unless *identical*: multi-value (OR) clauses, regex/cidr, **glob wildcards**
+(``*``/``?`` compile to regex, not literal substring), and **transforming modifiers** (``windash``/``i``/
+``base64``/…). Numeric ops parse hex/oct/bin (Sysmon ``GrantedAccess`` is hex). Never a false implication and
+never a false **exclusion** (a glob value may match the other, so distinct-equals exclusion is withheld when
+either side is opaque) — without that guard the integrity probe would raise false ``Both`` alarms.
 """
 
 from __future__ import annotations
@@ -68,12 +71,32 @@ def _single(c: Clause) -> str | None:
     return str(c.values[0]) if len(c.values) == 1 else None
 
 
-def _isnum(s: str) -> bool:
+_OPAQUE_MODS = frozenset({"windash", "i", "base64", "base64offset", "wide", "fieldref", "expand"})
+
+
+def _num(s: str):
+    """Parse a numeric value, hex/oct/bin aware (Sysmon GrantedAccess is hex like ``0x1410``). None if not."""
     try:
-        float(s)
-        return True
+        return float(s)
     except ValueError:
-        return False
+        try:
+            return float(int(s, 0))
+        except ValueError:
+            return None
+
+
+def _isnum(s: str) -> bool:
+    return _num(s) is not None
+
+
+def _has_wildcard(s: str) -> bool:
+    return "*" in s or "?" in s          # Sigma glob: '*'/'?' compile to regex, NOT literal substring
+
+
+def _opaque(c: Clause, v: str) -> bool:
+    """The value/op is not a plain literal substring relation — a glob wildcard or a transforming modifier
+    (windash/i/base64/…). String implication/exclusion reasoning is UNSOUND on these; relate only if identical."""
+    return _has_wildcard(v) or bool(set(c.mods) & _OPAQUE_MODS)
 
 
 def _num_implies(ao: str, av: float, bo: str, bv: float) -> bool:
@@ -94,10 +117,11 @@ def implies(a: Clause, b: Clause) -> bool:
     if av is None or bv is None:
         return False
     ao, bo = _op(a), _op(b)
-    if ao in _NUM_OPS and bo in _NUM_OPS and _isnum(av) and _isnum(bv):
-        return _num_implies(ao, float(av), bo, float(bv))
-    if "re" in (ao, bo) or "cidr" in (ao, bo):
-        return a.as_tuple() == b.as_tuple()    # regex/cidr: only identical implies
+    na, nb = _num(av), _num(bv)
+    if ao in _NUM_OPS and bo in _NUM_OPS and na is not None and nb is not None:
+        return _num_implies(ao, na, bo, nb)
+    if "re" in (ao, bo) or "cidr" in (ao, bo) or _opaque(a, av) or _opaque(b, bv):
+        return a.as_tuple() == b.as_tuple()    # regex/cidr/glob/transforming-mod: only identical implies
     la, lb = av.lower(), bv.lower()             # Sigma string matching is case-insensitive
     if ao == "equals":
         return {"equals": la == lb, "endswith": la.endswith(lb),
@@ -119,6 +143,8 @@ def excludes(a: Clause, b: Clause) -> bool:
     av, bv = _single(a), _single(b)
     if av is None or bv is None:
         return False
+    if _opaque(a, av) or _opaque(b, bv):       # a glob/transformed value may MATCH the other → can't claim
+        return False                            # mutual exclusion (e.g. EventID=1* and EventID=10 both fire)
     return _op(a) == "equals" and _op(b) == "equals" and av.lower() != bv.lower()
 
 
@@ -157,7 +183,9 @@ def derive(truth: dict[int, bool], implications: list[tuple[int, int]]) -> dict[
     while changed:
         changed = False
         for i, j in implications:
-            if out.get(i) and not out.get(j):
+            # fill only UNKNOWN (absent) atoms. An explicitly-observed ``b=False`` under ``a True, a⟹b`` is a
+            # CONTRADICTION — leave it False so consistency_violations can surface it (was overwritten to True).
+            if out.get(i) is True and out.get(j) is None:
                 out[j] = True
                 changed = True
     return out

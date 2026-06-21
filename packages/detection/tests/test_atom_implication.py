@@ -68,3 +68,37 @@ def test_exclusion_violation_flags_both_true():
     impl = build_atom_implications(atoms)
     bad = consistency_violations({0: True, 1: True}, impl["implications"], impl["exclusions"])
     assert len(bad) == 1 and bad[0]["kind"] == "exclusion"
+
+
+# --- regression: glob/transform soundness + derive-preserves-False + hex numerics (review HIGH) ---
+
+def test_glob_value_does_not_falsely_exclude():
+    # EventID|equals "1*" is a glob that MATCHES "10" → the two are NOT mutually exclusive.
+    assert not excludes(_c("EventID", ["equals"], "1*"), _c("EventID", ["equals"], "10"))
+    # but genuine distinct literals still exclude
+    assert excludes(_c("EventID", ["equals"], "4624"), _c("EventID", ["equals"], "4625"))
+
+
+def test_transforming_modifier_is_opaque_to_exclusion():
+    assert not excludes(_c("CommandLine", ["windash"], "-s"), _c("CommandLine", ["equals"], "-s"))
+
+
+def test_glob_implication_is_withheld_unless_identical():
+    assert not implies(_c("Image", ["contains"], "a*b"), _c("Image", ["contains"], "ab"))
+    assert implies(_c("Image", ["contains"], "a*b"), _c("Image", ["contains"], "a*b"))   # identical ok
+
+
+def test_derive_preserves_an_observed_false():
+    # 0 ⟹ 1, observed {0:True, 1:False} is a contradiction — derive must NOT overwrite 1 to True.
+    out = derive({0: True, 1: False}, [(0, 1)])
+    assert out[1] is False
+    assert consistency_violations({0: True, 1: False}, [(0, 1)], []) == [
+        {"kind": "implication", "a": 0, "b": 1}]
+    # but an ABSENT atom is still filled
+    assert derive({0: True}, [(0, 1)])[1] is True
+
+
+def test_hex_numeric_implication_grantedaccess():
+    # GrantedAccess masks are hex; gt 0x1000 ⟹ gte 0x1000
+    assert implies(_c("GrantedAccess", ["gt"], "0x1000"), _c("GrantedAccess", ["gte"], "0x1000"))
+    assert implies(_c("GrantedAccess", ["gte"], "0x1410"), _c("GrantedAccess", ["gte"], "0x1000"))
