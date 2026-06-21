@@ -84,6 +84,21 @@
     off-profile behavior matters most.
   </div>
 
+  <h2>The other half — the allowlist is also the blind spot</h2>
+  <p>An allowlist doesn't only describe the privileged surface; it marks where detection has been
+  <strong>deliberately switched off</strong>. That is its entire purpose — stop firing here. So the watch set
+  is high-value <em>twice over</em>: it's the surface an attacker most wants to ride, <strong>and</strong> the
+  surface the SIEM has agreed to stop watching. Whoever lands on an allowlisted identity is on the
+  highest-value and least-watched ground in the same moment.</p>
+  <div class="note key">
+    Read this way, the allowlist is the organization's own declaration of its <strong>control-gap</strong> — a
+    map of exactly where detection has been turned off. A capable adversary wants that map; the org has been
+    drawing it, one exclusion at a time. Watching the allowlist set for off-profile behavior puts eyes back
+    precisely where they were removed — without re-enabling the noise the exclusion existed to silence. It is
+    the "detection is the shadow of an absent or bypassable control" frame, read straight off the SIEM's own
+    configuration.
+  </div>
+
   <h2>Into the substrate → enterprise-specific atoms</h2>
   <p>Both halves go into canon: the detection <em>logic</em> (compiled to the IR) and the
   allowlist-derived <em>identities</em>. Out comes a set of <strong>enterprise-specific atoms</strong> —
