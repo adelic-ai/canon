@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canon — Resolution: what we built to sharpen Sigma, and what's left</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --ink:#e6e8ee; --muted:#9aa3b2;
+    --line:#2a2f3a; --accent:#7db4ff; --accent2:#c79bff;
+    --good:#6fcf97; --warn:#f2c94c; --gap:#eb6f6f;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1180px;margin:0 auto;padding:48px 28px 96px}
+  h1{font-size:30px;margin:0 0 6px;letter-spacing:-.01em}
+  .sub{color:var(--muted);margin:0 0 4px;font-size:18px}
+  .stamp{color:var(--muted);font:13px/1.5 var(--mono);margin:0 0 32px}
+  h2{font-size:21px;margin:42px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+  h3{font-size:16px;margin:24px 0 6px;color:var(--accent2)}
+  p{margin:10px 0}
+  code{font-family:var(--mono);font-size:.88em;background:#1e222b;padding:1px 5px;border-radius:4px}
+  pre{background:#10131a;border:1px solid var(--line);border-radius:8px;padding:14px 16px;
+    overflow-x:auto;font-family:var(--mono);font-size:13px;line-height:1.6;color:#d4d9e4}
+  .note{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:8px;padding:14px 18px;margin:18px 0}
+  .note.gap{border-left-color:var(--gap)}
+  .note.key{border-left-color:var(--accent2)}
+  .note.good{border-left-color:var(--good)}
+  .muted{color:var(--muted)}
+  ul{margin:10px 0;padding-left:22px}
+  li{margin:8px 0}
+  strong{color:#fff}
+  .lede{font-size:17px}
+  .arrow{color:var(--accent2);font-weight:600}
+
+  /* side-by-side: the verbatim seed query (left, sticky) next to the reworked exploration (right) */
+  .layout{display:grid;grid-template-columns:320px 1fr;gap:40px;align-items:start;margin-top:8px}
+  .seed{position:sticky;top:24px;background:var(--panel);border:1px solid var(--line);
+    border-left:3px solid var(--accent2);border-radius:10px;padding:18px 20px}
+  .seed .tag{display:inline-block;font:11px/1 var(--mono);text-transform:uppercase;letter-spacing:.05em;
+    color:var(--accent2);border:1px solid var(--line);border-radius:999px;padding:5px 9px;margin-bottom:12px}
+  .seed blockquote{margin:0;font-size:15px;line-height:1.65;color:#cdd3df;font-style:italic}
+  .seed .who{margin-top:14px;font:12px/1.4 var(--mono);color:var(--muted)}
+  @media(max-width:920px){
+    .layout{grid-template-columns:1fr;gap:22px}
+    .seed{position:static}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p style="font:13px/1.5 var(--mono,monospace);margin:0 0 22px"><a href="index.html" style="color:#7db4ff;text-decoration:none">← Canon index</a></p>
+  <h1>Resolution — what we built to sharpen Sigma, and what's left</h1>
+  <p class="sub">The treated corpus is an <em>instance</em>; every "categorize Sigma" tool is really a resolution instrument. Five axes, claim → structure → behavior.</p>
+  <p class="stamp">canon · exploration · 2026-06-21 · <span class="muted">the seed question, verbatim, beside its developed answer</span></p>
+
+  <div class="layout">
+    <!-- LEFT: the verbatim query, untouched -->
+    <aside class="seed">
+      <span class="tag">the question, verbatim</span>
+      <blockquote>So I was thinking a lot of our general work with canon is an instance. All of the Sigma work depends on the datasets we ran to help shape the structure we extract from Sigma, with other data the treated sigma may be different. And not just the data but the constructions we built to help belnap/SKOS/FCA to parse the data by doing things that, hopefully, increase resolution. So I wonder what else can be done to increase resolution, and what are exactly all the constructions we built for this purpose? You just built one of them, yes?</blockquote>
+      <p class="who">— the seed, 2026-06-21</p>
+    </aside>
+
+    <!-- RIGHT: the reworked exploration -->
+    <main>
+      <p class="lede">Yes — catch-set grounding (<code>catch_set.py</code>) plus the <code>ground_lattice</code> arbiter is
+      one of them, and the highest-resolution one on the "what does a rule detect" axis. But the constructions
+      aren't a flat list. They're <strong>resolution instruments stacked on five axes</strong>, each trading a lossy
+      representation for a finer one — and the move that runs through all of them is the same:
+      <span class="arrow">claim → structure → behavior</span>.</p>
+
+      <h2>First: "it's an instance" is canon's own thesis, turned inward</h2>
+      <p>The treated Sigma corpus isn't a fixed truth — it's a <strong>derived result</strong>, warranted only relative
+      to its inputs: <code>(corpus@cid, code@sha, labels)</code>. That's the <em>warrant-is-relational</em> principle
+      applied to our own work, not a weakness. The construction that makes the instance-ness explicit is the
+      treatment manifest (<code>treatment_pipeline.py</code>): it pins the producing state, and — the part that
+      answers the question directly — it lets you <strong>diff two result-CIDs when you swap an input</strong>.</p>
+      <div class="note key">
+        That diff <em>is</em> the measurement of "how much of this is an instance vs stable structure." Managing
+        instance-contingency and increasing resolution turn out to be the same activity, seen from two sides.
+      </div>
+
+      <h2>The five axes of resolution</h2>
+
+      <h3>Axis 1 — what does a rule <em>detect</em>?</h3>
+      <pre>tag  <span class="arrow">→</span>  FCA concept-key  <span class="arrow">→</span>  IR content_signature  <span class="arrow">→</span>  catch-set
+claim       field-set            structure              behavior        (lossy ───────────────────────────────────► fine)</pre>
+      <ul>
+        <li><strong>tag</strong> (<code>attack.tXXXX</code>) — the author's <em>claim</em>. Lossiest: 79 rules claim T1003.001, 2 catch.</li>
+        <li><strong>FCA concept-key</strong> (<code>audit.py</code>) — field-SET, value-blind. A resolution <em>floor, not a booster</em>: it over-collapses (32 distinct macOS detections → 1). This is what motivated the finer keys.</li>
+        <li><strong>IR content_signature</strong> (<code>rule_ir.py</code>) — the actual clauses + values, corpus-free.</li>
+        <li><strong>catch-set</strong> (<code>catch_set.py</code>, just built) — what's <em>actually</em> caught, corpus-grounded. Highest resolution — but data-contingent: this is the "instance."</li>
+      </ul>
+
+      <h3>Axis 2 — how do two rules <em>relate</em>?</h3>
+      <pre>binary dedup  <span class="arrow">→</span>  SKOS-graded lattice  <span class="arrow">→</span>  tightness grade  <span class="arrow">→</span>  behavioral co-catch
+same/not       exact/broad/narrow/related   IDF-weighted [0,1]      the arbiter</pre>
+      <ul>
+        <li><strong><code>rule_lattice.py</code></strong> — exact / close / broad / narrow / related: a navigable order, not a collapse.</li>
+        <li><strong>tightness</strong> (IDF-weighted Jaccard) — continuous; IDF is the entropy-analog: sharing a <em>rare</em> clause counts more than a ubiquitous one.</li>
+        <li><strong><code>atom_implication.py</code></strong> — the same relation at the atom altitude.</li>
+        <li><strong><code>ground_lattice</code></strong> (just built) — the <em>arbiter</em>: cross-tabs structural × behavioral to locate exactly where structure under- or over-resolves. The finding: behavioral synonyms are structurally <code>related</code>, not <code>exact</code> → dedup under-resolves.</li>
+      </ul>
+
+      <h3>Axis 3 — the carrier (state of knowledge)</h3>
+      <pre>boolean  <span class="arrow">→</span>  Belnap four-valued  (None ≠ True ≠ False ≠ Both)</pre>
+      <p>"Didn't look" (None) vs "looked, clean" (False) vs "contradiction" (Both) — the resolution that
+      SQL-<code>NULL</code>→<code>False</code> destroys. (<code>carrier</code> in <code>provenance</code>.)</p>
+
+      <h3>Axis 4 — cross-schema mapping fidelity</h3>
+      <pre>exact-or-nothing  <span class="arrow">→</span>  SKOS-graded + load-bearingness gate</pre>
+      <p><code>vocab.py</code> / <code>ocsf_*.py</code> grade the mapping <em>and</em> gate demotion on whether the
+      difference is load-bearing on <em>this</em> detection — an unused-field mismatch is inert, not a penalty.</p>
+
+      <h3>Axis 5 — why did a rule <em>miss</em>? (resolution on the negative space)</h3>
+      <pre>silent  <span class="arrow">→</span>  typed cause  <span class="arrow">→</span>  assembly-level
+        missing-telemetry / logic-gap / allowlist     instruction altitude</pre>
+      <p><code>fidelity.py</code> assigns a structured cause; <code>assembly_diagnosis.py</code> takes it down to
+      the instruction level — resolution applied to the rules that <em>didn't</em> fire.</p>
+
+      <div class="note">
+        So one of these <em>was</em> just built (axes 1–2, the behavioral end), and it's the one that exposed the
+        resolution gap between all the others: structure says <code>related</code> where behavior says <em>synonym</em>.
+      </div>
+
+      <h2>What else can sharpen resolution</h2>
+      <p>In rough priority, each tied to a real gap:</p>
+      <ul>
+        <li><strong>Filter-aware + value-aware structural keys</strong> (the queued <code>content_digest</code>). The
+        two finest <em>corpus-free</em> keys are still lossy: FCA is value-blind, <code>clause_set</code> is
+        positive-only (filter-blind). Both verified to over-group (an <code>svchost</code> filter pair; a Linux
+        <code>EXECVE</code> keyword trio). Cleanest next booster — raises axis-1/2 resolution with <strong>no new
+        data</strong>.</li>
+        <li><strong>Catch-<em>profile</em>, not catch-<em>set</em></strong> (behavioral, new). The set records <em>which</em>
+        instances fired; it can't tell apart two rules that catch the same instance via <em>different</em> discriminators
+        (the comsvcs case: <code>CallTrace</code> vs <code>StartModule</code> — same set, not real synonyms). Recording
+        <em>why</em> each instance fired (<code>ground_lattice.why()</code> already half-computes it) turns the set into
+        a profile and resolves same-set / different-mechanism.</li>
+        <li><strong>Cross-corpus ablation</strong> — the instance worry, operationalized. Run the treatment over N corpora
+        and diff the result-CIDs (the manifest already supports it). What's stable across corpora is <em>structure</em>;
+        what moves is the <em>instance</em>. That measures the exact thing the question is about, and says which extracted
+        relations are portable.</li>
+        <li><strong>Don't collapse the two verdict axes</strong> — Belnap (discrete knowledge) and confidence (continuous
+        log-odds) are orthogonal; keeping both per node instead of one scalar is a resolution choice already in the
+        design, worth holding as more detectors land.</li>
+      </ul>
+
+      <div class="note gap">
+        <strong>The honest one — and it is NOT a construction.</strong> Behavioral resolution is capped by data
+        <em>structure</em>, not machinery. Atomic-red-team captures are pure-attack: no benign population (can't resolve
+        precision/FP), cross-channel-disjoint (can't resolve same-channel rule disagreement). That's the wall both the
+        catch-set lane and the fan-out battery hit. You cannot construct your way past thin data — the next jump in
+        behavioral resolution needs <em>differently-shaped</em> data (benign background + same-channel variation;
+        <code>bots-v3</code> is the candidate), not more parsing of isolated captures.
+      </div>
+
+      <div class="note">
+        <strong>One line.</strong> Resolution rises <span class="arrow">claim → structure → behavior</span> across five
+        axes, but behavior is the least portable — which is precisely <em>why</em> the treated corpus is an instance.
+        Sharpen the portable structural keys (<code>content_digest</code>) where no data is needed; quantify the
+        instance-ness (cross-corpus ablation) where it is.
+      </div>
+    </main>
+  </div>
+</div>
+</body>
+</html>
