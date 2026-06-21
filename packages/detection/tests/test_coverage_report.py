@@ -85,3 +85,26 @@ def test_corroboration_layer_populates_from_events():
     assert cov["corroboration_enabled"] is True
     c = cov["per_technique"]["T1580"]["corroboration"]
     assert c is not None and c["category"] == "CORROBORATED" and c["witnesses"] >= 1
+
+
+# --- regression: corroboration key aggregation + base/sub match (review HIGH) ---
+
+def test_corroboration_aggregates_duplicate_specs_not_last_wins(monkeypatch):
+    import detection.sigma_panel as sp
+    monkeypatch.setattr(sp, "corroboration_coverage", lambda specs: [
+        {"technique": "T1003.001", "category": "CORROBORATED", "votes": 3, "fired": ["a.yml"], "note": ""},
+        {"technique": "T1003.001", "category": "no-overlap", "votes": 0, "fired": [], "note": ""},
+    ])
+    rules = [_mk("r", "T1003.001", {"sel": {"Image|endswith": "\\x.exe"}, "condition": "sel"})]
+    c = _cov(rules, ["T1003.001"], event_specs=[{"technique": "T1003.001"}])["per_technique"]["T1003.001"]["corroboration"]
+    assert c["category"] == "CORROBORATED" and c["witnesses"] == 3   # NOT overwritten to no-overlap/0
+
+
+def test_corroboration_matches_base_spec_to_sub_technique(monkeypatch):
+    import detection.sigma_panel as sp
+    monkeypatch.setattr(sp, "corroboration_coverage", lambda specs: [
+        {"technique": "T1003", "category": "CORROBORATED", "votes": 2, "fired": ["a.yml"], "note": ""},
+    ])
+    rules = [_mk("r", "T1003.001", {"sel": {"Image|endswith": "\\x.exe"}, "condition": "sel"})]
+    c = _cov(rules, ["T1003.001"], event_specs=[{"technique": "T1003"}])["per_technique"]["T1003.001"]["corroboration"]
+    assert c is not None and c["category"] == "CORROBORATED"        # base T1003 attaches to sub T1003.001

@@ -102,12 +102,29 @@ def coverage_report(rules: list[dict], compiled: list[CompiledRule], lattice: di
     # behavioral layer (event-gated): how many independent witnesses fire on the supplied scenarios
     if event_specs:
         from detection.sigma_panel import corroboration_coverage
-        corro = {r["technique"].upper(): r for r in corroboration_coverage(event_specs)}
+        # AGGREGATE by technique — multiple specs/channels for one technique must COMBINE, never last-wins
+        # (a CORROBORATED spec silently overwritten by a later no-overlap spec was a real witness-drop bug).
+        corro: dict[str, dict] = {}
+        for r in corroboration_coverage(event_specs):
+            agg = corro.setdefault(r["technique"].upper(),
+                                   {"category": r["category"], "witnesses": 0, "fired": [], "note": ""})
+            agg["witnesses"] += r["votes"]
+            agg["fired"] = sorted(set(agg["fired"]) | set(r["fired"]))
+            if r["votes"]:                                     # any corroborating spec ⇒ CORROBORATED
+                agg["category"] = "CORROBORATED"
+            if r.get("note"):
+                agg["note"] = "; ".join(p for p in (agg["note"], r["note"]) if p)
+
+        def _match(tech):                                     # exact, else base-technique (T1003 ↔ T1003.001)
+            if tech in corro:
+                return corro[tech]
+            base = tech.split(".")[0]
+            return next((v for k, v in corro.items() if base in (k, k.split(".")[0])), None)
+
         for tech, t in per.items():
-            c = corro.get(tech)
-            if c:                                             # witnesses=deduped classes that fired (votes)
-                t["corroboration"] = {"category": c["category"], "witnesses": c["votes"],
-                                      "fired": c["fired"], "note": c.get("note", "")}
+            c = _match(tech)
+            if c:
+                t["corroboration"] = {k: c[k] for k in ("category", "witnesses", "fired", "note")}
 
     gaps = [t for t in requested if t not in covered]
     return {
