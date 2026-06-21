@@ -50,8 +50,8 @@ def clause_set(ir: CompiledRule) -> frozenset[tuple]:
     for b in ir.blocks:
         if b.kind == "keyword":
             continue
-        if 1 in pol.get(b.name, {1}):                          # positive block (selector), default positive
-            for m in b.maps:
+        if 1 in pol.get(b.name, set()):                        # positively-REFERENCED block only (an
+            for m in b.maps:                                   # unreferenced block doesn't gate firing → excluded
                 for c in m:
                     out.add((c.field, c.mods, c.values))
     return frozenset(out)
@@ -120,29 +120,35 @@ def build_lattice(rules: list[CompiledRule]) -> dict:
     pairwise comparison to rules that share ≥1 field (everything else is disjoint = no edge), so it is
     near-linear in practice, not O(n²). Returns the edges ``(rule_a, relation, rule_b)`` and the type tally;
     ``exact`` edges are the dedup (synonym) classes, ``broader``/``narrower`` the navigable subsumption order."""
-    sets = [(ir.rule_id, clause_set(ir)) for ir in rules]
-    sets = [(rid, cs) for rid, cs in sets if cs]               # drop unstructured (keyword-only) rules
+    sets = [(ir.rule_id, clause_set(ir), ir) for ir in rules]
+    sets = [(rid, cs, ir) for rid, cs, ir in sets if cs]      # drop unstructured (keyword-only) rules
     idx: dict[str, set[int]] = defaultdict(set)
-    for i, (_rid, cs) in enumerate(sets):
+    for i, (_rid, cs, _ir) in enumerate(sets):
         for (f, _m, _v) in cs:
             idx[f].add(i)
 
     idf = clause_idf(rules)                                    # information weights for the tightness grade
     edges: list[tuple] = []
     counts: Counter = Counter()
-    for i, (rid_a, a) in enumerate(sets):
+    for i, (rid_a, a, ir_a) in enumerate(sets):
         candidates: set[int] = set()
         for (f, _m, _v) in a:
             candidates |= idx[f]
         for j in candidates:
             if j <= i:                                         # each unordered pair once
                 continue
-            rid_b, b = sets[j]
+            rid_b, b, ir_b = sets[j]
             rel = relation(a, b)
             if rel is None:
                 continue
             t = round(tightness(a, b, idf), 3)
-            if rel == "related" and t >= CLOSE_BAND:           # tightness GRADES the overlap web
+            # EXACT is the dedup CLAIM — it must never false-claim a synonym. Equal clause-SETS are not
+            # sufficient: `a OR b` and `a AND b` (and unreferenced-block variants) share clauses but compose
+            # them differently. Require the full content structure (blocks + condition AST) to match; else the
+            # rules merely share all clauses → demote to close/related, never exact.
+            if rel == "exact" and ir_a.content_digest() != ir_b.content_digest():
+                rel = "close" if t >= CLOSE_BAND else "related"
+            elif rel == "related" and t >= CLOSE_BAND:         # tightness GRADES the overlap web
                 rel = "close"
             edges.append((rid_a, rel, rid_b, t))               # edges now carry their tightness
             counts[rel] += 1

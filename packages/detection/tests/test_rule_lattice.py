@@ -105,3 +105,36 @@ def test_lattice_over_a_real_technique_has_graded_edges():
     # graded, not just dedup: subsumption and/or related edges exist alongside exact
     c = lat["counts"]
     assert sum(c.get(k, 0) for k in ("broader", "narrower", "related")) > 0
+
+
+# --- regression: exactMatch must be structure-aware (code-review HIGH H1/H2) ---
+
+def _ir(rid, detection):
+    return compile_rule({"id": rid, "detection": detection})
+
+
+def test_or_block_and_and_block_with_same_clauses_are_not_exact():
+    # `a OR b` (one block, list-of-maps) vs `a AND b` (two blocks) share clauses but compose differently.
+    or_ir = _ir("or", {"selection": [{"Image|endswith": "\\a.exe"}, {"Image|endswith": "\\b.exe"}],
+                       "condition": "selection"})
+    and_ir = _ir("and", {"s1": {"Image|endswith": "\\a.exe"}, "s2": {"Image|endswith": "\\b.exe"},
+                         "condition": "s1 and s2"})
+    lat = build_lattice([or_ir, and_ir])
+    rels = {rel for _a, rel, _b, _t in lat["edges"]}
+    assert "exact" not in rels                     # MUST NOT false-claim a synonym
+    assert lat["counts"].get("exact", 0) == 0
+
+
+def test_unreferenced_block_is_excluded_from_clause_set():
+    # `filt` is defined but never named by the condition → it does not gate firing → not in the clause-set.
+    ir = _ir("r", {"sel": {"Image|endswith": "\\x.exe"}, "filt": {"User": "admin"}, "condition": "sel"})
+    fields = {f for f, _m, _v in clause_set(ir)}
+    assert fields == {"Image"}                     # User (unreferenced filt block) excluded
+
+
+def test_genuinely_identical_rules_still_exact():
+    # the fix must not break real dedup: same blocks + same condition (different ids) → exact.
+    a = _ir("a", {"selection": {"Image|endswith": "\\x.exe"}, "condition": "selection"})
+    b = _ir("b", {"selection": {"Image|endswith": "\\x.exe"}, "condition": "selection"})
+    lat = build_lattice([a, b])
+    assert lat["counts"].get("exact", 0) == 1
