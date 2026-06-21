@@ -70,6 +70,8 @@ def diagnose_silent_rule(rule: dict, event: dict, atom_reuse: dict[str, int]) ->
 
     fault ∈ {
       ``fires``            — it actually fired (caller usually filters these out),
+      ``keyword-miss``     — a keyword-only rule whose needle isn't in any field value (keyword blocks read
+                             EVERY field, so this is a value miss on a populated event, NOT missing-telemetry),
       ``wrong-channel``    — the rule reads NONE of this event's fields (missing-telemetry, not a logic fault),
       ``filter-excluded``  — positive logic matches but a filter/exclusion block matches → allowlisted,
       ``composition-gap``  — every positive atom matches in isolation, yet the rule doesn't fire (the
@@ -88,11 +90,20 @@ def diagnose_silent_rule(rule: dict, event: dict, atom_reuse: dict[str, int]) ->
     ir = compile_rule(rule)
     fires = eval_ir(ir, event)
     pos = _positive_atoms(ir)
+    pol = block_polarities(ir)
+
+    # An atom HITS only if its field is PRESENT and matches. `Clause.matches` reads `event.get(field, "")`,
+    # so an empty-pattern clause (`|contains: ""`, `|re: ".*"`) matches an ABSENT field — a ghost match that
+    # must not count as present/matched. `hit` is the single source of truth used everywhere below.
+    def hit(c) -> bool:
+        return c.field in event and c.matches(event)
+
     present = [(c, bn) for c, bn in pos if c.field in event]
-    missed = [(c, bn) for c, bn in pos if not c.matches(event)]
+    missed = [(c, bn) for c, bn in pos if not hit(c)]                     # absent OR present-but-value-wrong
     missed_present = [(c, bn) for c, bn in missed if c.field in event]    # value-miss (field there, value wrong)
+    has_keyword = any(b.kind == "keyword" and 1 in pol.get(b.name, {1}) for b in ir.blocks)
     filters_hit = [b.name for b in ir.blocks
-                   if -1 in block_polarities(ir).get(b.name, set()) and b.matches(event)]
+                   if -1 in pol.get(b.name, set()) and b.matches(event)]
 
     def vouched(c) -> bool:
         return atom_reuse.get(clause_atom_id(c), 0) > 1
@@ -101,6 +112,8 @@ def diagnose_silent_rule(rule: dict, event: dict, atom_reuse: dict[str, int]) ->
 
     if fires:
         fault = "fires"
+    elif not pos and has_keyword and event:
+        fault = "keyword-miss"                   # keyword blocks read EVERY field → not wrong-channel
     elif not present:
         fault = "wrong-channel"                  # reads none of this event's fields → not a logic fault
     elif not missed and filters_hit:
@@ -120,7 +133,7 @@ def diagnose_silent_rule(rule: dict, event: dict, atom_reuse: dict[str, int]) ->
         "rule_id": ir.rule_id,
         "fires": fires,
         "fault": fault,
-        "exonerated": [show(c, bn) for c, bn in present if c.matches(event)],   # match in isolation
+        "exonerated": [show(c, bn) for c, bn in present if hit(c)],            # field present AND matches
         "value_miss": [show(c, bn) for c, bn in missed_present],               # field present, value wrong
         "suspect_atoms": [show(c, bn) for c, bn in unvouched],                 # rule-unique misses (bug locus)
         "filters_hit": filters_hit,

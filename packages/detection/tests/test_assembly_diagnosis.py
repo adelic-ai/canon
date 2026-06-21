@@ -57,3 +57,29 @@ def test_fires_is_reported_when_the_rule_actually_matches():
     rule = _rule("r", {"sel": {"A": "1"}, "condition": "sel"})
     d = diagnose_silent_rule(rule, {"A": "1"}, {})
     assert d["fires"] and d["fault"] == "fires"
+
+
+# --- regression: empty-pattern ghost match + keyword-only mislabel (review HIGH/MED) ---
+
+def test_empty_pattern_clause_on_absent_field_is_not_a_ghost_match():
+    # Marker|contains:'' matches event.get('Marker','')=='' even though Marker is absent. It must NOT count
+    # as a present/matched atom — the rule reads Image too, which is also absent → wrong-channel (honest),
+    # never composition-gap via the ghost.
+    rule = _rule("r", {"sel": {"Image|endswith": "\\x.exe", "Marker|contains": ""}, "condition": "sel"})
+    d = diagnose_silent_rule(rule, {"CommandLine": "foo"}, {})
+    assert d["fault"] == "wrong-channel"
+    assert not d["exonerated"]                      # the ghost atom is NOT exonerated
+
+
+def test_empty_pattern_ghost_does_not_fake_composition_gap():
+    # Image present+matching, Marker absent with empty pattern. Without the fix Marker "matches" → not missed
+    # → composition-gap. With the fix Marker is missed (absent) → field-absent-gap, not a fake assembly fault.
+    rule = _rule("r", {"sel": {"Image|endswith": "\\x.exe", "Marker|contains": ""}, "condition": "sel"})
+    d = diagnose_silent_rule(rule, {"Image": "C:\\x.exe"}, {})
+    assert d["fault"] != "composition-gap"
+
+
+def test_keyword_only_miss_on_populated_event_is_not_wrong_channel():
+    rule = _rule("r", {"kw": ["mimikatz"], "condition": "kw"})
+    d = diagnose_silent_rule(rule, {"CommandLine": "powershell -enc abcd"}, {})
+    assert d["fault"] == "keyword-miss"             # needle absent, but the channel was read
