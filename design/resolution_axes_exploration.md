@@ -25,6 +25,16 @@ two result-CIDs when an input is swapped**. That diff IS the measurement of "how
 vs stable structure." So managing instance-contingency and increasing resolution are the same
 activity from two sides.
 
+**The precise cut (sharpening the headline — not *all* the treatment is an instance).** The
+STRUCTURAL half — `content_signature`, the lattice structure, the Belnap carrier, the mapping
+grades — is **corpus-free, therefore portable**; it does not move with the data. Only the
+**BEHAVIORAL half** (catch-set, fidelity) is the instance: corpus-bound, capped by data shape.
+That gives the actionable line — **machinery sharpens the portable structural half** (invest
+freely, no data needed: `content_digest`); **only data moves the data-bound behavioral half** (the
+actual instance: more/better-shaped corpora). The priority list below already respects this split;
+naming it up front is the refinement. (Independently confirmed: the main instance's bots-v3
+two-sided run is the first test of the data-bound half — see [[project-catch-set-grounding]].)
+
 Define **resolution** = the power to distinguish things genuinely different and to merge things
 genuinely the same. Low resolution = over-collapse (FCA folding 32 macOS detections into 1) or
 under-distinction.
@@ -79,6 +89,7 @@ captures. See [[project-catch-set-grounding]].
 
 ## One line
 
-Resolution rises claim → structure → behavior across five axes, but behavior is the least portable —
-which is *why* the treated corpus is an instance. Sharpen the portable structural keys where no data
-is needed (`content_digest`); quantify the instance-ness where it is (cross-corpus ablation).
+Resolution rises claim → structure → behavior across five axes. The structural half is portable
+(corpus-free); only the behavioral half is the instance (data-bound). So machinery alone sharpens
+the structural half (`content_digest`, no data needed) — the behavioral half moves only with
+better-shaped data (cross-corpus ablation quantifies it; bots-v3 is the first test of the cap).
