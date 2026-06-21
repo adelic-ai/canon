@@ -135,25 +135,30 @@ same/not       exact/broad/narrow/related   IDF-weighted [0,1]      the arbiter<
       </div>
 
       <h2>What else can sharpen resolution</h2>
-      <p>In rough priority, each tied to a real gap:</p>
+      <p>Ranked by <strong>thesis-leverage, not cost</strong> — an earlier draft led with
+      <code>content_digest</code> because it's cheap, which conflated cost with importance:</p>
       <ul>
-        <li><strong>Filter-aware + value-aware structural keys</strong> (the queued <code>content_digest</code>). The
-        two finest <em>corpus-free</em> keys are still lossy: FCA is value-blind, <code>clause_set</code> is
-        positive-only (filter-blind). Both verified to over-group (an <code>svchost</code> filter pair; a Linux
-        <code>EXECVE</code> keyword trio). Cleanest next booster — raises axis-1/2 resolution with <strong>no new
-        data</strong>.</li>
-        <li><strong>Catch-<em>profile</em>, not catch-<em>set</em></strong> (behavioral, new). The set records <em>which</em>
-        instances fired; it can't tell apart two rules that catch the same instance via <em>different</em> discriminators
-        (the comsvcs case: <code>CallTrace</code> vs <code>StartModule</code> — same set, not real synonyms). Recording
-        <em>why</em> each instance fired (<code>ground_lattice.why()</code> already half-computes it) turns the set into
-        a profile and resolves same-set / different-mechanism.</li>
-        <li><strong>Cross-corpus ablation</strong> — the instance worry, operationalized. Run the treatment over N corpora
-        and diff the result-CIDs (the manifest already supports it). What's stable across corpora is <em>structure</em>;
-        what moves is the <em>instance</em>. That measures the exact thing the question is about, and says which extracted
-        relations are portable.</li>
-        <li><strong>Don't collapse the two verdict axes</strong> — Belnap (discrete knowledge) and confidence (continuous
-        log-odds) are orthogonal; keeping both per node instead of one scalar is a resolution choice already in the
-        design, worth holding as more detectors land.</li>
+        <li><strong>Cross-corpus ablation</strong> — run the treatment over N <em>genuinely different</em> corpora
+        (different orgs/sources), diff result-CIDs. Stable-across-corpora is portable <em>structure</em>; what moves is
+        the <em>instance</em>. The one move here that buys <strong>real independence</strong> — different data, not two
+        agents sharing a driver (convergence-of-instances is <em>not</em> independence). So it's both the measure of
+        instance-ness and the external-validity test of whether the frame is <em>right</em> vs merely tidy.
+        <strong>Highest leverage.</strong></li>
+        <li><strong>Catch-<em>profile</em>, not catch-<em>set</em></strong> — record <em>why</em> each instance fired (the
+        discriminator), not just <em>which</em>. Makes corroboration-by-independence <em>measurable</em>: same-discriminator
+        co-catch = synonym; different-discriminator co-catch = independent witnesses (comsvcs <code>CallTrace</code> vs
+        <code>StartModule</code>). Advances the verdict thesis directly. Behavioral → data-bound (an instance, not free).
+        <code>ground_lattice.why()</code> already half-computes it. Complements ablation: this makes behavioral resolution
+        <em>richer</em>, ablation tests how much <em>generalizes</em>.</li>
+        <li><strong>Filter-aware + value-aware structural keys</strong> (the queued <code>content_digest</code>). FCA is
+        value-blind, <code>clause_set</code> is positive-only (filter-blind); both verified to over-group (an
+        <code>svchost</code> filter pair; a Linux <code>EXECVE</code> keyword trio). <strong>Cheap, no data — but low
+        thesis-leverage:</strong> it polishes the structural <em>proxy</em> that behavioral grounding is built to override
+        anyway; its real payoff is the SigmaHQ clean-dedup path, not load-bearing resolution. Cheap ≠ important. (Still the
+        only lever in the no-data regime, where most of the corpus lives — so not zero.)</li>
+        <li><strong>Don't collapse the two verdict axes</strong> — Belnap (discrete) and confidence (log-odds) are
+        orthogonal; keeping both per node is a <em>maintained invariant</em>, already true in the justified-verdict
+        substrate. "Don't regress," not a new frontier.</li>
       </ul>
 
       <div class="note gap">
