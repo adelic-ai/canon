@@ -88,11 +88,13 @@ def grounded_fidelity(technique: str, scenarios, background: list[dict], *, sigm
     benign = [e for e, lab in zip(corpus["events"], corpus["labels"]) if not lab]
     rules = [(p, r) for p, r in gather(technique, root=sigma_root) if is_evaluable(r)]
 
+    mal_cids = [(_cid(e), e) for e in malicious]               # instance CIDs — the catch-set key (stage 4)
     rows = []
     for p, r in rules:
-        catches = any(evaluate_rule(r, e)["fires"] for e in malicious)
+        caught_on = sorted(cid for cid, e in mal_cids if evaluate_rule(r, e)["fires"])
         fps = sum(1 for e in benign if evaluate_rule(r, e)["fires"])
-        rows.append({"rule": p.name, "catches": catches, "false_positives": fps})
+        rows.append({"rule": p.name, "catches": bool(caught_on), "caught_on": caught_on,
+                     "false_positives": fps})
 
     catching = [x for x in rows if x["catches"]]
     return {
