@@ -65,8 +65,10 @@
   <table>
     <thead><tr><th>Relation</th><th>SKOS</th><th class="n">edges</th><th>meaning</th></tr></thead>
     <tbody>
-      <tr><td class="k">exact</td><td><code>skos:exactMatch</code></td><td class="n">2</td>
-        <td>true synonyms — the <em>only</em> real dedup (2 pairs, below)</td></tr>
+      <tr><td class="k">exact</td><td><code>skos:exactMatch</code></td><td class="n">1</td>
+        <td>true synonym — identical matching content AND structure (the <em>only</em> real dedup, below)</td></tr>
+      <tr><td class="k">close</td><td><code>skos:closeMatch</code></td><td class="n">1</td>
+        <td>same clauses, <em>different composition</em> (an OR/structure difference) — near-synonym, not exact</td></tr>
       <tr><td class="k">broader</td><td><code>skos:broadMatch</code></td><td class="n">17</td>
         <td>a general rule subsumes a stricter one</td></tr>
       <tr><td class="k">narrower</td><td><code>skos:narrowMatch</code></td><td class="n">5</td>
@@ -76,11 +78,13 @@
     </tbody>
   </table>
   <div class="note key">
-    <strong>The headline finding.</strong> Of 657 relations, only <strong>2 are true synonyms</strong> and
+    <strong>The headline finding.</strong> Of 657 relations, only <strong>1 is a true synonym</strong> and
     ~22 are subsumption; the other <strong>633 are loose overlap.</strong> So the corpus does <em>not</em>
     partition into clean categories — it's a web of rules that share a clause but each detect something
     distinct. The flat field-set key would have collapsed much of that 633 into "equivalence classes" by
     shared fields — <em>conflating overlap with equivalence.</em> The graded lattice is what tells them apart.
+    (<code>exactMatch</code> is structure-aware: it requires identical composition, not just identical clauses —
+    so the one pair that shares clauses but composes them differently is <code>closeMatch</code>, not a synonym.)
   </div>
 
   <h2>Categories that genuinely exist (1) — subsumption families</h2>
@@ -185,24 +189,24 @@ Scheduled Task Executing Payload from Registry      ·  persistence surface
       <tr><td class="n">99b97608</td><td>Remote Thread Creation Via PowerShell In Uncommon Target</td><td class="var">variant</td></tr>
       <tr><td class="n">c4eeeeae</td><td>Scheduled Task Executing Encoded Payload from Registry</td><td class="var">variant</td></tr>
       <tr><td class="n">eb1c4225</td><td>Suspicious DumpMinitool Execution</td><td class="var">variant</td></tr>
-      <tr><td class="n">58cb02d5</td><td>Alternate PowerShell Hosts Pipe</td><td>exactMatch class 2</td></tr>
-      <tr><td class="n">ac7102b4</td><td>New PowerShell Instance Created</td><td>exactMatch class 2</td></tr>
-      <tr><td class="n">0f920ebe</td><td>Potential Credential Dumping Attempt Via PowerShell</td><td>exactMatch class 1</td></tr>
-      <tr><td class="n">fb656378</td><td>Potential Credential Dumping Attempt Via PowerShell Remote Thread</td><td>exactMatch class 1</td></tr>
+      <tr><td class="n">58cb02d5</td><td>Alternate PowerShell Hosts Pipe</td><td>closeMatch (same clauses, diff structure)</td></tr>
+      <tr><td class="n">ac7102b4</td><td>New PowerShell Instance Created</td><td>closeMatch (same clauses, diff structure)</td></tr>
+      <tr><td class="n">0f920ebe</td><td>Potential Credential Dumping Attempt Via PowerShell</td><td>exactMatch class</td></tr>
+      <tr><td class="n">fb656378</td><td>Potential Credential Dumping Attempt Via PowerShell Remote Thread</td><td>exactMatch class</td></tr>
     </tbody>
   </table>
 
-  <h2>Categories that genuinely exist (2) — true synonyms (the only real dedup)</h2>
+  <h2>Categories that genuinely exist (2) — the true synonym (the only real dedup)</h2>
   <table>
-    <thead><tr><th class="n">#</th><th>exactMatch class — identical matching content, different rule</th></tr></thead>
+    <thead><tr><th class="n">#</th><th>exactMatch class — identical matching content AND composition, different rule</th></tr></thead>
     <tbody>
-      <tr><td class="n">1</td><td>Alternate PowerShell Hosts Pipe &nbsp;≡&nbsp; New PowerShell Instance Created</td></tr>
-      <tr><td class="n">2</td><td>Potential Credential Dumping Attempt Via PowerShell &nbsp;≡&nbsp; …Via PowerShell Remote Thread</td></tr>
+      <tr><td class="n">1</td><td>Potential Credential Dumping Attempt Via PowerShell &nbsp;≡&nbsp; …Via PowerShell Remote Thread</td></tr>
     </tbody>
   </table>
-  <p class="muted">Two pairs out of 333 rules. "Dedup" — the thing the flat key claimed lots of — is almost
-  nonexistent at the content level. (Filter/allowlist differences are ignored here; a filter-aware
-  <code>content_digest</code> would split even these.)</p>
+  <p class="muted">One pair out of 333 rules. "Dedup" — the thing the flat key claimed lots of — is almost
+  nonexistent at the content level. The previously-counted second pair (<em>Alternate PowerShell Hosts Pipe</em>
+  / <em>New PowerShell Instance Created</em>) is now <code>closeMatch</code>, not exact: they share clauses but
+  compose them differently, and structure-aware <code>exactMatch</code> no longer calls that a synonym.</p>
 
   <h2>What the result means</h2>
   <ul>
@@ -220,7 +224,7 @@ Scheduled Task Executing Payload from Registry      ·  persistence surface
   </ul>
 
   <div class="note">
-    <strong>One line.</strong> Across 333 rules the corpus is 2 synonyms, ~22 subsumption pairs, and 633 loose
+    <strong>One line.</strong> Across 333 rules the corpus is 1 synonym, ~22 subsumption pairs, and 633 loose
     overlaps — so Sigma doesn't dedup into categories; it forms a graded relation graph whose only clean
     structure is the subsumption families (general rule → stricter variants), and whose true grouping awaits
     catch-set grounding.

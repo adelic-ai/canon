@@ -1,19 +1,33 @@
-# Full-corpus dedup pass — exactMatch over-groups; behavioral synonymy needs grounding
+# Full-corpus dedup pass — exactMatch over-grouped (DIAGNOSED, then RESOLVED by the structure-aware fix)
 
-**Status:** result, 2026-06-20. Ran the `exactMatch` slice of the SKOS lattice over the **whole** SigmaHQ
-corpus (not the 3-technique slice in `web/sigma_lattice_result.html`) to test whether it yields a fileable
-duplicate report for SigmaHQ. **It does not.** The honest output is a correction to the method, not a dup
-list. **Relates to:** [[cross_check_validation_kerberos]], the catch-set grounding result (Maude's n=1 OTRF),
+**Status:** result, 2026-06-20; **numbers regenerated 2026-06-21** after the fix below. Ran the `exactMatch`
+slice of the SKOS lattice over the **whole** SigmaHQ corpus to test whether it yields a fileable duplicate
+report for SigmaHQ. **It does not** — and the *original* run revealed that `exactMatch` itself over-grouped.
+**Relates to:** [[cross_check_validation_kerberos]], the catch-set grounding result (Maude's n=1 OTRF),
 [[project_sigma_consumption_audit]], [[project_skos_graded_mapping_seam]].
 
-## Setup
+> **UPDATE (2026-06-21) — the over-grouping this note diagnosed was FIXED.** The original run found 40 exact
+> edges / **31 classes / 66 rules**, most of them over-groups: rules with equal *positive clause-sets* but
+> distinct discriminators in **keyword** blocks (the linux/auditd trio → `{type=EXECVE}`) or **filter** blocks
+> (the svchost pair). A code review made `exactMatch` **structure-aware** — it now requires the full
+> `content_digest` (all blocks + condition AST) to match, not just the positive clause-set. Re-run over the
+> same 3720 rules: **exact 11 edges / 11 classes / 22 rules** (close 4 → **33** — the demoted over-groups land
+> here). The auditd keyword over-group and the svchost filter over-group are **gone from exact** (confirmed
+> absent). So this note's diagnosis drove a real fix; the body below is the *as-found* analysis that motivated
+> it, and the "kinds" decomposition now applies to the **11** residual classes — which are genuine
+> content-duplicates, dominated by **cross-platform ports** (Linux/macOS/Windows variants of one rule:
+> Python-path, Ngrok, Find, MeshAgent, Remote-System-Discovery, Shai-Hulud, TeamViewer) plus a few
+> same-/cross-logsource pairs (LocaltoNet, SILENTTRINITY DLL-load↔execution, Dns.exe delete↔modify, the
+> PowerShell credential pair). The keyword/filter cases are no longer mis-grouped at all.
+
+## Setup (as-found, original run)
 
 - Corpus: 3748 rules with a `detection:` block; **3720 evaluable/structured** (compile to IR).
-- Lattice: `build_lattice` over all 3720 → 13780 edges. Counts:
-  `{related: 13200, narrower: 347, broader: 189, exact: 40, close: 4}`.
-- `exact_classes` (connected components under `exactMatch`): **31 multi-member classes covering 66 rules.**
+- Lattice (original, clause-set-only exactMatch): 13780 edges, `{related: 13200, narrower: 347, broader: 189,
+  exact: 40, close: 4}`; `exact_classes` **31 multi-member classes / 66 rules**. *(Post-fix: exact 11 / close
+  33; see UPDATE above.)*
 - Verification: for each class, pulled `logsource`, `level`, filter-presence, and `clause_set` (what the
-  lattice actually compares) — so the claim is checked, not asserted (the LSASS over-claim lesson).
+  lattice actually compared) — so the claim is checked, not asserted (the LSASS over-claim lesson).
 
 ## Result — exactMatch-on-positive is not a duplicate detector
 
