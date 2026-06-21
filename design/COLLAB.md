@@ -44,9 +44,15 @@ is the default because it's versioned and discoverable.
 ## Lane registry
 
 ```
-<<< lane: sigma-treatment | instance: main         | worktree: ~/canon        | branch: feat/sigma-treatment-pipeline | status: ACTIVE >>>
-<<< lane: catch-set        | instance: peer (Maude) | worktree: ~/canon-maude  | branch: feat/catch-set-grounding      | status: CLOSED (de-risk) >>>
+<<< lane: bots-fidelity   | instance: main         | worktree: ~/canon        | branch: eval/bots-real-benign-fidelity | status: ACTIVE >>>
+<<< lane: resolution-axes | instance: peer (Maude) | worktree: NONE (shared ~/canon — needs its own) | branch: docs/resolution-axes | status: artifacts landed >>>
 ```
+
+> **⚠ WORKTREE LESSON (2026-06-21).** `~/canon-maude` was removed when the catch-set lane looked done — then a
+> new query REOPENED Maude's work with no isolated worktree, so she ran in the shared `~/canon` tree on main's
+> eval branch (the exact collision the worktree prevents). **"Lane closed" ≠ "instance done" — do not remove a
+> worktree while its instance may still take a turn.** Re-isolate before more parallel work:
+> `git worktree add ~/canon-maude <branch>`.
 
 ## Open decisions
 
@@ -61,6 +67,22 @@ is the default because it's versioned and discoverable.
   present in the event). Edit-distance filter deferred.
 
 ## Handoff log (append-only, newest first)
+
+### 2026-06-21 · coordination · worktree collision + resolution-axes landing
+`~/canon-maude` removed (user, thinking catch-set was done); a new query reopened Maude with no worktree → she
+worked in shared `~/canon` on main's `eval/bots-real-benign-fidelity` branch. Her 3 artifacts (resolution-axes
+HTML + design note + an index entry) were landed by main on **`docs/resolution-axes`** off main (NOT mixed into
+the bots eval branch), pushed, unmerged. Main also did the bots-v3 two-sided fidelity (below). FIX QUEUED:
+recreate Maude's worktree (`git worktree add ~/canon-maude …`) so the lanes re-isolate. See the worktree lesson
+above.
+
+### 2026-06-21 · main · bots-v3 two-sided fidelity (real benign background)
+`eval/bots-real-benign-fidelity` @ pushed. Extracted BOTS v3 Sysmon EID1 benign background (3616 events, local
+only). Corpus-wide FP: 1613 process_creation rules → 1583 (98%) clean, 30 FP, top `Elevated System Shell
+Spawned` 969/3616 = 27% (fileable SigmaHQ FP finding). Recall: OTRF comsvcs EID1 spawn (causal label) caught by
+4; 3 CLEAN catchers (catch + 0 FP). First two-sided fidelity on a REAL benign background — partially crosses the
+population frontier (rule detectors; battery still needs EID10/4769 channels BOTS lacks). Caveats: benign-by-
+absence (FP upper bound), one corpus, EID1-only, recall n=1. Note: `design/grounded_fidelity_bots_real_benign.md`.
 
 ### 2026-06-21 · main · rigorous code review + verified-HIGH fixes
 `feat/sigma-treatment-pipeline` @ pushed. Fan-out review (5 agents, 1/module), every finding VERIFIED with a
