@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Three notions of "the same rule"</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --ink:#e6e8ee; --muted:#9aa3b2;
+    --line:#2a2f3a; --accent:#7db4ff; --accent2:#c79bff;
+    --good:#6fcf97; --warn:#f2c94c; --gap:#eb6f6f;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1000px;margin:0 auto;padding:48px 28px 96px}
+  h1{font-size:30px;margin:0 0 6px;letter-spacing:-.01em}
+  .sub{color:var(--muted);margin:0 0 4px;font-size:18px}
+  .stamp{color:var(--muted);font:13px/1.5 var(--mono);margin:0 0 32px}
+  h2{font-size:21px;margin:44px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+  p{margin:10px 0}
+  code{font-family:var(--mono);font-size:.88em;background:#1e222b;padding:1px 5px;border-radius:4px}
+  pre{background:#10131a;border:1px solid var(--line);border-radius:8px;padding:16px 18px;
+    overflow-x:auto;font-family:var(--mono);font-size:13px;line-height:1.6;color:#d4d9e4}
+  .note{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:8px;padding:14px 18px;margin:18px 0}
+  .note.key{border-left-color:var(--accent2)} .note.gap{border-left-color:var(--gap)}
+  .muted{color:var(--muted)} strong{color:#fff} ul{margin:10px 0;padding-left:22px} li{margin:8px 0}
+  .lede{font-size:17px}
+  table{border-collapse:collapse;width:100%;margin:18px 0;font-size:14px;background:var(--panel);
+    border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  th,td{text-align:left;padding:10px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#1c212b;color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+  tr:last-child td{border-bottom:none} td.k{font-weight:600;white-space:nowrap;color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p style="font:13px/1.5 var(--mono,monospace);margin:0 0 22px"><a href="index.html" style="color:#7db4ff;text-decoration:none">← Canon index</a></p>
+  <h1>Three notions of "the same rule"</h1>
+  <p class="sub">Detection needs three different "are these two rules the same?" tests — and the bugs live in the gap between what a rule says and what it does.</p>
+  <p class="stamp">canon · design note · 2026-06-21 · the real structure behind clause_set / content_digest / catch_set</p>
+
+  <p class="lede">Three real, distinct equivalence relations on rules. They do <em>not</em> coincide, and each
+  is the right tool for a different job.</p>
+
+  <h2>The three "same?" tests</h2>
+  <table>
+    <thead><tr><th>Test</th><th>Mechanism</th><th>What it means</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Same conditions</td><td><code>clause_set</code></td><td>search for the same <code>(field, predicate, value)</code> atoms. The lattice's ⊆/∩ math → "broader / overlaps / neighborhood." Blind to filters and to AND-vs-OR wiring.</td></tr>
+      <tr><td class="k">Same construction</td><td><code>content_digest</code></td><td>byte-identical logic — same atoms, filters, wiring. Strictest. Same conditions but different filter, or OR vs AND, differ here.</td></tr>
+      <tr><td class="k">Same behavior</td><td><code>catch-set</code></td><td>fire on the same labeled instances. The only one about what a rule <em>does</em>, not what it <em>says</em>. Needs real attack data.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>They're genuinely different — two failure cases prove it</h2>
+  <ul>
+    <li><strong>Same conditions, different behavior (over-grouping):</strong> two <code>svchost.exe</code> rules,
+      identical positive conditions, different filters (one excludes "in System32," the other "parent =
+      services.exe") → catch <em>opposite</em> events. Conditions say same; behavior says different.</li>
+    <li><strong>Different conditions, same behavior (under-grouping):</strong> the comsvcs pair —
+      <code>CallTrace contains comsvcs</code> vs <code>StartModule endswith comsvcs</code>, totally different
+      conditions → catch the <em>same</em> LSASS dump. Conditions say unrelated; behavior says synonyms.</li>
+  </ul>
+
+  <h2>The structure — a refinement order</h2>
+  <p><strong>Same-construction is the finest:</strong> <code>content_digest</code>-equal ⟹ same conditions
+  <em>and</em> same behavior (identical logic forces both). <strong>Same-conditions and same-behavior are
+  incomparable</strong> — neither implies the other; the two failure cases are exactly the two directions they
+  come apart.</p>
+  <pre>                 same construction  (content_digest — finest; implies both below)
+                /                \
+        same conditions      same behavior
+          (clause_set)        (catch-set)
+       what the rule SAYS    what the rule DOES    ← incomparable; this gap is where the bugs live</pre>
+
+  <h2>ground_lattice maps where "says" and "does" disagree</h2>
+  <p>It cross-tabs the <strong>structural</strong> relation (same-conditions, via <code>clause_set</code>)
+  against the <strong>behavioral</strong> relation (same-behavior, via <code>catch-set</code>) for every rule
+  pair, and surfaces the two off-diagonals — <strong>over-grouped</strong> (conditions same, behavior different)
+  and <strong>under-grouped</strong> (behavior same, conditions different). The comparison is
+  <strong>irreducible</strong>: neither view alone tells you what the other does.</p>
+  <div class="note key">It uses <code>clause_set</code> for its structural axis <em>on purpose</em> — the lossy
+  "same-conditions" view is exactly what over-grouping exposes. Using <code>content_digest</code> there would
+  make over-grouping impossible to see (identical construction can't behave differently).</div>
+
+  <h2>Which view for which job</h2>
+  <ul>
+    <li><strong>Same-conditions (<code>clause_set</code>)</strong> — the lattice's relationships and
+      neighborhoods (subsumption, overlap). The intent isn't dedup; it's the intersections — and a set is what
+      you do that math on.</li>
+    <li><strong>Same-construction (<code>content_digest</code>)</strong> — true duplicate detection, and the
+      structure-aware <code>exactMatch</code> edges (so OR-vs-AND with the same conditions isn't a "synonym").</li>
+    <li><strong>Same-behavior (<code>catch-set</code>)</strong> — the ground truth you validate the other two
+      against.</li>
+  </ul>
+
+  <div class="note gap"><strong>The one durable point.</strong> The bugs live in the gap between <em>what a rule
+  says</em> and <em>what a rule does</em>. That's why you can't pick a single view: the structural one scales
+  and gives you the relationships, the behavioral one is the truth, and the comparison between them
+  (<code>ground_lattice</code>) is the irreducible step that catches where they part.</div>
+</div>
+</body>
+</html>
