@@ -86,6 +86,28 @@
   "same-conditions" view is exactly what over-grouping exposes. Using <code>content_digest</code> there would
   make over-grouping impossible to see (identical construction can't behave differently).</div>
 
+  <h2>SKOS and FCA operate on the structural axis — at different resolutions</h2>
+  <p>The "same conditions" side isn't one thing — it's a ladder of structural keys, coarse to fine, and SKOS
+  and FCA just pick a rung:</p>
+  <pre>FCA field-set  →  clause_set / SKOS  →  content_digest
+value-blind        (field,pred,value)     everything
+coarsest            graded relations      finest
+(32 macOS → 1)     (filter-blind still)  (true dedup)        all on the "says" axis ───►</pre>
+  <ul>
+    <li><strong>FCA — field-set key (coarsest, value-blind):</strong> groups rules by <em>which fields</em> they
+      read, ignoring values. Maximally over-collapsing (32 distinct macOS detections → 1 concept).</li>
+    <li><strong>SKOS — <code>clause_set</code> (finer):</strong> the graded order on <code>(field, predicate,
+      value)</code> atoms — subset → broad/narrow, intersection → related, <code>content_digest</code> gating
+      exact. Still positive-only → still filter/keyword-blind.</li>
+    <li><strong><code>content_digest</code> (finest):</strong> everything — the true-duplicate key.</li>
+  </ul>
+  <div class="note key">Two consequences: <strong>coarser key ⟹ more over-grouping</strong> (FCA worst, SKOS
+  less, content_digest none — the 32→1 and filter-blind-"exact" over-collapses are the structural axis
+  over-claiming at the chosen resolution); and <strong>all of it is still "says," so all of it is grounded by
+  <code>catch-set</code></strong> — FCA concepts, SKOS relations, exact classes, none tell you what a rule
+  <em>does</em>. Same ladder as the detection resolution axis <code>tag → FCA field-set → content_signature →
+  catch-set</code>.</div>
+
   <h2>Which view for which job</h2>
   <ul>
     <li><strong>Same-conditions (<code>clause_set</code>)</strong> — the lattice's relationships and
