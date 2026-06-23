@@ -63,10 +63,29 @@ def stage_rc4_fanout(evs: list[dict], *, n: int = 8, window_sec: int = 3600,
     return max(len(s) for s in bins.values()) >= n
 
 
+def stage_sensitive_logon(evs: list[dict], *, sensitive_hosts, code_field: str = "EventCode",
+                          logon_code: str = "4624", host_field: str = "Computer_Name",
+                          logontype_field: str = "LogonType", network_logon: str = "3") -> bool:
+    """S2 — a network logon (LogonType 3) to a sensitive (crown-jewel) host. ``sensitive_hosts`` is the
+    deployment's crown-jewel set (parameterized — not baked into the engine)."""
+    return any(e.get(code_field) == logon_code and e.get(host_field) in sensitive_hosts
+               and e.get(logontype_field) == network_logon for e in evs)
+
+
 def kerberoast_chain(*, n: int = 8, window_sec: int = 3600) -> list[tuple]:
     """The 2-stage kerberoast spec: ``authenticate`` (4768) then ``rc4_fanout`` (≥ n distinct RC4 services /
     window). Pass to :func:`check_chain` with ``actor_field='Account_Name'``."""
     return [
         ("authenticate", lambda evs: stage_authenticate(evs)),
         ("rc4_fanout", lambda evs: stage_rc4_fanout(evs, n=n, window_sec=window_sec)),
+    ]
+
+
+def kerberoast_lateral_chain(*, sensitive_hosts, n: int = 8, window_sec: int = 3600) -> list[tuple]:
+    """The full 3-stage kerberoast→lateral spec: ``authenticate`` → ``rc4_fanout`` → ``lateral_logon`` (a
+    network logon to a sensitive host). The conjunction is what discriminates: many accounts log into sensitive
+    hosts (S2 alone over-fires); only the kerberoasters also fan out RC4 (S1). Ordering (S1 before S2) is the
+    next rung — this checks the stages over an actor's events, not their time order yet."""
+    return kerberoast_chain(n=n, window_sec=window_sec) + [
+        ("lateral_logon", lambda evs: stage_sensitive_logon(evs, sensitive_hosts=sensitive_hosts)),
     ]

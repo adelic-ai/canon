@@ -1,6 +1,12 @@
 """Chain checker — declarative kill-chain satisfaction (the kerberoast 2-stage spec)."""
 
-from detection.chain import check_chain, kerberoast_chain, stage_authenticate, stage_rc4_fanout
+from detection.chain import (
+    check_chain,
+    kerberoast_chain,
+    kerberoast_lateral_chain,
+    stage_authenticate,
+    stage_rc4_fanout,
+)
 
 
 def _tgs(actor, svc, t, enc="0x17"):
@@ -47,3 +53,36 @@ def test_stage_predicates_directly():
     assert stage_authenticate(roaster)
     assert stage_rc4_fanout(roaster, n=8)
     assert not stage_rc4_fanout(roaster, n=9)        # 8 distinct, threshold 9 → not met
+
+
+# ── the full 3-stage chain (kerberoast → lateral) ──
+_SENS = {"DC01.corp.local", "fileserver.corp.local", "sqlserver.corp.local"}
+
+
+def _logon(actor, host, lt="3"):
+    return {"Account_Name": actor, "EventCode": "4624", "Computer_Name": host, "LogonType": lt,
+            "_time": "2026-03-04 06:00:00.000"}
+
+
+def test_full_chain_holds_for_roast_then_pivot():
+    evs = [_tgt("attacker")] + [_tgs("attacker", f"svc{i}", i) for i in range(8)] \
+        + [_logon("attacker", "fileserver.corp.local")]
+    res = check_chain(evs, kerberoast_lateral_chain(sensitive_hosts=_SENS, n=8), actor_field="Account_Name")
+    assert res["satisfied"] == ["attacker"]
+
+
+def test_sensitive_logon_alone_does_not_complete_the_chain():
+    # a benign service account logs into a sensitive host but never roasts → S1 fails, chain fails
+    evs = [_tgt("svc_sql")] + [_logon("svc_sql", "sqlserver.corp.local")]
+    res = check_chain(evs, kerberoast_lateral_chain(sensitive_hosts=_SENS, n=8), actor_field="Account_Name")
+    assert res["satisfied"] == []
+    assert ("rc4_fanout", False) in res["per_actor"]["svc_sql"]
+
+
+def test_roast_without_pivot_does_not_complete_the_chain():
+    # roasts but the logon is to a NON-sensitive host → S2 fails (no completed lateral)
+    evs = [_tgt("roaster")] + [_tgs("roaster", f"svc{i}", i) for i in range(8)] \
+        + [_logon("roaster", "WS007.corp.local")]
+    res = check_chain(evs, kerberoast_lateral_chain(sensitive_hosts=_SENS, n=8), actor_field="Account_Name")
+    assert res["satisfied"] == []
+    assert ("lateral_logon", False) in res["per_actor"]["roaster"]
