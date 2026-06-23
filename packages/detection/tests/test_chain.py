@@ -85,4 +85,15 @@ def test_roast_without_pivot_does_not_complete_the_chain():
         + [_logon("roaster", "WS007.corp.local")]
     res = check_chain(evs, kerberoast_lateral_chain(sensitive_hosts=_SENS, n=8), actor_field="Account_Name")
     assert res["satisfied"] == []
-    assert ("lateral_logon", False) in res["per_actor"]["roaster"]
+    assert ("sensitive_logon", False) in res["per_actor"]["roaster"]
+
+
+def test_ordering_lateral_before_roast_fails_when_ordered():
+    # the only sensitive logon is BEFORE the roast burst → with ordering S2 can't follow S1 (chain fails);
+    # without ordering it would (wrongly) hold. This is what the ordering constraint buys.
+    early_logon = {"Account_Name": "a", "EventCode": "4624", "Computer_Name": "sqlserver.corp.local",
+                   "LogonType": "3", "_time": "2026-03-04 04:00:00.000"}        # before the 04:54 burst
+    evs = [_tgt("a")] + [_tgs("a", f"svc{i}", i) for i in range(8)] + [early_logon]
+    spec = kerberoast_lateral_chain(sensitive_hosts=_SENS, n=8)
+    assert check_chain(evs, spec, actor_field="Account_Name", ordered=True)["satisfied"] == []
+    assert check_chain(evs, spec, actor_field="Account_Name", ordered=False)["satisfied"] == ["a"]
