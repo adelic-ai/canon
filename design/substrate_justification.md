@@ -52,14 +52,52 @@ written as a `≤_k`-monotone fold into `FOUR = {None, True, False, Both}`.
   (`contracts/carrier.md`; PROVEN in [[guarantees_ledger]], `provenance/carrier.py` ·
   `test_carrier.py`). The universal **`≤_k`-monotonicity invariant** is CI-checked per fold
   (`test_monotone.py`).
-- **The arguable residue (must be argued crisply, currently prose):** *why Belnap, not Kleene
-  K3 or a probability?* The answer is load-bearing: a detector ensemble can both go **silent**
-  (`None`) and **disagree** (`Both`); K3 has one order and forces the SQL-`NULL`→`False` collapse
-  canon exists to prevent, and a scalar probability cannot represent "two confident contradictory
-  sources" (`Both` ≠ 0.5). This is the modeling argument, and it is the thing a reviewer attacks
-  — so it must be stated as an argument with the failure modes of the alternatives, not asserted.
+- **The carrier-choice argument (the one modeling claim a reviewer attacks):** *why Belnap, not
+  Kleene K3 or a probability?* This was the doc's last open prose residue; it is now argued in full
+  below (§2a), anchored to the carrier's actual `(t,f)` construction.
 - **Verdict:** near-beyond-reproach. The algebra is inherited; the monotonicity is enforced, not
-  asserted. The only soft spot is making the carrier-*choice* argument explicit.
+  asserted; and the carrier-choice argument (§2a) names the alternatives' failure modes rather than
+  asserting Belnap.
+
+### 2a. Why Belnap — not K3, not probability
+
+Anchored to what the carrier *is* (`provenance/carrier.py`, `contracts/carrier.md`): `Four(t, f)`,
+a pair of independent bits — `t` = "told true", `f` = "told false" — with `None=(0,0)`, `True=(1,0)`,
+`False=(0,1)`, `Both=(1,1)`, and two non-interchangeable orders (`≤_k` knowledge, `≤_t` truth;
+the ops are named functions, not overloaded operators, *precisely so the two never blur*).
+
+**Why not K3 (Kleene three-valued: None/True/False, no `Both`).** K3 is *exactly* canon's carrier
+minus `(1,1)`. It can hold ignorance (`None`) but not contradiction (`Both`). Canon's actual
+workload is **multi-source fusion** — the Sigma panel, corroboration, cross-witness — where two
+independent sources disagree: one tells-true `(1,0)`, one tells-false `(0,1)`, and their combination
+is `Both=(1,1)`. K3 has nowhere to put it; it must collapse disagreement to one side or to `None`,
+**silently erasing that the sources conflicted** — the one thing a fusion substrate must never drop.
+The technical clincher: evidence accumulation is `⊕` = componentwise OR, and **`True ⊕ False = Both`**
+(`contracts/carrier.md` truth table). Remove `Both` and that join has no value — *the
+evidence-combiner is no longer closed.* K3 doesn't merely lack expressiveness; it **breaks the fold
+algebra's closure.**
+
+**Why not probability (`[0,1]`).** Probability collapses the two independent coordinates
+(told-true, told-false) into one number, forcing `p_false = 1 − p_true`. That single move
+destroys three distinctions canon depends on: (1) **ignorance vs equipoise vs conflict** all become
+`0.5` — `None` (no evidence), genuine 50/50, and `Both` (two confident opposed sources) are
+indistinguishable; (2) `p_false = 1 − p_true` **directly contradicts `None ≠ False`** (the
+substrate's founding rule) — zero told-true is read as told-false; (3) there is **no information
+order**, so `≤_k`-monotonicity — the universal invariant every fold is checked against — *cannot
+even be stated*, let alone enforced. Magnitude/strength-of-belief is real and wanted, but it lives
+in a **separate, later fold** (confidence / conformal demotion) layered on top, so graded numbers
+never contaminate the monotone-fold invariant.
+
+**The three failure modes, stated explicitly (what §2a buys):**
+- **K3** → silent conflict-erasure + a non-closed evidence join (`True ⊕ False` has no value).
+- **Probability** → ignorance/conflict/equipoise indistinguishable; `p_false = 1−p_true` contradicts
+  `None ≠ False`; no information order, so `≤_k`-monotonicity is unstatable.
+- **Belnap** (the honest costs canon accepts) → coarse (magnitude deferred to a later fold) + a
+  two-order discipline burden (mitigated in code: named `≤_k`/`≤_t`, no operator overloading).
+
+The choice is therefore not aesthetic: Belnap is the *minimal* carrier that (a) keeps the evidence
+join closed under source-disagreement and (b) lets the `≤_k`-monotonicity invariant be stated at
+all. K3 fails (a); probability fails (b) and the founding `None ≠ False` rule.
 
 ## 3. The fold family and the four requirements
 
@@ -208,9 +246,13 @@ detection empirics (conformal/MI/IT advantage)         CAPPED/       guarantees_
    `content_digest` is verified filter-aware + keyword-inclusive (`rule_ir.py`); the comment mislabel
    is fixed (`9743f70`). No longer "the only unsound application in active use." The only residual is
    the **deliberate** structural-not-semantic ceiling, which is **catch-set's lane**, not FCA's.
-2. **Carrier-choice argument** — harden architecture §5 from prose into an explicit "why not K3 /
-   why not probability," with the alternatives' failure modes named.
-3. **SKOS proxy boundary** — ensure no artifact ever presents the structural edge as behavioral
-   ground truth; the catch-set is the only thing that earns that word.
-4. **Universality phrasing** — everywhere the "every concern is a fold" claim appears, it must read
-   as an admission criterion, never as a proof.
+2. **Carrier-choice argument** — **CLOSED (2026-06-25).** Argued in full in §2a, anchored to the
+   carrier's `(t,f)` construction: K3 → conflict-erasure + non-closed evidence join
+   (`True ⊕ False` has no value); probability → ignorance/conflict/equipoise indistinguishable,
+   `p_false=1−p_true` contradicts `None ≠ False`, no information order so `≤_k`-monotonicity is
+   unstatable; Belnap is the *minimal* carrier keeping the join closed and the invariant statable.
+   Pure argumentation (the carrier itself is already PROVEN, §2/§7); no code side.
+3. **SKOS proxy boundary** (standing guardrail) — ensure no artifact ever presents the structural
+   edge as behavioral ground truth; the catch-set is the only thing that earns that word.
+4. **Universality phrasing** (standing guardrail) — everywhere the "every concern is a fold" claim
+   appears, it must read as an admission criterion, never as a proof.
