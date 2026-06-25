@@ -149,14 +149,19 @@ moved, and trusting the note over the repo is the exact failure this doc preache
   `TRUE`/`NONE`-never-`FALSE` compounds it) and audit's **bracket upper-bound**. The dead
   `concept_key` is not called anywhere (zero refs in `packages/`).
 
-- **Verdict (revised):** FCA is **no longer the most-attackable application in active use.** The
-  unsound general-equivalence key is not in recall-critical use; it survives only where its error
-  direction is provably safe (vote-dedup) or explicitly bracketed (audit bound). Two honest
-  residuals: (a) `content_signature` keys on the compiled-IR digest — whether that fully covers the
-  *filter-aware + keyword-inclusive* scope of the original content-digest goal is **not exhaustively
-  verified** ("substantially landed," not "backlog fully closed"); (b) a cosmetic mislabel (a
-  `round.py` comment still reads "FCA signature" over a var holding `content_signature`) — code-side,
-  A's lane.
+- **Verdict (revised — reproach CLOSED in code):** FCA is **no longer the most-attackable
+  application in active use.** The unsound general-equivalence key is not in recall-critical use; it
+  survives only where its error direction is provably safe (vote-dedup) or explicitly bracketed
+  (audit bound). Both earlier residuals are now resolved: (a) `content_digest` is **verified
+  filter-aware AND keyword-inclusive** — it folds *all* blocks (filter/negative + keyword blocks, as
+  `(kind, field, ops, values, keywords)`) plus the condition AST that encodes `not filter`
+  (`rule_ir.py::content_digest`, read 2026-06-25), so the original content-digest scope is met; (b)
+  the cosmetic `round.py` comment mislabel was fixed by A (`speed/round-fca-comment-tidy`,
+  `9743f70`). The **only remaining boundary is deliberate, not a gap:** `content_digest` is
+  value-aware but *structural* — it cannot see *semantic* equivalence across differently-structured
+  rules (`endswith \\x.exe` vs `contains x`; the same target via different fields). That ceiling is
+  **catch-set's job, not content_digest's** — a designed division of labor, tracked separately, not
+  an FCA reproach.
 
 ## 7. Epistemic status — beyond-reproach vs strongly-arguable
 
@@ -197,12 +202,12 @@ detection empirics (conformal/MI/IT advantage)         CAPPED/       guarantees_
 
 ## 9. Open reproach-risks to close
 
-1. **FCA scoping** (largely CLOSED in code — verified 2026-06-25) — `content_signature` (value-aware)
-   is landed and wired into the firing path (`round.py`) and the audit redundancy bracket; the
-   value-blind `signature` is confined to provably-safe uses (vote-dedup, audit upper-bound). No
-   longer "the only unsound application in active use." Residual: (a) confirm `content_signature`'s
-   IR-digest covers the filter-aware/keyword-inclusive scope of the original goal; (b) cosmetic
-   `round.py` comment mislabel (code-side, A's lane).
+1. **FCA scoping** — **CLOSED in code (verified 2026-06-25).** `content_signature` (value-aware) is
+   landed and wired into the firing path (`round.py`) and the audit redundancy bracket; the
+   value-blind `signature` is confined to provably-safe uses (vote-dedup, audit upper-bound);
+   `content_digest` is verified filter-aware + keyword-inclusive (`rule_ir.py`); the comment mislabel
+   is fixed (`9743f70`). No longer "the only unsound application in active use." The only residual is
+   the **deliberate** structural-not-semantic ceiling, which is **catch-set's lane**, not FCA's.
 2. **Carrier-choice argument** — harden architecture §5 from prose into an explicit "why not K3 /
    why not probability," with the alternatives' failure modes named.
 3. **SKOS proxy boundary** — ensure no artifact ever presents the structural edge as behavioral
