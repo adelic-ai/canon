@@ -7,6 +7,10 @@ Source-of-truth docs it assembles: [[self_validation_architecture]] (§7 borrow 
 wheel-vs-novel), [[guarantees_ledger]] (the epistemic register — the tests are the truth), the
 contracts [[carrier]] / [[fold_protocol]], and the application sites in code. Where this doc and a
 cited test disagree, the test wins.
+**Correction 2026-06-25 (same day):** §6 / §9.1 / §7-table revised after verifying the code — the
+value-aware `content_signature` over-collapse fix is already landed and wired (firing path + audit
+bracket); the original draft trusted the stale [[project-content-digest-backlog]] note over the
+repo. Dogfooding the doc's own rule: the test/code is the truth, the note was stale.
 
 ## 0. The thesis of this document
 
@@ -117,24 +121,42 @@ compose independently; justification is the same object as the result.**
   The one failure mode is anyone (a paper, a verdict) treating the structural edge as "what the
   rule detects."
 
-## 6. FCA — the weak application; scope it or fix it
+## 6. FCA — value-blind key, but the fix is landed and the blind key is confined
 
 **Inherited:** Next-Closure / Duquenne–Guigues (proven). **Modeling claim:** rule-equivalence is
-an FCA concept keyed on `(logsource, field-set)`.
+an FCA concept. There are now **two** concept keys (verified in code 2026-06-25):
 
-- **The soundness problem (documented, not hidden):** the concept key is **field-set, value-blind**,
-  so it **over-collapses** — value-distinct detections fold into one concept (the 32-macOS-detections-
-  →-1 finding; [[skos_graded_mapping_seam]], [[full_corpus_dedup_pass]]). As a general "these rules
-  are equivalent" claim, this is **unsound**.
-- **Where it is nonetheless safe:** the Sigma corroboration panel uses FCA for **vote-dedup** — one
-  concept = one vote ([[guarantees_ledger]] VALIDATED, `detection/sigma_panel.py`). There,
-  over-collapse **under-counts** votes — it can only make corroboration *more* conservative, never
-  inflate it. The Belnap one-sidedness (`TRUE`/`NONE`, never `FALSE`) compounds the safety.
-- **The rule:** FCA's claim must be scoped to **conservative vote-dedup**, never to general
-  equivalence — or replaced by the value/filter-aware **`content_digest`** ([[project-content-digest-backlog]]).
-- **Verdict:** **this is the single most attackable application in the stack.** It is safe where used
-  today only by the conservative direction of its error; an unscoped "we dedup rules via FCA" is the
-  reproach. Closing it (scope-in-writing or `content_digest`) is the highest-value justification fix.
+- **value-blind `signature`** = `(logsource, field-set)` — **over-collapses** (value-distinct
+  detections sharing a field-set merge; the 32-macOS-detections-→-1 finding;
+  [[skos_graded_mapping_seam]], [[full_corpus_dedup_pass]]). Unsound as a general "these rules are
+  equivalent" claim. `detection/sigma_panel.py::signature`.
+- **value-aware `content_signature`** = `(logsource, content_digest of the compiled IR)` — the
+  over-collapse fix: rules sharing a field-set but matching different VALUES get distinct keys.
+  `detection/sigma_panel.py::content_signature`.
+
+**The fix is landed and wired** (correcting an earlier draft of this section that listed it as
+un-landed backlog — the source was the stale [[project-content-digest-backlog]] note; the code had
+moved, and trusting the note over the repo is the exact failure this doc preaches against):
+
+- The **recall-critical firing path keys on `content_signature`** (`detection/round.py`) — so
+  value-distinct rules no longer collapse to one best-peer; the 32→1 *under-fire* hazard is closed
+  **in the firing path**.
+- **`audit.py` runs both keys to BRACKET redundancy** — field-set `signature` = the **upper bound**
+  (over-collapse), `content_signature` = the **lower bound**; true redundancy is between them and
+  needs the catch-set. The blind key here is explicitly labeled a *bound*, not an equivalence claim.
+- The **value-blind `signature` survives only in two provably-safe uses:** the Sigma corroboration
+  panel's **vote-dedup** (over-collapse only *under-counts* votes → more conservative; Belnap
+  `TRUE`/`NONE`-never-`FALSE` compounds it) and audit's **bracket upper-bound**. The dead
+  `concept_key` is not called anywhere (zero refs in `packages/`).
+
+- **Verdict (revised):** FCA is **no longer the most-attackable application in active use.** The
+  unsound general-equivalence key is not in recall-critical use; it survives only where its error
+  direction is provably safe (vote-dedup) or explicitly bracketed (audit bound). Two honest
+  residuals: (a) `content_signature` keys on the compiled-IR digest — whether that fully covers the
+  *filter-aware + keyword-inclusive* scope of the original content-digest goal is **not exhaustively
+  verified** ("substantially landed," not "backlog fully closed"); (b) a cosmetic mislabel (a
+  `round.py` comment still reads "FCA signature" over a var holding `content_signature`) — code-side,
+  A's lane.
 
 ## 7. Epistemic status — beyond-reproach vs strongly-arguable
 
@@ -151,8 +173,10 @@ carrier choice (Belnap over K3/probability)            ARGUABLE      architectur
 "every concern is a monotone fold" (universality)      ARGUABLE      admission criterion, not a proof
 SKOS edge as structural relation                       ARGUABLE/     rule_lattice; honest proxy
                                                        SCOPED        (must never = ground truth)
-FCA concept = rule equivalence                         UNSOUND       over-collapse documented; SAFE only as
-                                                       (scoped-safe) conservative vote-dedup
+FCA value-blind key (general equivalence)              SCOPED-SAFE   value-aware content_signature landed +
+                                                                     wired (round.py firing path, audit
+                                                                     bracket); blind key confined to
+                                                                     vote-dedup + audit upper-bound
 detection empirics (conformal/MI/IT advantage)         CAPPED/       guarantees_ledger — unproven on real data
                                                        UNPROVEN
 >>>
@@ -173,8 +197,12 @@ detection empirics (conformal/MI/IT advantage)         CAPPED/       guarantees_
 
 ## 9. Open reproach-risks to close
 
-1. **FCA scoping** (highest value) — scope to conservative vote-dedup in writing, or land
-   `content_digest`. Until then, the only unsound application in active use.
+1. **FCA scoping** (largely CLOSED in code — verified 2026-06-25) — `content_signature` (value-aware)
+   is landed and wired into the firing path (`round.py`) and the audit redundancy bracket; the
+   value-blind `signature` is confined to provably-safe uses (vote-dedup, audit upper-bound). No
+   longer "the only unsound application in active use." Residual: (a) confirm `content_signature`'s
+   IR-digest covers the filter-aware/keyword-inclusive scope of the original goal; (b) cosmetic
+   `round.py` comment mislabel (code-side, A's lane).
 2. **Carrier-choice argument** — harden architecture §5 from prose into an explicit "why not K3 /
    why not probability," with the alternatives' failure modes named.
 3. **SKOS proxy boundary** — ensure no artifact ever presents the structural edge as behavioral
