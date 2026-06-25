@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canon — Online partial-chain detection: the third stateful shape</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --ink:#e6e8ee; --muted:#9aa3b2;
+    --line:#2a2f3a; --accent:#7db4ff; --accent2:#c79bff;
+    --good:#6fcf97; --warn:#f2c94c; --gap:#eb6f6f;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1080px;margin:0 auto;padding:48px 28px 96px}
+  h1{font-size:30px;margin:0 0 6px;letter-spacing:-.01em}
+  .sub{color:var(--muted);margin:0 0 4px;font-size:18px}
+  .stamp{color:var(--muted);font:13px/1.5 var(--mono);margin:0 0 32px}
+  h2{font-size:21px;margin:48px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+  h3{font-size:16px;margin:26px 0 6px;color:var(--accent2)}
+  p{margin:10px 0}
+  code{font-family:var(--mono);font-size:.88em;background:#1e222b;padding:1px 5px;border-radius:4px}
+  pre{background:#10131a;border:1px solid var(--line);border-radius:8px;padding:14px 16px;
+    overflow-x:auto;font-family:var(--mono);font-size:13px;line-height:1.55;color:#d4d9e4}
+  .note{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:8px;padding:14px 18px;margin:18px 0}
+  .note.gap{border-left-color:var(--gap)}
+  .note.key{border-left-color:var(--accent2)}
+  .note.good{border-left-color:var(--good)}
+  .muted{color:var(--muted)}
+  ul{margin:10px 0;padding-left:22px}
+  li{margin:7px 0}
+  strong{color:#fff}
+  table{border-collapse:collapse;width:100%;margin:18px 0;font-size:14px;background:var(--panel);
+    border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  th,td{text-align:left;padding:10px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#1c212b;color:var(--muted);font-weight:600;font-size:12px;
+    text-transform:uppercase;letter-spacing:.04em}
+  tr:last-child td{border-bottom:none}
+  td.k{font-weight:600;white-space:nowrap;color:var(--accent)}
+  .good{color:var(--good)} .gap{color:var(--gap)} .warn{color:var(--warn)}
+  .lede{font-size:17px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p style="font:13px/1.5 var(--mono,monospace);margin:0 0 22px"><a href="index.html" style="color:#7db4ff;text-decoration:none">← Canon index</a></p>
+  <h1>Online partial-chain detection — the third stateful shape</h1>
+  <p class="sub">The value is in the chain that hasn't finished. Catching a prefix needs a state shape that neither the per-event verifier nor the windowed surfacer provides.</p>
+  <p class="stamp">canon · design · 2026-06-25 · <span class="muted">partial-match shadows · recursive filters with forgetting · the identity graph</span></p>
+
+  <p class="lede">A completed kill-chain is a failure: by the time the full path to a crown jewel has materialized, the
+  jewel is gone. So the thing worth detecting is the <strong>partial</strong> chain — the prefix, mid-assembly. That sounds
+  like a small change to the chain checker, but it isn't: firing on prefixes changes <em>what you persist</em>. The object is
+  no longer the path, it is <strong>per-entity partial-match state</strong> — the half-assembled shadow of an attacker, kept
+  alive across time so a later fragment can join it. This note is the state shape that makes that tractable, and where it sits
+  relative to what's already designed.</p>
+
+  <h2>1 · Three online shapes, not two</h2>
+  <p><a href="live_stream_ingest.html">Live stream ingest</a> splits "detect live" along the verifier/surfacer axis and gets
+  two shapes. A multi-stage kill-chain falls through the gap between them:</p>
+  <table>
+    <thead><tr><th>Shape</th><th>State</th><th>Catches</th><th>Misses</th></tr></thead>
+    <tbody>
+      <tr><td class="k">per-event verifier<br><span class="muted">Sigma round</span></td>
+        <td><span class="good">none</span></td>
+        <td>a single event matching a rule</td>
+        <td>anything spanning more than one event</td></tr>
+      <tr><td class="k">windowed surfacer<br><span class="muted">the battery</span></td>
+        <td><span class="warn">trailing window</span></td>
+        <td>rarity of one feature against a population</td>
+        <td>an <em>ordered, multi-stage</em> structure across identities</td></tr>
+      <tr><td class="k" style="color:var(--accent2)">partial-match accumulator<br><span class="muted">this note</span></td>
+        <td><span class="warn">sparse per-entity shadows</span></td>
+        <td>a kill-chain <em>prefix</em> as it assembles, before completion</td>
+        <td>(the hard parts — §5)</td></tr>
+    </tbody>
+  </table>
+  <div class="note key"><strong>The chain checker is the forensic corner of the third shape.</strong>
+  <code>detection/chain.py</code> recognizes <em>complete</em> chains in <em>batch</em> — "did this whole path happen." That is
+  the right tool for after-the-fact investigation and the wrong one for monitoring. Monitoring wants the same chain logic run
+  <em>online over prefixes</em> with state that survives between fragments. Same spec; opposite end of the
+  completeness×abnormality space from <a href="kill_chains_as_entity_path_analysis.html">the entity-path note</a> — there the
+  boolean complete chain was the <code>completeness=full</code> corner; here we live in the interior.</div>
+
+  <h2>2 · "We throw the artifacts away" — the bug, named</h2>
+  <p>A windowed or per-event detector is <strong>memoryless across its boundary</strong>: a fragment that doesn't complete a
+  chain inside the window is discarded. But the fragments of a real intrusion arrive minutes-to-months apart and across
+  several identities. Discarding the lonely fragment is exactly the failure — the prefix was the early-warning signal and we
+  dropped it. The fix is not a smarter recognizer; it is to <strong>keep the fragment, attached to the entity, with
+  decay</strong>, so the next compatible fragment can find it.</p>
+
+  <h2>3 · Why this is not the intractable thing it looks like</h2>
+  <p>"Maintain a belief over hidden attack-states for every entity" is a dense HMM, and it <em>is</em> intractable — worse than
+  per-entity, because attacks couple identities (the kerberoast pivot binds the roasting account and the cracked service
+  account), so the honest hidden state is over <em>sets</em> of identities: exponential. You don't pay that, because of
+  <strong>sparsity</strong>:</p>
+  <ul>
+    <li><strong>Instantiate on first light.</strong> ~all entities are in the null state showing nothing; you never allocate a
+      shadow for them. A shadow is created only when an entity produces a fragment worth keeping.</li>
+    <li><strong>Decay and prune.</strong> Each shadow loses weight with age and is dropped when it falls below threshold. The
+      live set is small — the handful of entities currently mid-something — not the whole population.</li>
+    <li><strong>HMM is the semantics; partial-match is the implementation.</strong> The probabilistic model (hidden attacker
+      state, transition likelihoods, the completeness×abnormality score) rides on top of a <em>complex-event-processing</em>
+      partial-match store: maintain open prefixes, advance them as events arrive, expire on timeout. You run the expensive
+      inference over the live shadows only — Viterbi over five, not a million.</li>
+  </ul>
+
+  <h2>4 · The comp­actness is one operator — recursive filters with forgetting</h2>
+  <p>Three things in this architecture decay over time, and they are the <em>same operator</em>
+  <code>new = α·obs + (1−α)·old</code> wearing three different carriers:</p>
+  <table>
+    <thead><tr><th>Layer</th><th>Carrier</th><th>Forgetting means</th><th>Home in canon</th></tr></thead>
+    <tbody>
+      <tr><td class="k">baseline (EWMA)</td><td>a <em>level</em> — normal-for-this-entity</td>
+        <td>old normal stops counting → tracks drift</td>
+        <td><a href="retention_and_aging.html">baselines</a> / battery change-detection</td></tr>
+      <tr><td class="k">shadow decay</td><td>a <em>hypothesis weight</em> — "may be mid-chain"</td>
+        <td>stale suspicion stops counting → bounds prefix lifetime</td>
+        <td><span class="warn">new — this note</span></td></tr>
+      <tr><td class="k">belief (HMM forward)</td><td>a <em>distribution</em> over hidden states</td>
+        <td>falls out of the transition dynamics</td>
+        <td>the killchain/HMM machinery</td></tr>
+    </tbody>
+  </table>
+  <div class="note"><strong>Structurally and abstractly the same; conceptually distinct.</strong> EWMA is the point-estimate
+  member of a family — steady-state Kalman / RLS-with-forgetting; the HMM forward step is the same recurrence one richness
+  level up (a distribution, not a point). That shared skeleton is the answer to "the log as a weird, compact database": you
+  never replay history, you keep a <strong>recursive sufficient statistic</strong> — the current baseline level, the current
+  live-shadow set, the current belief — and update it per event. Forgetting is what lets a bounded state stand in for an
+  unbounded stream. <em>Share the skeleton, keep the carriers' decay constants distinct</em> — they run against different
+  clocks (a baseline drifts over weeks; a hypothesis lives for an attack's dwell time).</div>
+
+  <h2>5 · What the shadows live on — the identity graph as a data-plane IR</h2>
+  <p>A shadow is a partial walk over a graph, so the state shape presupposes a graph. Its nodes and edges:</p>
+  <ul>
+    <li><strong>An action is a typed edge,</strong> not a bare predicate: <code>Subject × Object → StateΔ</code> — who acted, on
+      what, what changed. Chains chain because <em>the object of one action becomes the subject of the next</em>: the object of
+      "roast" (the service account behind the SPN) is the subject of the later "logon." A path is a sequence of typed edges
+      where one's codomain feeds the next's domain — not a conjunction of independent truths.</li>
+    <li><strong>The attacker is a hidden entity that wears identities.</strong> Only a security principal acts at the
+      authorization layer (a process runs under a token = an identity), but the thing you're tracking — the campaign — puppets
+      several identities and pivots between them. The identity is the <em>observable</em>; the attacker is the <em>hidden
+      state</em>. This is what couples shadows across identities. Granularity varies with telemetry: process, identity, or
+      asset.</li>
+    <li><strong>This graph is a data-plane IR</strong> — a different frontend axis than <a href="intermediate_representation.html">the
+      IR spine</a> describes. There the frontends are <em>rule languages</em> (Sigma/CAR) lowering to the detection-IR; here
+      the frontends are <em>telemetry sources</em> (eslogger, Sysmon, ETW, CamFlow PROV) lowering to an <em>observation
+      graph</em>. The <code>eslogger→OCSF</code> adapter is the first such frontend already; OCSF/SKOS is its vocabulary. Reuse
+      PROV-O graph shape + OCSF vocab — mint the in-memory representation, not a fourth standard. A detection-IR motif
+      (<code>spawn ⋈ access on ProcessGuid</code>) is then a <em>query over</em> this observation graph; the two IRs meet only
+      because they share the entity vocabulary.</li>
+  </ul>
+  <div class="note good"><strong>The provenance-aware-OS ideal, and what we actually own.</strong> Whole-system provenance
+  (CamFlow, PASS) and streaming provenance-graph IDS (SLEUTH, HOLMES) emit the graph at the source instead of flattening it to
+  a log and reconstructing it. That ideal relocates the hard parts rather than removing them (the kernel sees syscalls, not
+  "TGS request, RC4"; the graph is the firehose; it's per-host). canon can't change a customer's OS — so its move is to
+  <em>consume</em> a graph-at-source where one exists and reconstruct it from flat logs where it doesn't. The realizable slice
+  is the producer canon owns: emit PROV-shaped typed edges from our own collectors. This is the <strong>ADJACENT</strong> band
+  (source-custody/capture), not canon's core edge.</div>
+
+  <h2>6 · Honest hard parts</h2>
+  <ul>
+    <li><strong>Entity resolution is the actual open problem,</strong> and the partial-match store does not solve it — it needs
+      the join key. The known-pivot cases stitch (kerberoast's <code>SPN → service-account</code>; pass-the-hash); the
+      <em>unknown-coupling</em> case — an attacker using two identities with no observable link — stays an honest <strong>NONE</strong>.
+      This is the <a href="kill_chains_as_entity_path_analysis.html">cross-actor linkage</a> rung; it is a relational join
+      across identities (the attack-graph view), not a per-actor scan, and <code>chain.py</code> today is per-actor.</li>
+    <li><strong>Prefix-firing has brutal FP pressure.</strong> Surface every 1-of-3 fragment and you drown. The only thing that
+      makes partial surfacing survivable is the abnormality-for-this-entity gate — i.e. the EWMA baseline — and that is
+      <em>data-gated</em> on the entity's history (the recurring wall; same data dependency the entity-path note flags).</li>
+    <li><strong>The decay constant is adversarially attackable.</strong> Short → miss slow attacks (APT dwell is months;
+      roast-then-logon can be weeks). Long → shadows pile up and false-join. "Low and slow" is precisely pacing under the
+      forgetting factor. There is no clean constant; it is a recall/FP knob with the adversary's hand on it.</li>
+    <li><strong>In-memory graph vs the durable journal — a real tension.</strong> Live ingest deliberately writes NDJSON to an
+      append file with a checkpointed offset, so a restart is <em>resume, not gap</em> (custody). A pure in-memory observation
+      graph trades that away. Resolution: the graph is <em>derived hot state</em>, replayable from the journal; the NDJSON
+      stays the durable custody record. The graph is the analysis surface, not the system of record.</li>
+    <li><strong>The IR's expressiveness is the detection ceiling.</strong> If the observation IR can't represent ticket
+      encryption type, no frontend delivers RC4 and no shadow can see kerberoast — regardless of source. Designing the IR's
+      vocabulary <em>is</em> designing what's detectable (the sub-atomic schema floor).</li>
+  </ul>
+
+  <h2>7 · Honest scope — built vs designed</h2>
+  <ul>
+    <li><strong>Built:</strong> <code>detection/chain.py</code> (complete-chain, batch — the forensic corner); the
+      <code>eslogger→OCSF</code> adapter (the first observation frontend); the battery (windowed surfacer); the fold substrate
+      / computation DAG. The per-actor limitation and the complete-chain limitation are both real today.</li>
+    <li><strong>Designed, not built:</strong> the partial-match accumulator as the third online shape; the sparse decaying
+      shadow store; the recursive-filter triple sharing one operator; the observation-graph data-IR as a telemetry-frontend
+      axis. None of this exists in code yet.</li>
+    <li><strong>The seed (smallest real step):</strong> add a per-entity shadow accumulator to the (designed) reader loop —
+      one decay constant, one EWMA baseline, the existing kerberoast spec run over prefixes — and show a prefix fires
+      <em>before</em> completion on the faker corpus. Honest caveat: the faker can prove the <em>mechanism</em> (a prefix fires
+      early, decays, false-joins under a bad constant) but <strong>cannot earn fidelity</strong> — author-both-sides
+      circularity. Real validation is gated on real multi-stage telemetry, the same wall the kerberoast track hit.</li>
+  </ul>
+
+  <div class="note">
+    <strong>One line.</strong> Between the per-event verifier and the windowed surfacer sits a third online shape — the
+    per-entity partial-match accumulator — which fires on kill-chain <em>prefixes</em> by keeping sparse, decaying attacker
+    shadows over an identity graph; it is tractable because the shadow, the baseline, and the belief are one
+    recursive-filter-with-forgetting operator (compact sufficient statistics, not a replayed log), and it is honest because
+    the cross-identity join, the FP gate, and the decay constant are named as data-gated or adversarial rather than assumed.
+  </div>
+</div>
+</body>
+</html>
