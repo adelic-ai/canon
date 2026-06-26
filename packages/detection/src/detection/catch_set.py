@@ -179,7 +179,10 @@ def splunk_t1558_003_grounding(base: str, *, sigma_root=None) -> dict:
     for xml in sorted(Path(base).rglob("windows-xml.log")):
         events.extend(load_evtx_xml(xml))
     rc4 = [e for e in events if e.get("EventID") == "4769" and e.get("TicketEncryptionType") == "0x17"]
-    instances = list({_cid(e): e for e in rc4}.values())          # dedup by content CID
+    # dedup to DISTINCT detections — content, not occurrence: drop the per-event timestamp so repeated-identical
+    # requests collapse. (evtx_xml now captures TimeCreated; without this, every event would be its own
+    # "instance" and the content-dedup a no-op.)
+    instances = list({_cid({k: v for k, v in e.items() if k != "TimeCreated"}): e for e in rc4}.values())
     rules = [(r.get("id", p.name), r) for p, r in gather("T1558.003", root=root)]
     return {
         "technique": "T1558.003",

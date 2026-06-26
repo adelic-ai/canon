@@ -35,6 +35,12 @@ def _parse_event(line: str) -> dict | None:
             el = sys.find(f"{_NS}{tag}")
             if el is not None and el.text is not None:
                 out[tag] = el.text
+        # TimeCreated carries the event time in its SystemTime *attribute* (not text) — capture it, since any
+        # temporal detection (windows, ordering, the chain checker's not_before) needs it. Absent in some
+        # exports, so it is best-effort.
+        tc = sys.find(f"{_NS}TimeCreated")
+        if tc is not None and tc.get("SystemTime"):
+            out["TimeCreated"] = tc.get("SystemTime")
     data = root.find(f"{_NS}EventData")
     if data is not None:
         for d in data.findall(f"{_NS}Data"):
