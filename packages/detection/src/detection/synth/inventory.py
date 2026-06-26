@@ -129,6 +129,13 @@ class Inventory:
         ws = self.host_by_name(u.workstation)
         return ws.ip if ws else None
 
+    def all_spns(self) -> tuple[str, ...]:
+        """The domain's full *requestable* SPN namespace — what a kerberoast fan-out enumerates: every host's
+        ``HOST/<fqdn>`` computer SPN plus the user-service SPNs. Only the service-SPN subset
+        (:meth:`spn_to_account`) is *crackable*; the computer SPNs pad the fan-out the way they do in a real
+        domain (requested indiscriminately, uncrackable). Sorted for determinism."""
+        return tuple(sorted({f"HOST/{h.name}" for h in self.hosts} | {s.spn for s in self.service_accounts}))
+
 
 def _username(rng: random.Random, seen: set[str]) -> str:
     """A unique ``first.last`` username; a numeric suffix breaks collisions deterministically."""
