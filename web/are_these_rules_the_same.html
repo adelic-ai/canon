@@ -66,9 +66,8 @@
 
   <p>It sounds trivial. It is not. By the end you will have rediscovered FCA and SKOS — two acronyms from the
   Semantic Web stack — without ever being told to adopt them, because a pile of real rules will have forced
-  them on you. The point of the exercise is not to sell the Semantic Web. It is to show that you re-derive its
-  pieces the moment you take <em>meaning</em> seriously on real data — which is the only honest reason to want
-  them.</p>
+  them on you. The point is not to sell the Semantic Web. It is to show that you re-derive its pieces the moment
+  you take <em>meaning</em> seriously on real data — which is the only honest reason to want them.</p>
 
   <p class="muted" style="font-size:16px">A note on scope, stated up front so it can't drift: this justifies the
   <em>constructions</em> — explicit concept structure and graded relations. It does <em>not</em> argue for the
@@ -77,31 +76,23 @@
 
   <h2><span class="n">1</span>What a rule is, just enough to be concrete</h2>
 
-  <p>The corpus is <a href="https://github.com/SigmaHQ/sigma">Sigma</a> — the open standard for writing
-  detection rules. We have <strong>3,748</strong> of them sitting in a local copy. A rule is a small structured
-  object: it reads fields off a log event and combines tests with boolean logic. Here is the shape, stripped to
-  essentials:</p>
+  <p>The corpus is <a href="https://github.com/SigmaHQ/sigma">Sigma</a>, the open standard for detection rules;
+  we have <strong>3,748</strong> of them in a local copy. A rule reads fields off a log event and combines tests
+  with boolean logic. Stripped to essentials:</p>
 
   <pre><span class="k">detection</span>:
   <span class="k">selection</span>:
     Image|endswith: <span class="s">'\mimikatz.exe'</span>
   <span class="k">condition</span>: selection</pre>
 
-  <p>That single test — <code>Image|endswith: '\mimikatz.exe'</code> — is an <strong>atom</strong>, and it has
-  three parts:</p>
-
-  <ul style="font-size:16px;line-height:1.55">
-    <li><strong>field</strong> — <code>Image</code>, the event key being read;</li>
-    <li><strong>predicate</strong> — <code>endswith</code>, how to compare;</li>
-    <li><strong>value</strong> — <code>\mimikatz.exe</code>, what to compare against.</li>
-  </ul>
-
-  <p>A rule is a <strong>boolean combination of atoms</strong> — atoms joined by <code>and</code>, <code>or</code>,
-  <code>not</code>. And the predicate vocabulary is small. The entire set of comparisons a rule can make is
-  roughly this:</p>
+  <p>That single test is an <strong>atom</strong>, and it has three parts: a <strong>field</strong>
+  (<code>Image</code>), a <strong>predicate</strong> (<code>endswith</code> — how to compare), and a
+  <strong>value</strong> (<code>\mimikatz.exe</code>). A rule is a <strong>boolean combination of atoms</strong>
+  (<code>and</code>/<code>or</code>/<code>not</code>). And the predicate vocabulary is small — almost entirely
+  string operations:</p>
 
   <table>
-    <tr><td class="k">= / glob</td><td>exact match, or wildcard match if the value has <code>*</code>/<code>?</code></td></tr>
+    <tr><td class="k">= / glob</td><td>exact match, or wildcard if the value has <code>*</code>/<code>?</code></td></tr>
     <tr><td class="k">contains</td><td>substring</td></tr>
     <tr><td class="k">startswith / endswith</td><td>prefix / suffix</td></tr>
     <tr><td class="k">re</td><td>regular expression</td></tr>
@@ -109,9 +100,8 @@
     <tr><td class="k">gt / gte / lt / lte</td><td>numeric comparison</td></tr>
   </table>
 
-  <p>Hold onto that smallness. <strong>The predicates are almost all string operations.</strong> It will turn out
-  to be the crux of the whole essay — but we can't see why yet. First we have to try, and fail, to answer the
-  question the easy way.</p>
+  <p>Hold onto that smallness; it returns at the end as the crux. First we try, and fail, to answer the question
+  the easy way.</p>
 
   <h2><span class="n">2</span>The naive answer: are the texts equal?</h2>
 
@@ -128,150 +118,116 @@
 
   <p>Reordered keys, list-vs-inline, a stray space — byte-different, behaviorally identical. Text equality
   answers <em>"different,"</em> and it is wrong. We need to compare what a rule <em>is</em>, not how it was
-  typed. So we abstract away from the syntax and look at structure.</p>
+  typed. So we abstract away from the syntax and compare structure.</p>
 
-  <h2><span class="n">3</span>A real idea: group rules by their fields</h2>
+  <h2><span class="n">3</span>Compare structure — and structure is already graded</h2>
 
-  <p>Here is the first genuinely principled move. Forget the text; ask <em>which fields does this rule read?</em>
-  Rule A and rule B both read <code>{Image, CommandLine}</code>. Group rules by their field-set and you have
-  collapsed the syntactic noise: two rules in the same group are "the same concept" — they look at the same part
-  of the world.</p>
+  <p>Forget the text; compare what the rules <em>are</em>. And here is the thing the naive question hides: the
+  honest answer is never just "same" or "different." Two rules can be <em>identical</em>; one can be a
+  <em>special case</em> of the other (it adds a condition); they can <em>overlap</em>; they can be
+  <em>disjoint</em>. The relationship between two rules is <strong>graded</strong> — it comes in degrees of
+  generality.</p>
 
-  <p>This is <strong>Formal Concept Analysis</strong> (FCA), and you just re-invented it. FCA is the mathematics
-  of exactly this move: a set of <em>objects</em> (rules), a set of <em>attributes</em> (fields), and the
-  <em>concepts</em> that fall out — the closed groupings where "every rule with these fields" and "every field in
-  these rules" line up. The groups form a lattice ordered by specificity. You didn't reach for it because a spec
-  told you to; you reached for it because "compare the structure, not the text" <em>is</em> grouping by
-  attributes, and that is FCA.</p>
-
-  <p>And it works — for a while. Genuine duplicates, the same detection typed twice, land in the same concept and
-  collapse. Across the corpus this is real signal: of 3,748 rules, the distinct field-set concepts number in the
-  hundreds, not thousands. The redundancy is enormous, and FCA is the tool that measures it.</p>
-
-  <p>So we have our answer to "are these two rules the same?" — <em>they're the same iff they share a field-set
-  concept.</em> Clean. Principled. And, on real data, wrong.</p>
-
-  <h2><span class="n">4</span>The wall: over-collapse</h2>
-
-  <p>The field-set key is <strong>value-blind</strong>. It sees <em>which</em> fields a rule reads, never
-  <em>what values</em> it looks for. Watch what that does. Consider thirty-two distinct macOS detections — thirty-two
-  genuinely different rules, each hunting a different command, a different binary, a different argument — that all
-  happen to read the same field, <code>CommandLine</code>:</p>
-
-  <div class="note gap"><strong>32 distinct detections &rarr; 1 concept.</strong> Same field-set
-  (<code>{CommandLine}</code>), thirty-two different values. The FCA key folds all thirty-two into a single
-  concept and declares them "the same rule." They are not. One catches a credential dump; another catches a
-  persistence trick; the key cannot tell them apart, because it threw the values away.</div>
-
-  <p>This is not a tuning bug. It is the structure of the move. The instant you abstract from "the text" to "the
-  fields," you abstract <em>past the values</em>, and the values are most of the meaning. Grouping by attributes
-  was the right instinct and the wrong granularity. <strong>Equality of structure over-collapses.</strong></p>
-
-  <h2><span class="n">5</span>A finer key — and why it still isn't enough</h2>
-
-  <p>The fix seems obvious: stop being value-blind. Hash the rule's <em>full compiled logic</em> — fields,
-  predicates, <em>and</em> values, the filters, the keywords, everything — into a content signature. Now the
-  thirty-two macOS rules have thirty-two different signatures. <strong>32 &rarr; 32.</strong> The over-collapse is
-  gone; genuinely identical logic still collapses, genuinely different logic stays apart. Value-aware equality is
-  the right answer to "are these <em>byte-for-byte the same detection?</em>"</p>
-
-  <p>But notice what we can now say, and what we still can't. We can say <em>identical</em> or <em>not
-  identical</em>. That's it. Equality — however fine-grained — is a <strong>yes/no</strong>. And the real
-  relationships between rules are not yes/no. Open the corpus and you find, everywhere:</p>
+  <p>Two pieces of the Semantic Web are exactly the machinery for that, and they are <em>not</em> a sequence of
+  coarse-then-fine — they are two faces of the same structure:</p>
 
   <ul style="font-size:16px;line-height:1.55">
-    <li>one rule that is a <em>more specific version</em> of another (it adds a condition);</li>
-    <li>two rules that <em>overlap</em> — they catch some of the same things, and each catches things the other
-      misses;</li>
-    <li>two rules that are <em>synonyms</em> — different fields, different predicates, but they're after the same
-      behavior.</li>
+    <li><strong>FCA</strong> (Formal Concept Analysis) is the <em>method</em>: feed it objects (rules) and
+      attributes, and it <em>derives</em> a <strong>concept lattice</strong> — and a lattice is already a
+      hierarchy of <em>more-general / more-specific</em>. The order between concepts <em>is</em>
+      broader/narrower; FCA hands you the grades, not just buckets.</li>
+    <li><strong>SKOS</strong> (Simple Knowledge Organization System) is the <em>vocabulary</em>: it
+      <em>names</em> those relations — <code>exactMatch</code>, <code>broadMatch</code>,
+      <code>narrowMatch</code>, <code>closeMatch</code>.</li>
   </ul>
 
-  <p>None of those is "the same." None is "different." They live on a <strong>spectrum</strong>, and equality —
-  the only tool we have left — can't address a spectrum. We've run out of road on identity. We need
-  relationships that come in <em>degrees</em>.</p>
+  <div class="note key"><strong>FCA derives the graded structure; SKOS expresses it.</strong> FCA's lattice
+  order and SKOS broader/narrower are the <em>same relation</em> seen from two sides — one computed from the
+  data, one written down. You don't go "FCA, then SKOS for grades." You use FCA to find the relations and SKOS
+  to say them. The instant you compare structure honestly, you are doing both.</div>
 
-  <h2><span class="n">6</span>What you're forced into: graded relations</h2>
+  <h2><span class="n">4</span>The one real knob: what you feed it</h2>
 
-  <p>So you invent the missing vocabulary. You need to say not just "same / different" but:</p>
+  <p>FCA needs <em>attributes</em>, and the whole result turns on which ones you pick. Take the naive choice —
+  a rule's <strong>field-set</strong>: "which fields does it read?" It collapses the syntactic noise nicely, and
+  for genuine duplicates it works. But it is <strong>value-blind</strong>, and on real data that bites hard.
+  Thirty-two distinct macOS detections — thirty-two different commands, binaries, arguments — all happen to read
+  the same field, <code>CommandLine</code>:</p>
 
-  <table>
-    <tr><td class="k">exact</td><td>these two are the same detection</td></tr>
-    <tr><td class="k">close</td><td>nearly the same — interchangeable for most purposes</td></tr>
-    <tr><td class="k">broader</td><td>this one is a more general version of that one</td></tr>
-    <tr><td class="k">narrower</td><td>this one is a special case of that one</td></tr>
-  </table>
+  <div class="note gap"><strong>32 distinct detections &rarr; 1 concept.</strong> Same field-set, thirty-two
+  different values. A field-set key folds all thirty-two into one and calls them "the same rule." They are not.
+  The key threw the values away.</div>
 
-  <p>That is <strong>SKOS</strong> — the Simple Knowledge Organization System, the Semantic Web's vocabulary for
-  exactly these graded relations (<code>exactMatch</code>, <code>closeMatch</code>, <code>broadMatch</code>,
-  <code>narrowMatch</code>). And, again — you did not adopt it. You were <em>forced</em> into it, because
-  "same-or-not" could not express "this rule is a stricter version of that one," and your data is full of
-  stricter-versions-of. The moment you take the relationships between rules seriously, equality is not enough and
-  a <em>graded</em> relation is the minimum that works. SKOS is the name for the minimum.</p>
-
-  <div class="note key"><strong>This is the payoff of part one.</strong> The first place the Semantic Web stops
-  being abstract is right here: you needed concept structure (FCA) to get past the text, and you needed graded
-  relations (SKOS) to get past equality. Neither was a vision you bought into. Each was the next forced move when
-  the previous tool hit a wall on real rules.</p>
-
-  <h2><span class="n">7</span>The seam: structure is not behavior</h2>
-
-  <p>And now the honest crack, the one that opens part two. Everything we've built — concept lattices, content
-  signatures, graded relations — describes what a rule <strong>says</strong>. None of it knows what a rule
-  <strong>does</strong>. And on real rules, those come apart.</p>
-
-  <p>Here is a single real rule that contains the whole problem. It lives at
-  <code>proc_creation_win_susp_parent_execute_itself.yml</code> in the corpus, and it uses Sigma's most common
-  idiom — a positive selection wrapped in layered allowlists:</p>
+  <p>Crucially, <strong>this is not a flaw in FCA or SKOS — it is a flaw in the attributes.</strong> Feed FCA
+  richer attributes and the over-collapse vanishes. Include the <em>values</em> and the result sharpens — the
+  thirty-two become thirty-two concepts. And include the <strong>filters</strong>, too. Sigma's most common
+  idiom is a positive selection wrapped in allowlists; here is a real rule at
+  <code>proc_creation_win_susp_parent_execute_itself.yml</code>:</p>
 
   <pre><span class="k">detection</span>:
   <span class="k">selection</span>:
     Image|fieldref: ParentImage          <span class="c"># a process whose image == its parent's</span>
   <span class="k">filter_main_path</span>:
-    Image|startswith:
-      - <span class="s">'C:\Program Files\'</span>
-      - <span class="s">'C:\Program Files (x86)\'</span>
+    Image|startswith: [<span class="s">'C:\Program Files\'</span>, <span class="s">'C:\Program Files (x86)\'</span>]
   <span class="k">filter_main_original_fn</span>:
     OriginalFileName: [<span class="s">'Cmd.Exe'</span>, <span class="s">'PowerShell.EXE'</span>, ...]
   <span class="k">filter_main_product</span>:
     Product: [<span class="s">'Microsoft Office'</span>, <span class="s">'Firefox'</span>, ...]
   <span class="k">condition</span>: selection <span class="k">and not</span> 1 of filter_*</pre>
 
-  <p>The <code>selection</code> — the part our structural key <em>sees</em> — is one line. The three
-  <code>filter_*</code> blocks — the part the key barely registers — carry almost all of the behavior: they
-  suppress every binary under Program Files, every known-good executable by its embedded metadata, every listed
-  vendor's product. <strong>Take two rules with the same selection and different allowlists. To structure they
-  are identical. In behavior they are wildly different</strong> — one stays silent on Firefox, the other screams
-  at it. The thing that determines what the rule <em>does</em> is exactly the thing structure under-weights.</p>
+  <p>The filters are not hidden — they are sitting right there in the rule, and there is nothing stopping you
+  from feeding them to FCA. Tag each clause by polarity — positive selection clauses and negative filter
+  clauses — and put them all in the attribute set. Both kinds <em>narrow</em> the rule (a positive clause says
+  "must match more," a filter says "must match less"), so the lattice order — <em>more clauses, of either
+  polarity, is narrower</em> — lines up exactly with SKOS <code>narrowMatch</code>. Now two rules with the same
+  selection but different allowlists are correctly <em>distinct</em>, and "this rule is a stricter version of
+  that one" is a relation the lattice <em>states</em>.</p>
 
-  <p>It gets worse, and the small predicate vocabulary from section 1 is why. With only a handful of string
-  operations, the <em>same catch</em> can be spelled many ways: <code>Image|endswith: '\mimikatz.exe'</code> and
-  <code>CommandLine|contains: 'mimikatz'</code> are different atoms — different fields, different predicates,
-  different values, so different by every structural key we built — yet they fire on the same events. Different
-  structure, same behavior. And the reverse, as we just saw with the allowlists: same structure, different
-  behavior. Structure and behavior are not a fine and coarse version of one axis. <strong>They are
-  orthogonal.</strong></p>
+  <div class="note key">The lesson of the over-collapse is not "structure can't see the values or the filters."
+  It can — you just have to <em>include</em> them. The real knob is <strong>attribute granularity</strong>:
+  field-sets are too coarse; values-plus-filters are right. Same FCA, same SKOS — a richer formal context.</div>
 
-  <div class="note gap">There is no structural key — not field-sets, not content signatures, not SKOS grades —
-  that can tell you what a rule <em>catches</em>. To know what a rule catches, there is exactly one move left:
-  <strong>run it.</strong> And running it needs a detector, real events, and a notion of "fired on the same
-  instances." That is a different machine, and a different question, and it is where part two begins.</div>
+  <h2><span class="n">5</span>The seam: even complete structure isn't behavior</h2>
 
-  <h2><span class="n">8</span>So — why do we need the Semantic Web?</h2>
+  <p>So include everything — every field, every value, every filter, the whole boolean condition. You now have
+  the most faithful structural description of a rule you can write. And it is <em>still</em> not what the rule
+  <strong>does</strong>. Two reasons, and neither can be closed by adding more structure:</p>
 
-  <p>Because if you take one ordinary question — <em>are these two things the same?</em> — and you refuse to lie
-  about the answer on real data, you are marched, step by forced step, through its constructions. Text equality
-  fails, so you group by structure, which is FCA. Structure over-collapses, so you add values, which gets you to
-  exact identity. Identity is yes/no and the world is graded, so you reach for degree, which is SKOS. None of it
-  was abstract. Each piece was the cheapest tool that survived contact with 3,748 real rules.</p>
+  <p><strong>Semantic equivalence.</strong> Different structures can catch the same thing.
+  <code>Image|endswith: '\mimikatz.exe'</code> and <code>CommandLine|contains: 'mimikatz'</code> are different
+  fields, different predicates, different values — distinct by <em>every</em> structural key, however rich — yet
+  they fire on the same events. The relation is sound in one direction only: identical structure
+  <em>guarantees</em> identical behavior, but the converse fails. Structure can't see the equivalence because it
+  is a fact about what the predicates <em>mean over data</em>, not about how they're spelled — and the predicate
+  vocabulary is so small that there are always many spellings of one catch.</p>
 
-  <p>That is the honest case for the Semantic Web, and it is the only one worth making: you do not <em>adopt</em>
-  it as a vision. You <em>rediscover</em> its pieces, because the problem of meaning — what is the same, what is
-  related, what is true — forces them on anyone who works at the level of data and won't fake the answers.</p>
+  <p><strong>Data-relativity.</strong> "What a rule catches" is relative to the log. Two rules can be
+  behaviorally identical on one dataset and divergent on another — an allowlist excludes something present in
+  one environment and absent in the next. A structural comparison is data-free; it cannot give you a
+  data-relative answer.</p>
 
-  <p>And we have stopped one question short. We learned what a rule <em>says</em>, and proved it isn't what a rule
-  <em>does</em>. The catch — what these rules actually fire on, and the four-valued logic you need to combine
-  many of them honestly — is the behavioral axis, and it needs a detector. Part two runs the rules.</p>
+  <div class="note gap">No structural key — field-sets, full content signatures, SKOS grades — can tell you what
+  a rule <em>catches</em>. To know that, there is exactly one move left: <strong>run it.</strong> And running it
+  needs a detector, real events, and a notion of "fired on the same instances." That is a different machine, and
+  a different question — and it is where part two begins.</div>
+
+  <h2><span class="n">6</span>So — why do we need the Semantic Web?</h2>
+
+  <p>Because if you take one ordinary question — <em>are these two things the same?</em> — and refuse to lie
+  about the answer on real data, you are walked, step by forced step, into its constructions. Text equality
+  fails, so you compare structure — and structure is graded, which is FCA deriving a lattice and SKOS naming its
+  relations. The first attributes you try over-collapse, so you make the attributes richer — values, filters,
+  polarity — and the grades come right. None of it was abstract. Each piece was the cheapest tool that survived
+  contact with 3,748 real rules.</p>
+
+  <p>That is the honest case for the Semantic Web, and the only one worth making: you do not <em>adopt</em> it as
+  a vision; you <em>rediscover</em> its pieces, because the problem of meaning — what is the same, what is
+  related — forces them on anyone who works at the level of data and won't fake the answers.</p>
+
+  <p>And we have stopped one question short. We learned what a rule <em>says</em>, and proved it isn't what a
+  rule <em>does</em>: structure is sound but incomplete for behavior, and behavior is data-relative. The catch —
+  what these rules actually fire on, and the four-valued logic you need to combine many of them honestly — is
+  the behavioral axis, and it needs a detector. Part two runs the rules.</p>
 
   <footer>
     adelic · "Are These Two Rules the Same?" · part 1 of a series on detection, meaning, and honest verdicts.<br>
