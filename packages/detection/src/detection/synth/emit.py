@@ -102,6 +102,26 @@ def project_timeline(acts: list[Activity], inv: Inventory) -> dict[tuple[str, st
     return dict(logs)
 
 
+def labeled_events(acts: list[Activity], inv: Inventory) -> list[tuple[dict, str | None]]:
+    """Project the timeline to flat event-dicts paired with each activity's causal ground-truth ``label``
+    (``None`` = benign, ``kerberoast:<user>`` = a campaign step). The same events :func:`project_timeline`
+    writes to log files, but parsed back to the dicts the Sigma evaluator consumes and carrying the label
+    instead of being grouped by ``(host, channel)``. This is the labeled view :mod:`detection.cofire`
+    fires the rule bundle against — the round-trip through :func:`detection.evtx_xml` keeps it faithful
+    (real ``<Data Name=…>`` field names, no toy dicts)."""
+    from detection.evtx_xml import _parse_event
+
+    out: list[tuple[dict, str | None]] = []
+    for a in acts:
+        p = project_activity(a, inv)
+        if p is None:
+            continue
+        e = _parse_event(p[2])
+        if e is not None:
+            out.append((e, a.label))
+    return out
+
+
 def write_logs(logs: dict[tuple[str, str], list[str]], out_dir: str | Path) -> dict[tuple[str, str], Path]:
     """Write each ``(host, channel)`` stream to ``out_dir/<host>__<channel>.xml`` (one Event per line). Returns
     the paths. Data destination is a workspace dir (``~/data``); this is the only I/O in the generator."""
