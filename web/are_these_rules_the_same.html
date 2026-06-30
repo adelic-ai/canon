@@ -151,16 +151,19 @@
   <p>FCA needs <em>attributes</em>, and the whole result turns on which ones you pick. Take the naive choice —
   a rule's <strong>field-set</strong>: "which fields does it read?" It collapses the syntactic noise nicely, and
   for genuine duplicates it works. But it is <strong>value-blind</strong>, and on real data that bites hard.
-  Thirty-two distinct macOS detections — thirty-two different commands, binaries, arguments — all happen to read
-  the same field, <code>CommandLine</code>:</p>
+  In the macOS slice of the corpus, <strong>twenty</strong> distinct detections — AppleScript run through
+  <code>osascript</code>, <code>base64 -d</code>, <code>touch</code> to backdate a file, <code>chflags</code> to
+  hide one, <code>csrutil disable</code> to turn off System Integrity Protection — all read the same two fields,
+  <code>Image</code> and <code>CommandLine</code>:</p>
 
-  <div class="note gap"><strong>32 distinct detections &rarr; 1 concept.</strong> Same field-set, thirty-two
-  different values. A field-set key folds all thirty-two into one and calls them "the same rule." They are not.
+  <div class="note gap"><strong>20 distinct detections &rarr; 1 concept.</strong> Same field-set, twenty
+  different values. A field-set key folds all twenty into one and calls them "the same rule." They are not.
   The key threw the values away.</div>
 
   <p>Crucially, <strong>this is not a flaw in FCA or SKOS — it is a flaw in the attributes.</strong> Feed FCA
   richer attributes and the over-collapse vanishes. Include the <em>values</em> and the result sharpens — the
-  thirty-two become thirty-two concepts. And include the <strong>filters</strong>, too. Sigma's most common
+  twenty become twenty concepts, and across the whole macOS slice the value-aware key tells all
+  <strong>seventy-five</strong> rules apart. And include the <strong>filters</strong>, too. Sigma's most common
   idiom is a positive selection wrapped in allowlists; here is a real rule at
   <code>proc_creation_win_susp_parent_execute_itself.yml</code>:</p>
 
@@ -183,6 +186,13 @@
   selection but different allowlists are correctly <em>distinct</em>, and "this rule is a stricter version of
   that one" is a relation the lattice <em>states</em>.</p>
 
+  <p>One subtlety the same example quietly settles. That selection clause,
+  <code>Image|fieldref:&nbsp;ParentImage</code>, compares a field to <em>another field</em>, not to a literal
+  value — every other predicate is field-to-value; <code>fieldref</code> is field-to-field, a <em>relational</em>
+  attribute. It still goes straight into the formal context; it is simply a different <em>kind</em> of attribute
+  (a field-pair), not a value clause. "Structure can't represent that" is never the obstacle — the only question
+  is which kind of attribute each predicate becomes.</p>
+
   <div class="note key">The lesson of the over-collapse is not "structure can't see the values or the filters."
   It can — you just have to <em>include</em> them. The real knob is <strong>attribute granularity</strong>:
   field-sets are too coarse; values-plus-filters are right. Same FCA, same SKOS — a richer formal context.</div>
@@ -200,6 +210,11 @@
   <em>guarantees</em> identical behavior, but the converse fails. Structure can't see the equivalence because it
   is a fact about what the predicates <em>mean over data</em>, not about how they're spelled — and the predicate
   vocabulary is so small that there are always many spellings of one catch.</p>
+
+  <p>You can watch this happen. Feed the value-aware key all seventy-five macOS rules and it returns
+  seventy-five distinct concepts and <em>zero</em> exact-match classes — it finds not a single pair of synonyms.
+  Not because there are none, but because the only sameness that matters here — <em>same catch, different
+  spelling</em> — is precisely the kind structure cannot see.</p>
 
   <p><strong>Data-relativity.</strong> "What a rule catches" is relative to the log. Two rules can be
   behaviorally identical on one dataset and divergent on another — an allowlist excludes something present in
@@ -231,8 +246,10 @@
 
   <footer>
     adelic · "Are These Two Rules the Same?" · part 1 of a series on detection, meaning, and honest verdicts.<br>
-    Every number and rule path here is checkable against the local Sigma corpus (3,748 rules). Next:
-    <em>what a rule does</em> — catch-sets, the behavioral ground truth, and Belnap's four values.
+    Every number here regenerates from the local Sigma corpus — the worked example is the macOS slice
+    (75 evaluable rules), reproduced by <code>experiments/fca_skos_figures.py</code>, which emits the concept
+    counts and the SKOS lattice as Turtle. Next: <em>what a rule does</em> — catch-sets, the behavioral ground
+    truth, and Belnap's four values.
   </footer>
 
 </div>
