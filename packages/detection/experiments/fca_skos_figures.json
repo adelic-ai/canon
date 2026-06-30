@@ -1,0 +1,207 @@
+{
+  "figure1_over_collapse": {
+    "product": "macos",
+    "n_rules": 75,
+    "fieldset_concepts": 9,
+    "content_concepts": 75,
+    "biggest_fieldset_class": 33,
+    "biggest_fieldset_fields": "(empty \u2014 keyword/whole-event rules)",
+    "biggest_class_split_by_content": 33
+  },
+  "figure2_value_class": {
+    "shared_fieldset": [
+      "CommandLine",
+      "Image"
+    ],
+    "n_rules_in_class": 20,
+    "fieldset_concepts_for_class": 1,
+    "content_concepts_for_class": 20,
+    "members": [
+      {
+        "rule": "proc_creation_macos_applescript.yml",
+        "clauses": [
+          "CommandLine['contains']=[' -e ', '.scpt', '.js']",
+          "Image['endswith']=['/osascript']"
+        ]
+      },
+      {
+        "rule": "proc_creation_macos_base64_decode.yml",
+        "clauses": [
+          "CommandLine['contains']=['-d']",
+          "Image=['/usr/bin/base64']"
+        ]
+      },
+      {
+        "rule": "proc_creation_macos_change_file_time_attr.yml",
+        "clauses": [
+          "CommandLine['contains']=['-t', '-acmr', '-d', '-r']",
+          "Image['endswith']=['/touch']"
+        ]
+      },
+      {
+        "rule": "proc_creation_macos_chflags_hidden_flag.yml",
+        "clauses": [
+          "CommandLine['contains']=['hidden ']",
+          "Image['endswith']=['/chflags']"
+        ]
+      },
+      {
+        "rule": "proc_creation_macos_csrutil_disable.yml",
+        "clauses": [
+          "CommandLine['contains']=['disable']",
+          "Image['endswith']=['/csrutil']"
+        ]
+      },
+      {
+        "rule": "proc_creation_macos_csrutil_status.yml",
+        "clauses": [
+          "CommandLine['contains']=['status']",
+          "Image['endswith']=['/csrutil']"
+        ]
+      },
+      {
+        "rule": "proc_creation_macos_dscl_add_user_to_admin_group.yml",
+        "clauses": [
+          "CommandLine['all', 'contains']=[' -append ', ' /Groups/admin ', ' GroupMembership ']",
+          "Image['endswith']=['/dscl']"
+        ]
+      },
+      {
+        "rule": "proc_creation_macos_dseditgroup_add_to_admin_group.yml",
+        "clauses": [
+          "CommandLine['all', 'contains']=[' -o edit ', ' -a ', ' -t user', 'admin']",
+          "Image['endswith']=['/dseditgroup']"
+        ]
+      },
+      {
+        "rule": "proc_creation_macos_hdiutil_create.yml",
+        "clauses": [
+          "CommandLine['contains']=['create']",
+          "Image['endswith']=['/hdiutil']"
+        ]
+      },
+      {
+        "rule": "proc_creation_macos_hdiutil_mount.yml",
+        "clauses": [
+          "CommandLine['contains']=['attach ', 'mount ']",
+          "Image['endswith']=['/hdiutil']"
+        ]
+      },
+      {
+        "rule": "proc_creation_macos_jamf_usage.yml",
+        "clauses": [
+          "CommandLine['contains']=['createAccount', 'manage', 'removeFramework', 'removeMdmProfile', 'resetPassword', 'setComputerName']",
+          "Image['endswith']=['/jamf']"
+        ]
+      },
+      {
+        "rule": "proc_creation_macos_launchctl_execution.yml",
+        "clauses": [
+          "CommandLine['contains']=['submit', 'load', 'start']",
+          "Image['endswith']=['/launchctl']"
+        ]
+      },
+      {
+        "rule": "proc_creation_macos_nscurl_usage.yml",
+        "clauses": [
+          "CommandLine['contains']=['--download ', '--download-directory ', '--output ', '-dir ', '-dl ', '-ld', '-o ']",
+          "Image['endswith']=['/nscurl']"
+        ]
+      },
+      {
+        "rule": "proc_creation_macos_payload_decoded_and_decrypted.yml",
+        "clauses": [
+          "CommandLine['all', 'contains']=['/Volumes/', 'enc', '-base64', ' -d ']",
+          "Image['endswith']=['/openssl']"
+        ]
+      },
+      {
+        "rule": "proc_creation_macos_persistence_via_plistbuddy.yml",
+        "clauses": [
+          "CommandLine['all', 'contains']=['RunAtLoad', 'true']",
+          "CommandLine['contains']=['LaunchAgents', 'LaunchDaemons']",
+          "Image['endswith']=['/PlistBuddy']"
+        ]
+      },
+      {
+        "rule": "proc_creation_macos_schedule_task_job_cron.yml",
+        "clauses": [
+          "CommandLine['contains']=['/tmp/']",
+          "Image['endswith']=['/crontab']"
+        ]
+      },
+      {
+        "rule": "proc_creation_macos_susp_find_execution.yml",
+        "clauses": [
+          "CommandLine['contains']=['-perm -4000', '-perm -2000', '-perm 0777', '-perm -222', '-perm -o w', '-perm -o x', '-perm -u=s', '-perm -g=s']",
+          "Image['endswith']=['/find']"
+        ]
+      },
+      {
+        "rule": "proc_creation_macos_sysadminctl_add_user_to_admin_group.yml",
+        "clauses": [
+          "CommandLine['all', 'contains']=[' -addUser ', ' -admin ']",
+          "Image['endswith']=['/sysadminctl']"
+        ]
+      },
+      {
+        "rule": "proc_creation_macos_sysadminctl_enable_guest_account.yml",
+        "clauses": [
+          "CommandLine['all', 'contains']=[' -guestAccount', ' on']",
+          "Image['endswith']=['/sysadminctl']"
+        ]
+      },
+      {
+        "rule": "proc_creation_macos_xattr_gatekeeper_bypass.yml",
+        "clauses": [
+          "CommandLine['all', 'contains']=['-d', 'com.apple.quarantine']",
+          "Image['endswith']=['/xattr']"
+        ]
+      }
+    ]
+  },
+  "figure3_skos_lattice": {
+    "lattice_rules": 75,
+    "edges": 32,
+    "edge_type_counts": {
+      "related": 31,
+      "broader": 1
+    },
+    "dedup_exact_classes": 0,
+    "examples": {
+      "broader": {
+        "a": "proc_creation_macos_remote_access_tools_meshagent_arguments.yml",
+        "b": "proc_creation_macos_remote_access_tools_renamed_meshagent_execution.yml",
+        "tightness": 0.456,
+        "skos": "skos:broadMatch",
+        "why": {
+          "shared": [
+            "('CommandLine', ('contains',), ('--meshServiceName',))"
+          ],
+          "a_only": [],
+          "b_only": [
+            "('OriginalFileName', ('contains',), ('meshagent',))"
+          ]
+        }
+      },
+      "related": {
+        "a": "file_event_macos_emond_launch_daemon.yml",
+        "b": "file_event_macos_susp_startup_item_created.yml",
+        "tightness": 0.219,
+        "skos": "skos:relatedMatch",
+        "why": {
+          "shared": [
+            "('TargetFilename', ('endswith',), ('.plist',))"
+          ],
+          "a_only": [
+            "('TargetFilename', ('contains',), ('/etc/emond.d/rules/',))",
+            "('TargetFilename', ('contains',), ('/private/var/db/emondClients/',))"
+          ],
+          "b_only": [
+            "('TargetFilename', ('startswith',), ('/Library/StartupItems/', '/System/Library/StartupItems'))"
+          ]
+        }
+      }
+    }
+  }
+}
