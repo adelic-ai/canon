@@ -34,6 +34,49 @@ AES = "0x12"      # AES256 — the benign default
 
 
 @dataclass(frozen=True)
+class RoastVariant:
+    """One kerberoast tradecraft variant — the *surface* a campaign presents to detection, holding the
+    causal structure (authenticate → tool → SPN fan-out → cross-account lateral) fixed. Varying the surface
+    is what makes co-firing informative: different rules catch different variants, so the catchers stop
+    being a single homogeneous block.
+
+    ``image``/``cmdline`` are the roasting process (Sysmon EID 1). ``enc_mode`` is *which* fan-out tickets
+    are RC4 — the load-bearing axis, because the dominant kerberoast detection family keys on the RC4
+    downgrade:
+
+    * ``loud``    — every requested ticket is RC4 (the classic noisy roast);
+    * ``stealth`` — only the crackable pivot SPN is RC4, the rest AES (downgrade just the ticket you mean
+      to crack — evades the RC4 rule for most of the fan-out, pivot stays crackable);
+    * ``none``    — **no downgrade at all**: every ticket is AES, cracked offline on a purpose-built rig.
+      The RC4 heuristic is *completely blind* here; only the structural fan-out / SPN→account pivot /
+      cross-host join can catch it. This is the hardest case and the real test of signature-vs-structure.
+    """
+    name: str
+    image: str
+    cmdline: str
+    enc_mode: str = "loud"
+
+
+# The default is ("rubeus",) — identical to the original single-variant campaign (Rubeus.exe, all-RC4), so
+# every existing caller/test is unchanged. Pass a longer tuple (e.g. via cofire) to diversify the surface.
+ROAST_VARIANTS: dict[str, RoastVariant] = {
+    "rubeus": RoastVariant("rubeus", "C:\\Tools\\Rubeus.exe",
+                           "C:\\Tools\\Rubeus.exe kerberoast /nowrap /outfile:C:\\Temp\\h.txt"),
+    "powershell": RoastVariant("powershell",
+                               "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+                               "powershell.exe -nop - exec bypass Invoke-Kerberoast -OutputFormat Hashcat"),
+    "setspn": RoastVariant("setspn", "C:\\Windows\\System32\\setspn.exe",
+                           "setspn.exe -T domain.local -Q */*", enc_mode="stealth"),
+    # no RC4 downgrade — AES tickets cracked offline on a purpose-built rig; low-signal PowerView footprint
+    # (no 'kerberoast' token) so neither the RC4 rule nor the tool-name rule sees it.
+    "aes_rig": RoastVariant("aes_rig",
+                            "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+                            "powershell.exe Get-DomainUser -SPN | Get-DomainSPNTicket -OutputFormat John",
+                            enc_mode="none"),
+}
+
+
+@dataclass(frozen=True)
 class Activity:
     """One abstract action, before projection to any log. ``src_host``/``dst_host`` are host *names* (L3 resolves
     IPs from the inventory — the inventory stays the single source of IP truth). ``label`` is None for benign or a
@@ -56,10 +99,13 @@ def _attrs(**kw: str) -> tuple[tuple[str, str], ...]:
 
 
 def build_timeline(inv: Inventory, *, seed: int, days: int = 5, n_kerberoasters: int = 3,
-                   roast_fanout: int = 10, benign_server_logon_p: float = 0.4) -> list[Activity]:
+                   roast_fanout: int = 10, benign_server_logon_p: float = 0.4,
+                   variants: tuple[str, ...] = ("rubeus",)) -> list[Activity]:
     """Generate the ordered activity timeline over ``inv``. Deterministic in ``seed``. ``roast_fanout`` distinct
     SPNs are requested per roast (must be ≤ ``len(inv.all_spns())``); the cracked account is one of the crackable
-    SPNs in that set (the pivot). Returns activities sorted by ``(time, actor, action)``."""
+    SPNs in that set (the pivot). ``variants`` (names from :data:`ROAST_VARIANTS`) are assigned round-robin to
+    the roasters by sorted username — default ``("rubeus",)`` reproduces the original single-variant campaign.
+    Returns activities sorted by ``(time, actor, action)``."""
     spns = inv.all_spns()
     crackable = list(inv.spn_to_account())
     if roast_fanout > len(spns):
@@ -93,21 +139,32 @@ def build_timeline(inv: Inventory, *, seed: int, days: int = 5, n_kerberoasters:
                 t = _START + d * _DAY + rng.randint(0, _DAY)
                 acts.append(Activity(t, sa.username, "logon", sa.host, sa.host, attrs=_attrs(logon_type="5")))
 
-    # ── attack: each kerberoaster runs authenticate → Rubeus → RC4 fan-out → lateral logon (causally labeled) ──
-    for user in sorted(kerberoasters):
+    # ── attack: each kerberoaster runs authenticate → tool → RC4-crackable fan-out → lateral logon (labeled) ──
+    chosen = [ROAST_VARIANTS[variants[i % len(variants)]] for i in range(len(kerberoasters))]
+    for idx, user in enumerate(sorted(kerberoasters)):
+        var = chosen[idx]
         label = f"kerberoast:{user}"
         ws = inv.user_by_name(user).workstation
         d = rng.randrange(days)
         t0 = _START + d * _DAY + rng.randint(11 * 3600, 15 * 3600)           # mid-day
         acts.append(Activity(t0, user, "authenticate", ws, _dc(inv), attrs=_attrs(enc=RC4), label=label))
-        acts.append(Activity(t0 + 30, user, "process_create", ws, ws, target="Rubeus.exe",
-                             attrs=_attrs(image="C:\\Tools\\Rubeus.exe", guid=f"{{guid-{user}}}"), label=label))
-        # RC4 fan-out — roast_fanout DISTINCT SPNs, one guaranteed crackable (the pivot target)
+        acts.append(Activity(t0 + 30, user, "process_create", ws, ws, target=var.image.rsplit("\\", 1)[-1],
+                             attrs=_attrs(image=var.image, cmdline=var.cmdline, guid=f"{{guid-{user}}}"),
+                             label=label))
+        # fan-out — roast_fanout DISTINCT SPNs, one guaranteed crackable (the pivot target). Encryption per
+        # variant: loud = all RC4; stealth = only the pivot RC4 (rest AES); none = all AES (no downgrade at
+        # all — cracked offline on a rig, so the RC4 detection family never sees it).
         cracked_spn = rng.choice(crackable)
         others = rng.sample([s for s in spns if s != cracked_spn], roast_fanout - 1)
         for i, spn in enumerate([cracked_spn] + others):
+            if var.enc_mode == "none":
+                enc = AES
+            elif var.enc_mode == "stealth":
+                enc = RC4 if spn == cracked_spn else AES
+            else:                                                    # loud
+                enc = RC4
             acts.append(Activity(t0 + 60 + i * 3, user, "request_ticket", ws, _dc(inv), target=spn,
-                                 attrs=_attrs(enc=RC4), label=label))
+                                 attrs=_attrs(enc=enc), label=label))
         # offline crack (no event) → lateral logon AS the cracked service account, same WS IP, to a crown jewel
         svc = inv.spn_to_account()[cracked_spn]
         acts.append(Activity(t0 + rng.randint(30 * 60, 180 * 60), svc, "logon", ws, rng.choice(sensitive),

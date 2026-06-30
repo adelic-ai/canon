@@ -83,7 +83,7 @@ def project_activity(a: Activity, inv: Inventory) -> tuple[str, str, str] | None
         return a.src_host, _SYSMON, _event_xml(
             event_id=1, computer=a.src_host, channel=_SYSMON, time=a.time,
             provider="Microsoft-Windows-Sysmon",
-            data={"Image": a.attr("image"), "CommandLine": a.attr("image"),
+            data={"Image": a.attr("image"), "CommandLine": a.attr("cmdline") or a.attr("image"),
                   "User": a.actor, "ProcessGuid": a.attr("guid")})
 
     return None

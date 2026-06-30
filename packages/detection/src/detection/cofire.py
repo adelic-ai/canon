@@ -101,20 +101,30 @@ def cofire(technique: str, events: list[dict], labels: list, *, sigma_root: Path
     }
 
 
-def cofire_synth(technique: str, *, seed: int = 1, days: int = 5, sigma_root: Path = SIGMA) -> dict:
+def cofire_synth(technique: str, *, seed: int = 1, days: int = 5,
+                 variants: tuple[str, ...] = ("rubeus", "powershell", "setspn", "aes_rig"),
+                 n_kerberoasters: int | None = None, sigma_root: Path = SIGMA) -> dict:
     """Wire the synth-enterprise generator straight into :func:`cofire`: build the inventory + causal
     timeline (seeded, reproducible), project it to labeled events, and co-fire the technique's rule
-    bundle. The single entry point for "co-firing measurement on the synth generator"."""
+    bundle. The single entry point for "co-firing measurement on the synth generator".
+
+    ``variants`` diversifies the kerberoast tradecraft surface across roasters (see
+    :data:`detection.synth.timeline.ROAST_VARIANTS`) so co-firing exercises more than one detection
+    surface; pass ``("rubeus",)`` for the original single-variant campaign. ``n_kerberoasters`` defaults to
+    ``max(3, len(variants))`` so each variant gets at least one roaster (the ``aes_rig`` no-downgrade case
+    is otherwise never reached at the original count of 3)."""
     from detection.synth.emit import labeled_events
     from detection.synth.inventory import build_inventory
     from detection.synth.timeline import build_timeline
 
+    n = n_kerberoasters if n_kerberoasters is not None else max(3, len(variants))
     inv = build_inventory(seed=seed)
-    acts = build_timeline(inv, seed=seed, days=days)
+    acts = build_timeline(inv, seed=seed, days=days, variants=variants, n_kerberoasters=n)
     pairs = labeled_events(acts, inv)
     events = [e for e, _ in pairs]
     labels = [lab for _, lab in pairs]
     res = cofire(technique, events, labels, sigma_root=sigma_root)
     res["n_events"] = len(events)
     res["seed"] = seed
+    res["variants"] = list(variants)
     return res
