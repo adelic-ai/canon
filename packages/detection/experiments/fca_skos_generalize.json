@@ -1,0 +1,149 @@
+{
+  "products": [
+    {
+      "product": "windows",
+      "n_rules": 2829,
+      "fieldset_concepts": 287,
+      "content_concepts": 2829,
+      "split_factor": 9.9,
+      "biggest_fieldset_class": 903,
+      "biggest_class_content_split": 903
+    },
+    {
+      "product": "linux",
+      "n_rules": 243,
+      "fieldset_concepts": 45,
+      "content_concepts": 243,
+      "split_factor": 5.4,
+      "biggest_fieldset_class": 55,
+      "biggest_class_content_split": 55
+    },
+    {
+      "product": "(none)",
+      "n_rules": 162,
+      "fieldset_concepts": 46,
+      "content_concepts": 162,
+      "split_factor": 3.5,
+      "biggest_fieldset_class": 35,
+      "biggest_class_content_split": 35
+    },
+    {
+      "product": "azure",
+      "n_rules": 131,
+      "fieldset_concepts": 41,
+      "content_concepts": 131,
+      "split_factor": 3.2,
+      "biggest_fieldset_class": 29,
+      "biggest_class_content_split": 29
+    },
+    {
+      "product": "macos",
+      "n_rules": 75,
+      "fieldset_concepts": 9,
+      "content_concepts": 75,
+      "split_factor": 8.3,
+      "biggest_fieldset_class": 33,
+      "biggest_class_content_split": 33
+    },
+    {
+      "product": "aws",
+      "n_rules": 54,
+      "fieldset_concepts": 14,
+      "content_concepts": 54,
+      "split_factor": 3.9,
+      "biggest_fieldset_class": 27,
+      "biggest_class_content_split": 27
+    },
+    {
+      "product": "gcp",
+      "n_rules": 26,
+      "fieldset_concepts": 8,
+      "content_concepts": 26,
+      "split_factor": 3.2,
+      "biggest_fieldset_class": 14,
+      "biggest_class_content_split": 14
+    },
+    {
+      "product": "opencanary",
+      "n_rules": 24,
+      "fieldset_concepts": 1,
+      "content_concepts": 24,
+      "split_factor": 24.0,
+      "biggest_fieldset_class": 24,
+      "biggest_class_content_split": 24
+    },
+    {
+      "product": "zeek",
+      "n_rules": 24,
+      "fieldset_concepts": 14,
+      "content_concepts": 24,
+      "split_factor": 1.7,
+      "biggest_fieldset_class": 4,
+      "biggest_class_content_split": 4
+    },
+    {
+      "product": "okta",
+      "n_rules": 23,
+      "fieldset_concepts": 9,
+      "content_concepts": 23,
+      "split_factor": 2.6,
+      "biggest_fieldset_class": 14,
+      "biggest_class_content_split": 14
+    },
+    {
+      "product": "m365",
+      "n_rules": 21,
+      "fieldset_concepts": 9,
+      "content_concepts": 21,
+      "split_factor": 2.3,
+      "biggest_fieldset_class": 12,
+      "biggest_class_content_split": 12
+    },
+    {
+      "product": "rpc_firewall",
+      "n_rules": 17,
+      "fieldset_concepts": 2,
+      "content_concepts": 17,
+      "split_factor": 8.5,
+      "biggest_fieldset_class": 11,
+      "biggest_class_content_split": 11
+    },
+    {
+      "product": "cisco",
+      "n_rules": 17,
+      "fieldset_concepts": 5,
+      "content_concepts": 17,
+      "split_factor": 3.4,
+      "biggest_fieldset_class": 13,
+      "biggest_class_content_split": 13
+    },
+    {
+      "product": "kubernetes",
+      "n_rules": 16,
+      "fieldset_concepts": 10,
+      "content_concepts": 16,
+      "split_factor": 1.6,
+      "biggest_fieldset_class": 4,
+      "biggest_class_content_split": 4
+    },
+    {
+      "product": "github",
+      "n_rules": 15,
+      "fieldset_concepts": 1,
+      "content_concepts": 15,
+      "split_factor": 15.0,
+      "biggest_fieldset_class": 15,
+      "biggest_class_content_split": 15
+    },
+    {
+      "product": "bitbucket",
+      "n_rules": 14,
+      "fieldset_concepts": 1,
+      "content_concepts": 14,
+      "split_factor": 14.0,
+      "biggest_fieldset_class": 14,
+      "biggest_class_content_split": 14
+    }
+  ],
+  "generalizes": true
+}
