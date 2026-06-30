@@ -20,6 +20,7 @@ process image/guid). Frozen + hashable, so a timeline is comparable — ``build_
 
 from __future__ import annotations
 
+import hashlib
 import random
 from dataclasses import dataclass
 
@@ -98,9 +99,18 @@ def _attrs(**kw: str) -> tuple[tuple[str, str], ...]:
     return tuple(sorted((k, str(v)) for k, v in kw.items() if v is not None))
 
 
+def _thash(*parts) -> str:
+    """A deterministic stand-in for a Kerberos ticket-hash fingerprint (the 2024-patch Request/Response
+    ticket-hash fields). Not real crypto — a stable identifier from the session inputs, so a TGT issued by
+    an ``authenticate`` (4768 Response hash) and that same TGT presented by a later ``request_ticket``
+    (4769 Request hash) carry the *same* value, and a forged TGT carries one no 4768 ever emitted."""
+    return hashlib.sha256("|".join(map(str, parts)).encode()).hexdigest()[:32]
+
+
 def build_timeline(inv: Inventory, *, seed: int, days: int = 5, n_kerberoasters: int = 3,
                    roast_fanout: int = 10, benign_server_logon_p: float = 0.4,
-                   variants: tuple[str, ...] = ("rubeus",)) -> list[Activity]:
+                   variants: tuple[str, ...] = ("rubeus",),
+                   include_ticket_attacks: bool = False) -> list[Activity]:
     """Generate the ordered activity timeline over ``inv``. Deterministic in ``seed``. ``roast_fanout`` distinct
     SPNs are requested per roast (must be ≤ ``len(inv.all_spns())``); the cracked account is one of the crackable
     SPNs in that set (the pivot). ``variants`` (names from :data:`ROAST_VARIANTS`) are assigned round-robin to
@@ -123,11 +133,14 @@ def build_timeline(inv: Inventory, *, seed: int, days: int = 5, n_kerberoasters:
         ws = u.workstation
         for d in range(days):
             s0 = _START + d * _DAY + rng.randint(7 * 3600, 10 * 3600)        # a morning login
-            acts.append(Activity(s0, u.username, "authenticate", ws, _dc(inv), attrs=_attrs(enc=AES)))
+            tgt = _thash(u.username, s0)                                     # the day's TGT, issued here
+            acts.append(Activity(s0, u.username, "authenticate", ws, _dc(inv), attrs=_attrs(enc=AES, tgt_hash=tgt)))
             acts.append(Activity(s0 + 5, u.username, "logon", ws, ws, attrs=_attrs(logon_type="2")))  # own WS
             for _ in range(rng.randint(1, 3)):                               # a few benign service tickets (AES)
-                acts.append(Activity(s0 + rng.randint(10, 7200), u.username, "request_ticket", ws, _dc(inv),
-                                     target=rng.choice(spns), attrs=_attrs(enc=AES)))
+                t = s0 + rng.randint(10, 7200)
+                spn = rng.choice(spns)
+                acts.append(Activity(t, u.username, "request_ticket", ws, _dc(inv), target=spn,
+                                     attrs=_attrs(enc=AES, tgt_hash=tgt, tgs_hash=_thash(u.username, spn, t))))
             if rng.random() < benign_server_logon_p:                         # benign reaches servers — incl. sensitive
                 acts.append(Activity(s0 + rng.randint(60, 7200), u.username, "logon", ws,
                                      rng.choice(sensitive), attrs=_attrs(logon_type="3")))
@@ -147,7 +160,8 @@ def build_timeline(inv: Inventory, *, seed: int, days: int = 5, n_kerberoasters:
         ws = inv.user_by_name(user).workstation
         d = rng.randrange(days)
         t0 = _START + d * _DAY + rng.randint(11 * 3600, 15 * 3600)           # mid-day
-        acts.append(Activity(t0, user, "authenticate", ws, _dc(inv), attrs=_attrs(enc=RC4), label=label))
+        tgt = _thash(user, t0)                                               # the roaster's (legit) TGT
+        acts.append(Activity(t0, user, "authenticate", ws, _dc(inv), attrs=_attrs(enc=RC4, tgt_hash=tgt), label=label))
         acts.append(Activity(t0 + 30, user, "process_create", ws, ws, target=var.image.rsplit("\\", 1)[-1],
                              attrs=_attrs(image=var.image, cmdline=var.cmdline, guid=f"{{guid-{user}}}"),
                              label=label))
@@ -164,11 +178,44 @@ def build_timeline(inv: Inventory, *, seed: int, days: int = 5, n_kerberoasters:
             else:                                                    # loud
                 enc = RC4
             acts.append(Activity(t0 + 60 + i * 3, user, "request_ticket", ws, _dc(inv), target=spn,
-                                 attrs=_attrs(enc=enc), label=label))
+                                 attrs=_attrs(enc=enc, tgt_hash=tgt, tgs_hash=_thash(user, spn, i)), label=label))
         # offline crack (no event) → lateral logon AS the cracked service account, same WS IP, to a crown jewel
         svc = inv.spn_to_account()[cracked_spn]
         acts.append(Activity(t0 + rng.randint(30 * 60, 180 * 60), svc, "logon", ws, rng.choice(sensitive),
                              attrs=_attrs(logon_type="3"), label=label))
+
+    # ── ticket-forgery / reuse campaigns (opt-in) — exercise the hash-based PtT/Golden detector ──
+    if include_ticket_attacks:
+        users_sorted = sorted(u.username for u in inv.users)
+        dc = _dc(inv)
+        # Pass-the-ticket: a TGT legitimately issued on the victim's host, then PRESENTED from another host.
+        # The issuance (authenticate) is benign/unlabeled; only the cross-host PRESENTATION is the attack.
+        victim = users_sorted[0]
+        v_ws = inv.user_by_name(victim).workstation
+        att_ws = next((inv.user_by_name(u).workstation for u in users_sorted[1:]
+                       if inv.user_by_name(u).workstation != v_ws), v_ws)
+        s_v = _START + 2 * _DAY + 9 * 3600
+        tgt_v = _thash(victim, s_v)
+        acts.append(Activity(s_v, victim, "authenticate", v_ws, dc, attrs=_attrs(enc=AES, tgt_hash=tgt_v)))
+        acts.append(Activity(s_v + 600, victim, "request_ticket", att_ws, dc, target=spns[0],
+                             attrs=_attrs(enc=AES, tgt_hash=tgt_v, tgs_hash=_thash(victim, "ptt")),
+                             label=f"ptt:{victim}"))
+        # Golden ticket: a FORGED TGT (krbtgt key, never issued by any DC) used to request a service ticket.
+        # Its presented TGT hash matches no 4768 anywhere → the hash anti-join fires.
+        g_user = users_sorted[1]
+        g_ws = inv.user_by_name(g_user).workstation
+        s_g = _START + 3 * _DAY + 13 * 3600
+        forged = _thash("FORGED-GOLDEN", g_user, seed)
+        acts.append(Activity(s_g, g_user, "request_ticket", g_ws, dc, target=spns[0],
+                             attrs=_attrs(enc=RC4, tgt_hash=forged, tgs_hash=_thash(g_user, "golden")),
+                             label=f"golden:{g_user}"))
+        # Golden #2: impersonate a principal that NEVER authenticates (fabricated admin) — the only golden the
+        # metadata tier can still see, since the account has no 4768 at all. (Impersonating an active user,
+        # as above, is invisible without the ticket hash.)
+        ghost = "svc_fakeadmin"
+        acts.append(Activity(s_g + 3600, ghost, "request_ticket", g_ws, dc, target=spns[0],
+                             attrs=_attrs(enc=RC4, tgt_hash=_thash("FORGED-GHOST", seed), tgs_hash=_thash(ghost, "g2")),
+                             label=f"golden:{ghost}"))
 
     acts.sort(key=lambda a: (a.time, a.actor, a.action))
     return acts
