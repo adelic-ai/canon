@@ -197,6 +197,12 @@
   It can — you just have to <em>include</em> them. The real knob is <strong>attribute granularity</strong>:
   field-sets are too coarse; values-plus-filters are right. Same FCA, same SKOS — a richer formal context.</div>
 
+  <p>And this is not a macOS quirk. The same value-blindness bites in <em>every</em> Sigma product: across all
+  sixteen with enough rules to measure, the value-aware key always carves more concepts than the field-set key —
+  most sharply in Windows, where a single field-set concept swallows <strong>903</strong> distinct detections
+  that the content key correctly tells apart, 903&nbsp;&rarr;&nbsp;903. macOS is a representative case, not an
+  extreme one.</p>
+
   <h2><span class="n">5</span>The seam: even complete structure isn't behavior</h2>
 
   <p>So include everything — every field, every value, every filter, the whole boolean condition. You now have
@@ -214,7 +220,9 @@
   <p>You can watch this happen. Feed the value-aware key all seventy-five macOS rules and it returns
   seventy-five distinct concepts and <em>zero</em> exact-match classes — it finds not a single pair of synonyms.
   Not because there are none, but because the only sameness that matters here — <em>same catch, different
-  spelling</em> — is precisely the kind structure cannot see.</p>
+  spelling</em> — is precisely the kind structure cannot see. And it is no small-sample artifact: across
+  <em>every</em> Sigma product the value-aware key's concept count equals the rule count exactly — not one
+  structural synonym in the whole corpus.</p>
 
   <p><strong>Data-relativity.</strong> "What a rule catches" is relative to the log. Two rules can be
   behaviorally identical on one dataset and divergent on another — an allowlist excludes something present in
