@@ -150,20 +150,26 @@
 
   <p>FCA needs <em>attributes</em>, and the whole result turns on which ones you pick. Take the naive choice —
   a rule's <strong>field-set</strong>: "which fields does it read?" It collapses the syntactic noise nicely, and
-  for genuine duplicates it works. But it is <strong>value-blind</strong>, and on real data that bites hard.
-  In the macOS slice of the corpus, <strong>twenty</strong> distinct detections — AppleScript run through
-  <code>osascript</code>, <code>base64 -d</code>, <code>touch</code> to backdate a file, <code>chflags</code> to
-  hide one, <code>csrutil disable</code> to turn off System Integrity Protection — all read the same two fields,
-  <code>Image</code> and <code>CommandLine</code>:</p>
+  for genuine duplicates it works. But it is <strong>value-blind</strong>, and across the corpus that bites hard.
+  Run it over Sigma and the value-blind key folds rules far harder than they deserve — in <em>every</em> product.
+  In Windows alone, a single field-set concept swallows <strong>903</strong> distinct detections — 903 different
+  commands and values — and files them all as one rule.</p>
 
-  <div class="note gap"><strong>20 distinct detections &rarr; 1 concept.</strong> Same field-set, twenty
-  different values. A field-set key folds all twenty into one and calls them "the same rule." They are not.
-  The key threw the values away.</div>
+  <div class="note gap"><strong>903 distinct detections &rarr; 1 concept.</strong> Same field-set, 903 different
+  values; the key threw the values away. And it is no Windows quirk — the same collapse appears in all sixteen
+  Sigma products with enough rules to measure. It is the rule, not the exception.</div>
+
+  <p>To see <em>why</em>, zoom into a slice small enough to read by eye — the macOS rules. <strong>Twenty</strong>
+  of them — AppleScript through <code>osascript</code>, <code>base64 -d</code>, <code>touch</code> to backdate a
+  file, <code>chflags</code> to hide one, <code>csrutil disable</code> to turn off System Integrity Protection —
+  share the one field-set <code>{Image, CommandLine}</code>, and the value-blind key files all twenty as the same
+  rule. They are not. It threw the values away.</p>
 
   <p>Crucially, <strong>this is not a flaw in FCA or SKOS — it is a flaw in the attributes.</strong> Feed FCA
   richer attributes and the over-collapse vanishes. Include the <em>values</em> and the result sharpens — the
-  twenty become twenty concepts, and across the whole macOS slice the value-aware key tells all
-  <strong>seventy-five</strong> rules apart. And include the <strong>filters</strong>, too. Sigma's most common
+  twenty become twenty concepts; across the macOS slice it tells all <strong>seventy-five</strong> rules apart,
+  and corpus-wide it separates every product completely, the 903 included. And include the
+  <strong>filters</strong>, too. Sigma's most common
   idiom is a positive selection wrapped in allowlists; here is a real rule at
   <code>proc_creation_win_susp_parent_execute_itself.yml</code>:</p>
 
@@ -196,12 +202,6 @@
   <div class="note key">The lesson of the over-collapse is not "structure can't see the values or the filters."
   It can — you just have to <em>include</em> them. The real knob is <strong>attribute granularity</strong>:
   field-sets are too coarse; values-plus-filters are right. Same FCA, same SKOS — a richer formal context.</div>
-
-  <p>And this is not a macOS quirk. The same value-blindness bites in <em>every</em> Sigma product: across all
-  sixteen with enough rules to measure, the value-aware key always carves more concepts than the field-set key —
-  most sharply in Windows, where a single field-set concept swallows <strong>903</strong> distinct detections
-  that the content key correctly tells apart, 903&nbsp;&rarr;&nbsp;903. macOS is a representative case, not an
-  extreme one.</p>
 
   <h2><span class="n">5</span>The seam: even complete structure isn't behavior</h2>
 
@@ -246,6 +246,11 @@
   <p>That is the honest case for the Semantic Web, and the only one worth making: you do not <em>adopt</em> it as
   a vision; you <em>rediscover</em> its pieces, because the problem of meaning — what is the same, what is
   related — forces them on anyone who works at the level of data and won't fake the answers.</p>
+
+  <p>And this was deliberately <em>one</em> ruleset. Everything here is Sigma — not because the construction is
+  Sigma-specific (it runs on atoms, not syntax) but because the honest way to earn these pieces is on a single
+  real corpus first. Carrying the same lattice across rulesets — CAR, Elastic, the rest — means lowering each to
+  a common set of atoms, and that lowering is its own step, not a free one; it comes later in the series.</p>
 
   <p>And we have stopped one question short. We learned what a rule <em>says</em>, and proved it isn't what a
   rule <em>does</em>: structure is sound but incomplete for behavior, and behavior is data-relative. The catch —
