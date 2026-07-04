@@ -39,6 +39,16 @@ def test_deterministic_order(tmp_path):
     assert [r.title for r in rules] == ["A", "B"]     # sorted by path -> a.yml before b.yml
 
 
+def test_missing_or_nondir_root_raises(tmp_path):
+    """A wrong path must not masquerade as a clean-but-empty load (files=0, clean=True)."""
+    with pytest.raises(FileNotFoundError):
+        load(tmp_path / "does-not-exist")
+    afile = tmp_path / "afile.yml"
+    afile.write_text("title: x\n")
+    with pytest.raises(NotADirectoryError):
+        load(afile)                                   # a file, not a directory
+
+
 _RULE = """\
 title: {t}
 logsource:

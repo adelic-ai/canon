@@ -17,6 +17,8 @@ from pathlib import Path
 from sigma.collection import SigmaCollection
 from sigma.rule import SigmaRule
 
+from omega.ir import Atom, Block, CompiledRule
+
 
 @dataclass
 class ParseReport:
@@ -51,11 +53,19 @@ def _is_correlation(rule: object) -> bool:
 def load(root: str | Path, *, pattern: str = "*.yml") -> tuple[list[SigmaRule], ParseReport]:
     """Parse every ``pattern`` file under ``root`` via pySigma. Returns ``(base_rules, report)``.
 
-    Total and error-isolating: a file pySigma rejects is recorded in the report (path + exception kind) and
-    skipped — never crashing the load, never silently vanishing. Deterministic: files are visited in sorted
-    order. Correlation rules are counted in the report but kept out of the returned base-rule stream.
+    Total and error-isolating over corpus *content*: a file pySigma rejects is recorded in the report (path +
+    exception kind) and skipped — never crashing, never silently vanishing. Deterministic: files are visited
+    in sorted order. Correlation rules are counted but kept out of the returned base-rule stream.
+
+    Raises ``FileNotFoundError`` / ``NotADirectoryError`` if ``root`` is not an existing directory — a wrong
+    path is a caller bug, and returning a clean-but-empty report would let it hide behind ``clean``. "Total"
+    means robust to a *messy* corpus, not silent about a *missing* one.
     """
     root = Path(root)
+    if not root.exists():
+        raise FileNotFoundError(f"omega ingest: corpus root not found: {root}")
+    if not root.is_dir():
+        raise NotADirectoryError(f"omega ingest: corpus root is not a directory: {root}")
     report = ParseReport()
     rules: list[SigmaRule] = []
     for p in sorted(root.rglob(pattern)):
@@ -72,3 +82,103 @@ def load(root: str | Path, *, pattern: str = "*.yml") -> tuple[list[SigmaRule], 
                 rules.append(rule)
                 report.rules += 1
     return rules, report
+
+
+# ── Stage 1 — map pySigma's AST to omega's agnostic IR (the adapter's second half) ─────────────────
+
+def _modname(mod: type) -> str:
+    """Normalise a pySigma modifier CLASS to a stable short name: ``SigmaEndswithModifier`` -> ``endswith``."""
+    return mod.__name__.removeprefix("Sigma").removesuffix("Modifier").lower()
+
+
+def _match_pattern(pattern: str, names: list[str]) -> list[str]:
+    """Resolve a condition block-reference to concrete block names: a bare name, a ``prefix_*`` glob, or
+    ``them`` (all blocks)."""
+    if pattern == "them":
+        return list(names)
+    if pattern.endswith("*"):
+        return [n for n in names if n.startswith(pattern[:-1])]
+    return [n for n in names if n == pattern]
+
+
+def _negated_operand(toks: list[str], i: int, names: list[str]) -> list[str]:
+    """The block names the operand starting at ``toks[i]`` (just after a ``not``) refers to. Handles the
+    standard Sigma forms: a bare ``<name>``, ``all|any|<N> of <pattern>``, and a parenthesised ``( a or b )``."""
+    if i >= len(toks):
+        return []
+    t = toks[i]
+    if (t.lower() in ("all", "any") or t.isdigit()) and i + 2 < len(toks) and toks[i + 1].lower() == "of":
+        return _match_pattern(toks[i + 2], names)
+    if t == "(":
+        depth, j, found = 1, i + 1, []
+        while j < len(toks) and depth:
+            if toks[j] == "(":
+                depth += 1
+            elif toks[j] == ")":
+                depth -= 1
+            elif toks[j].lower() not in ("and", "or", "not"):
+                found += _match_pattern(toks[j], names)
+            j += 1
+        return found
+    return _match_pattern(t, names)
+
+
+def _block_polarities(condition: str, names: list[str]) -> dict[str, int]:
+    """Read each block's polarity from the condition: ``-1`` if it is referenced under a ``not`` (a filter),
+    else ``+1`` (a selection). Covers the standard Sigma grammar (``selection and not 1 of filter_*``,
+    ``all of selection_*``, ``not (a or b)``); it does not model full boolean precedence, so an unusual
+    condition may mis-sign a block — the raw condition is kept on the IR so this can be hardened later."""
+    pol = {n: 1 for n in names}
+    toks = condition.replace("(", " ( ").replace(")", " ) ").split()
+    for i, t in enumerate(toks):
+        if t.lower() == "not":
+            for b in _negated_operand(toks, i + 1, names):
+                pol[b] = -1
+    return pol
+
+
+def _atoms(detection) -> list[Atom]:
+    """Flatten a (possibly nested) ``SigmaDetection`` into its atoms. A block written as a *list of maps* is a
+    nested ``SigmaDetection`` per map, so ``detection_items`` can hold sub-detections as well as field tests.
+    omega reads the block's atom SET, so nesting is flattened — the intra-block and/or grouping is not
+    preserved (a later refinement if a use needs it)."""
+    out: list[Atom] = []
+    for item in detection.detection_items:
+        if hasattr(item, "detection_items"):                    # a nested SigmaDetection -> recurse
+            out.extend(_atoms(item))
+        else:                                                   # a SigmaDetectionItem (field/value test)
+            out.append(Atom(
+                field=item.field,
+                mods=tuple(_modname(m) for m in (item.modifiers or [])),
+                values=tuple(str(v) for v in (item.value or [])),
+            ))
+    return out
+
+
+def to_ir(rule: SigmaRule) -> CompiledRule:
+    """Lower a parsed pySigma rule to omega's agnostic :class:`~omega.ir.CompiledRule`. Total by construction
+    — it *reads* fields, it does not evaluate — so every base rule maps. After this, no ``SigmaRule`` escapes.
+    (Multi-condition rules use the first condition for polarity; rare, and the raw string is retained.)"""
+    det = rule.detection
+    condition = det.condition[0] if det.condition else ""
+    polarity = _block_polarities(condition, list(det.detections))
+    blocks = tuple(
+        Block(name=name, polarity=polarity.get(name, 1), atoms=tuple(_atoms(detection)))
+        for name, detection in det.detections.items()
+    )
+    ls = rule.logsource
+    return CompiledRule(
+        id=str(rule.id) if rule.id else None,
+        title=rule.title,
+        logsource=(ls.category, ls.product, ls.service),
+        tags=tuple(str(t) for t in (rule.tags or [])),
+        blocks=blocks,
+        condition=condition,
+    )
+
+
+def load_ir(root: str | Path, *, pattern: str = "*.yml") -> tuple[list[CompiledRule], ParseReport]:
+    """The full Sigma adapter: :func:`load` then :func:`to_ir` on every base rule. Returns the agnostic IR
+    plus the parse report — this is the ``(list[CompiledRule], ParseReport)`` contract every adapter meets."""
+    rules, report = load(root, pattern=pattern)
+    return [to_ir(r) for r in rules], report
