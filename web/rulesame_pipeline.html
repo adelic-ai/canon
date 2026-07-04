@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>One Package, All of Sigma — the pipeline</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --ink:#e7e9ef; --muted:#9aa3b2;
+    --line:#2a2f3a; --accent:#7db4ff; --accent2:#c79bff;
+    --good:#6fcf97; --warn:#f2c94c; --gap:#eb6f6f;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:18px/1.72 -apple-system,BlinkMacSystemFont,"Segoe UI",Georgia,serif}
+  .wrap{max-width:760px;margin:0 auto;padding:64px 26px 120px}
+  h1{font-size:33px;line-height:1.18;margin:0 0 10px;letter-spacing:-.012em;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+  .sub{color:var(--muted);font-size:19px;margin:0 0 8px;font-style:italic}
+  .stamp{color:var(--muted);font:13px/1.5 var(--mono);margin:0 0 40px;font-style:normal}
+  h2{font-size:15px;margin:52px 0 14px;padding-top:18px;border-top:1px solid var(--line);
+    text-transform:uppercase;letter-spacing:.07em;color:var(--accent2);font-weight:700;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+  p{margin:16px 0}
+  a{color:var(--accent);text-decoration:none} a:hover{text-decoration:underline}
+  strong{color:#fff} em{color:#eef0f6}
+  code{font-family:var(--mono);font-size:.82em;background:#1e222b;padding:1px 6px;border-radius:5px;color:#d7dcea}
+  .lede{font-size:20px;line-height:1.6}
+  .muted{color:var(--muted)}
+  .note{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:9px;padding:14px 19px;margin:22px 0;font-size:16px;line-height:1.62}
+  .note.key{border-left-color:var(--accent2)} .note.gap{border-left-color:var(--gap)}
+  .note.good{border-left-color:var(--good)}
+
+  .stage{background:var(--panel);border:1px solid var(--line);border-radius:11px;
+    padding:18px 20px 16px;margin:16px 0}
+  .stage h3{margin:0 0 4px;font-size:17px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    color:var(--ink);display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+  .stage .mod{font:12.5px/1 var(--mono);color:var(--accent);background:#12151c;
+    padding:3px 7px;border-radius:5px;border:1px solid var(--line)}
+  .stage p{margin:8px 0;font-size:16px;line-height:1.6}
+  .contract{font:12.5px/1.6 var(--mono);color:#cfd6e6;background:#10131a;border:1px solid var(--line);
+    border-radius:7px;padding:9px 12px;margin:10px 0;overflow-x:auto}
+  .contract .arw{color:var(--accent2)}
+  .tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .badge{font:11px/1 var(--mono);text-transform:uppercase;letter-spacing:.04em;
+    padding:4px 8px;border-radius:20px;border:1px solid var(--line)}
+  .badge.port{color:var(--good);border-color:#2e4a3a;background:#12201a}
+  .badge.new{color:var(--accent);border-color:#26405e;background:#101a26}
+  .gate{color:var(--warn);font-size:14px;margin-top:9px;display:flex;gap:7px;align-items:baseline}
+  .gate b{color:var(--warn);font-weight:600;white-space:nowrap;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+  .n{color:var(--muted);font-variant-numeric:tabular-nums}
+  ol.dec{padding-left:22px} ol.dec li{margin:14px 0;font-size:16px;line-height:1.6}
+  footer{margin-top:60px;color:var(--muted);font-size:14px;border-top:1px solid var(--line);padding-top:22px;
+    font-family:-apple-system,BlinkMacSystemFont,sans-serif}
+  .ser{color:var(--muted);font:13px/1.5 var(--mono);margin-bottom:30px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="ser">adelic · build note</p>
+  <h1>One Package, All of Sigma</h1>
+  <p class="sub">The FCA/SKOS rule-sameness pipeline, end to end — reviewable piece by piece.</p>
+  <p class="stamp">a standalone package · every stage a module · every module a review gate</p>
+
+  <p class="lede">Doing it over, properly. Not the macOS slice and not throwaway scripts — one clean,
+  standalone package that runs the whole thing over all <strong>3,748</strong> Sigma rules, built and reviewed
+  one stage at a time.</p>
+
+  <p>The job, end to end: consume every Sigma rule &rarr; lower it to a normalized <strong>IR</strong> &rarr;
+  derive <strong>FCA</strong> concepts at each attribute granularity &rarr; express the graded relations as
+  <strong>SKOS</strong> &rarr; report the over-collapse and its generalization, and emit the RDF.</p>
+
+  <div class="note key">The honesty hinge is <strong>coverage</strong>. Parse is not where rules are lost —
+  pySigma reads the corpus whole (below) — so the honest denominator sits downstream, at <em>analysis</em>
+  coverage: which rules yield meaningful attributes, which we can fire. The report accounts for it per stated
+  reason, never a silent filter.</div>
+
+  <h2>Ingest &mdash; pySigma, not the CLI</h2>
+  <p><code>sigma-cli</code> is a conversion tool (rule&nbsp;&rarr;&nbsp;Splunk/ES query); scraping its output is
+  the wrong layer. The right tool is the library it sits on — <strong>pySigma</strong> — which parses each rule
+  into a real AST: fields, modifiers, values, the boolean condition. We delegate parsing to it and keep the
+  package to what it is for — the analysis.</p>
+  <div class="note good"><strong>Why it earns "all of Sigma."</strong> Our own subset-parser abstained on ~40%
+  of rules; pySigma parses the <em>full</em> spec — every modifier, correlation, rule collections — so no rule is
+  lost at the gate. Verified live: <strong>3,748 / 3,748 parse, zero errors.</strong> The honest denominator then
+  moves downstream, to which parsed rules yield usable attributes.</div>
+  <p class="muted" style="font-size:15px">Boundary kept explicit: pySigma <em>parses</em>, it does not
+  <em>fire</em>. Structure — this package, part one — needs only the parse; firing rules for the catch-set
+  (part two) is a separate choice, not forced by the parser.</p>
+
+  <h2>Architecture &mdash; the IR is the waist</h2>
+  <p>Ingest is <em>inherently</em> per-ruleset: Sigma&nbsp;&rarr;&nbsp;pySigma, CAR&nbsp;&rarr;&nbsp;data-model,
+  Elastic&nbsp;&rarr;&nbsp;EQL, ESCU&nbsp;&rarr;&nbsp;SPL. There is no ruleset-agnostic parser. So the
+  Sigma-specific code lives in an <code>ingest/</code> adapter, and the <strong>IR is the boundary it cannot
+  cross</strong>: below the IR, one adapter per language (parse + lower); at the IR, the languages converge;
+  <em>above</em> it — axes, FCA, SKOS, report — omega is written once, ruleset-agnostic.</p>
+  <div class="note key">A second ruleset is a new module under <code>ingest/</code> — <code>car.py</code>,
+  <code>elastic.py</code> — <strong>not a reshaping.</strong> Nothing above the IR knows a rule was ever Sigma.</div>
+
+  <h2>The pipeline &mdash; in sequence</h2>
+
+  <div class="stage">
+    <h3><span class="n">Stage 0</span> Ingest via pySigma <span class="mod">ingest/sigma.py</span></h3>
+    <p>The Sigma adapter — the one place pySigma is imported. Load the ruleset through its
+    <code>SigmaCollection</code> — full-spec, multi-document and rule-collection aware — into parsed
+    <code>SigmaRule</code> objects, recording pySigma's own validation errors as the parse report. A thin
+    wrapper over a trusted parser, not a parser of our own.</p>
+    <div class="contract">load_corpus(dir) <span class="arw">&rarr;</span> (SigmaRule[], parse_report)</div>
+    <div class="tags"><span class="badge port">pySigma · dependency</span><span class="badge new">new · thin wrapper</span></div>
+    <div class="note good" style="margin:12px 0 0">Verified: <strong>3,748 / 3,748 parse, 0 errors.</strong>
+    Nothing lost at the parse gate.</div>
+    <div class="gate"><b>review</b><span>Parse count (done) + how the report surfaces any spec-invalid rules.</span></div>
+  </div>
+
+  <div class="stage">
+    <h3><span class="n">Stage 1</span> Map to attribute-IR <span class="mod">ingest/sigma.py &rarr; ir.py</span></h3>
+    <p>The adapter's second half: walk pySigma's parsed AST — <code>SigmaDetectionItem</code> (field, modifiers,
+    values), each block's polarity, the boolean condition, logsource, tags — and lower it to the agnostic IR in
+    <code>ir.py</code>: the <code>(field, mods, values)</code> atoms the axes read. Parsing and mapping are the
+    Sigma adapter's; the IR they produce is everyone's. After this, no <code>SigmaRule</code> escapes.</p>
+    <div class="contract">to_ir(SigmaRule) <span class="arw">&rarr;</span> CompiledRule</div>
+    <div class="tags"><span class="badge new">new · the real seam</span></div>
+    <p class="muted" style="font-size:14.5px">Because pySigma parses everything, even rules we cannot yet
+    <em>fire</em> (base64, fieldref, correlation) still yield attributes — parse-for-clustering, separate from
+    evaluate-for-firing.</p>
+    <div class="gate"><b>review</b><span>The AST&rarr;atom mapping, and which rules yield usable attributes vs
+    abstain — the honest denominator, now downstream of parse.</span></div>
+  </div>
+
+  <div class="stage">
+    <h3><span class="n">Stage 2</span> Attribute axes <span class="mod">axes.py</span></h3>
+    <p>From the IR, extract the attribute set at a chosen granularity — the "one real knob," made first-class:
+    <code>field_set</code> (value-blind) · <code>clauses</code> (value-aware) · <code>polarity</code>
+    (selection + filters) · <code>relational</code> (fieldref pairs).</p>
+    <div class="contract">attributes(ir, axes=&hellip;) <span class="arw">&rarr;</span> frozenset[attr]</div>
+    <div class="tags"><span class="badge new">new · consolidates</span></div>
+    <div class="gate"><b>review</b><span>Turning axes on/off does exactly what the essay claims — coarse to fine.</span></div>
+  </div>
+
+  <div class="stage">
+    <h3><span class="n">Stage 3</span> FCA concepts <span class="mod">fca.py</span></h3>
+    <p>Group rules into concepts by their attribute set and compute the broader/narrower subsumption order and
+    the concept counts. The over-collapse numbers are born here.</p>
+    <div class="contract">concepts(rules, axes) <span class="arw">&rarr;</span> partition + &sube;-order + counts</div>
+    <div class="tags"><span class="badge new">new</span></div>
+    <p class="muted" style="font-size:14.5px">Uses the tractable partition + order (what the essay actually
+    uses), <em>not</em> the full Galois lattice — that is exponential and pointless at this scale. A deliberate cut.</p>
+    <div class="gate"><b>review</b><span>Value-blind vs value-aware concept counts, per product and corpus-wide.</span></div>
+  </div>
+
+  <div class="stage">
+    <h3><span class="n">Stage 4</span> SKOS graded relations <span class="mod">skos.py</span></h3>
+    <p>Compute pairwise graded edges — <code>exact</code> / <code>close</code> / <code>broad</code> /
+    <code>narrow</code> / <code>related</code>, each with a tightness and a <code>why</code> — and serialize the
+    lattice as SKOS RDF.</p>
+    <div class="contract">relate(rules, axes) <span class="arw">&rarr;</span> edges &nbsp;·&nbsp; to_turtle(edges) <span class="arw">&rarr;</span> .ttl</div>
+    <div class="tags"><span class="badge port">ported · proven</span></div>
+    <div class="gate"><b>review</b><span>The graded lattice + Turtle over all Sigma; spot-check a few <code>why()</code>.</span></div>
+  </div>
+
+  <div class="stage">
+    <h3><span class="n">Stage 5</span> Report + figures <span class="mod">report.py</span></h3>
+    <p>The over-collapse table per product and corpus-wide, the generalization, and the artifacts
+    (<code>figures.json</code>, <code>lattice.ttl</code>). The clean replacement for the two throwaway
+    experiment scripts.</p>
+    <div class="contract">analyze(concepts, edges) <span class="arw">&rarr;</span> report + figures.json + lattice.ttl</div>
+    <div class="tags"><span class="badge new">new</span></div>
+    <div class="gate"><b>review</b><span>The end-to-end, all-Sigma output.</span></div>
+  </div>
+
+  <div class="stage">
+    <h3><span class="n">Stage 6</span> CLI driver <span class="mod">__main__.py</span></h3>
+    <p>One command wires 0&ndash;5 together, deterministically, and emits everything.</p>
+    <div class="contract">python -m &lt;pkg&gt; run --corpus &lt;dir&gt; --out &lt;dir&gt; --axes clauses</div>
+    <div class="tags"><span class="badge new">new</span></div>
+    <div class="gate"><b>review</b><span>One command, all of Sigma, reproducible.</span></div>
+  </div>
+
+  <div class="stage" style="border-style:dashed;opacity:.85">
+    <h3><span class="n">Stage 7</span> Behavioral hook <span class="mod">deferred</span></h3>
+    <p>A named seam where <em>part two</em> — the catch-set and corroboration layer — plugs in later. Reserved,
+    not built, so the package never has to be reshaped to accept it. This is where the firing engine is chosen
+    (pySigma parses, it does not fire): a pySigma backend, a ported evaluator, or a small one of our own.</p>
+    <div class="tags"><span class="badge new">reserved</span></div>
+  </div>
+
+  <h2>Three decisions before Stage 0</h2>
+
+  <ol class="dec">
+    <li><strong>Name + location.</strong> Suggest <code>packages/rulesame/</code> — or <code>sigma_sameness</code>,
+    or tie it to the series. Your call.</li>
+    <li><strong>Standalone, pySigma the one dependency.</strong> <span class="muted">(settled)</span> Parsing is
+    delegated to pySigma rather than re-owned; the analysis — attribute axes, FCA, the SKOS lattice — is ours,
+    ported from the proven <code>rule_lattice</code> into clean modules you can read top to bottom. Self-contained
+    from canon's <code>detection</code> package; the only outside dependency is the parser everyone already trusts.</li>
+    <li><strong>Coverage honesty.</strong> Make "what doesn't compile, and why" a first-class output. Recommend
+    yes — it is the difference between <em>all</em> of Sigma and the convenient part.</li>
+  </ol>
+
+  <h2>Build rhythm</h2>
+  <p>Start at Stage 0. Build one stage, stop, you review, then the next — so you see every piece in sequence,
+  and nothing lands opaque. The review gate on each stage above is the checkpoint.</p>
+
+  <footer>
+    adelic · build note · the package behind "Are These Two Rules the Same?" — run over the whole corpus,
+    assembled in the open.
+  </footer>
+
+</div>
+</body>
+</html>
