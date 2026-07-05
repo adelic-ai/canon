@@ -167,10 +167,14 @@ def to_ir(rule: SigmaRule) -> CompiledRule:
         for name, detection in det.detections.items()
     )
     ls = rule.logsource
+    logsource = tuple(sorted(                                   # open (dimension, value) pairs, only-present
+        (dim, val) for dim, val in (("category", ls.category), ("product", ls.product), ("service", ls.service))
+        if val is not None
+    ))
     return CompiledRule(
         id=str(rule.id) if rule.id else None,
         title=rule.title,
-        logsource=(ls.category, ls.product, ls.service),
+        logsource=logsource,
         tags=tuple(str(t) for t in (rule.tags or [])),
         blocks=blocks,
         condition=condition,

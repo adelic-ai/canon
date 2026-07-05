@@ -37,7 +37,7 @@ def test_to_ir_atoms_and_filter_polarity(tmp_path):
     assert atoms["Image"].mods == ("endswith",)
     assert "exe" in atoms["Image"].values[0]             # value carries pySigma's endswith transform
     assert atoms["CommandLine"].mods == ("contains",)
-    assert ir.logsource == ("process_creation", "windows", None)
+    assert ir.logsource == (("category", "process_creation"), ("product", "windows"))   # open (dim, value) pairs
     assert "not 1 of filter_*" in ir.condition           # raw condition retained as polarity provenance
 
 

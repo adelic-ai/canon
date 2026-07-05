@@ -39,12 +39,15 @@ class Block:
 @dataclass(frozen=True)
 class CompiledRule:
     """omega's agnostic IR for one detection rule — produced by an adapter, consumed by the axes. Everything
-    the analysis needs and nothing ruleset-specific left. ``logsource`` is ``(category, product, service)``;
-    ``condition`` is retained verbatim as the provenance of the block polarities."""
+    the analysis needs and nothing ruleset-specific left. ``logsource`` is an OPEN, sorted set of
+    ``(dimension, value)`` pairs — only the dimensions the rule actually names (Sigma's ``category`` /
+    ``product`` / ``service``, and extensible: a new logsource field is one more pair, not a broken tuple).
+    It's a bag of orientation tags, not a positional triple. ``condition`` is retained verbatim as the
+    provenance of the block polarities."""
 
     id: str | None
     title: str | None
-    logsource: tuple[str | None, str | None, str | None]
+    logsource: tuple[tuple[str, str], ...]
     tags: tuple[str, ...]
     blocks: tuple[Block, ...]
     condition: str

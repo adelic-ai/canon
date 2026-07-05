@@ -100,6 +100,28 @@
   <div class="note key">A second ruleset is a new module under <code>ingest/</code> — <code>car.py</code>,
   <code>elastic.py</code> — <strong>not a reshaping.</strong> Nothing above the IR knows a rule was ever Sigma.</div>
 
+  <h2>Governing requirement &mdash; provenance is preserved</h2>
+  <p>However omega ids, dedups, merges, or restructures rules internally, that is its own business and must
+  have <strong>zero bearing</strong> on tracing a rule back to where it came from. Lineage travels fused with
+  the object and survives every transformation; a merge <em>unions</em> provenance, it never severs it. Binding
+  from adapter&nbsp;#2 on — one corpus has nothing to trace <em>between</em>, so the field is deferred, but the
+  <em>decision</em> is made now, not the build.</p>
+  <ul style="font-size:16px;line-height:1.55">
+    <li><strong>Source is first-class, per rule</strong> — <code>{ruleset, native_id, path, version}</code>,
+      attached and O(1) reachable. The Sigma UUID, the CAR id, the file: retained verbatim.</li>
+    <li><strong>Two decoupled id layers</strong> — omega's canonical id (its own scheme) vs the source's native
+      id (preserved regardless). How omega assigns ids cannot affect source traceability.</li>
+    <li><strong>Sources, plural</strong> — after cross-ruleset dedup a concept traces to a <em>set</em> of
+      contributors (Sigma-X&nbsp;&asymp;&nbsp;CAR-Y); merge&nbsp;=&nbsp;union of lineage, so a deduped rule
+      remembers every origin.</li>
+  </ul>
+  <div class="note key"><strong>The fit:</strong> make omega's canonical id <strong>content-addressed</strong>
+  (a hash of the atoms/structure). Then identical rules across corpora dedup <em>naturally</em> (same content
+  id), the node's provenance records <em>all</em> the sources that hashed to it, and the id is decoupled from
+  every source's scheme while each source id stays reachable. This <em>is</em> canon's provenance pattern —
+  content-address the node, keep the source in <code>wasDerivedFrom</code> — so omega should <strong>ride
+  canon's provenance package</strong>, not reinvent it.</div>
+
   <h2>The pipeline &mdash; in sequence</h2>
 
   <div class="stage">
