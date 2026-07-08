@@ -11,36 +11,15 @@ zero errors.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from pathlib import Path
 
 from sigma.collection import SigmaCollection
 from sigma.rule import SigmaRule
 
-from omega.ir import Atom, Block, CompiledRule
+from omega.ingest.base import ParseReport
+from omega.ir import Atom, Block, CompiledRule, Source
 
-
-@dataclass
-class ParseReport:
-    """Honest accounting of the ingest. ``errors`` maps a pySigma exception *kind* to its count; ``error_paths``
-    keeps the ``(path, kind)`` pairs so a spec-invalid rule can be *found*, not merely tallied. ``files`` counts
-    source files (a file may hold several rules); ``rules`` counts the base detection rules actually returned."""
-
-    files: int = 0
-    rules: int = 0
-    correlation_rules: int = 0                              # counted, deferred to a later axis
-    errors: dict[str, int] = field(default_factory=dict)
-    error_paths: list[tuple[str, str]] = field(default_factory=list)
-
-    @property
-    def clean(self) -> bool:
-        """True iff every file parsed — no rule was rejected."""
-        return not self.errors
-
-    def _record(self, path: Path, exc: Exception) -> None:
-        kind = type(exc).__name__
-        self.errors[kind] = self.errors.get(kind, 0) + 1
-        self.error_paths.append((str(path), kind))
+__all__ = ["ParseReport", "load", "to_ir", "load_ir"]
 
 
 def _is_correlation(rule: object) -> bool:
@@ -73,11 +52,11 @@ def load(root: str | Path, *, pattern: str = "*.yml") -> tuple[list[SigmaRule], 
         try:
             collection = SigmaCollection.from_yaml(p.read_text(encoding="utf-8", errors="replace"))
         except Exception as exc:                            # pySigma raises SigmaError; guard anything else too
-            report._record(p, exc)
+            report.record_error(p, exc)
             continue
         for rule in collection.rules:
             if _is_correlation(rule):
-                report.correlation_rules += 1
+                report.defer("correlation")
             else:
                 rules.append(rule)
                 report.rules += 1
@@ -171,13 +150,15 @@ def to_ir(rule: SigmaRule) -> CompiledRule:
         (dim, val) for dim, val in (("category", ls.category), ("product", ls.product), ("service", ls.service))
         if val is not None
     ))
+    native_id = str(rule.id) if rule.id else None
     return CompiledRule(
-        id=str(rule.id) if rule.id else None,
+        id=native_id,
         title=rule.title,
         logsource=logsource,
         tags=tuple(str(t) for t in (rule.tags or [])),
         blocks=blocks,
         condition=condition,
+        source=Source("sigma", native_id=native_id),           # path threading deferred; native id is the key
     )
 
 

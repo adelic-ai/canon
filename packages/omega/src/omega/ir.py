@@ -14,6 +14,20 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
+class Source:
+    """Provenance — where a rule came from, fused to the rule and preserved under every transformation
+    (the governing requirement, binding from adapter #2). ``ruleset`` is the origin corpus (``sigma`` /
+    ``car`` / …); ``native_id`` is that corpus's own id (the Sigma UUID, the CAR id), retained verbatim and
+    *decoupled* from whatever id omega assigns. So however omega restructures internally, the source stays
+    trivially reachable — and after cross-ruleset dedup a merged concept can carry several of these."""
+
+    ruleset: str
+    native_id: str | None = None
+    path: str | None = None
+    version: str | None = None
+
+
+@dataclass(frozen=True)
 class Atom:
     """One ``field | modifiers : values`` test — the leaf the axes read. ``field`` is ``None`` for a keyword
     (whole-event) item. ``mods`` are the normalised modifier names (``endswith``, ``contains``, …); ``values``
@@ -51,3 +65,4 @@ class CompiledRule:
     tags: tuple[str, ...]
     blocks: tuple[Block, ...]
     condition: str
+    source: Source | None = None       # provenance; adapters populate it, direct construction may omit it
