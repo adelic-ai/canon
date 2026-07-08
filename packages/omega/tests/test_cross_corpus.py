@@ -1,6 +1,7 @@
 """Cross-corpus report — group by provenance, measure the ATT&CK bridge. Pins that the report consumes
 source.ruleset, finds shared tokens across corpora, and surfaces concrete cross-corpus joins."""
 
+import os
 from pathlib import Path
 
 import pytest
@@ -9,8 +10,9 @@ from omega.cli import main
 from omega.ir import Atom, Block, CompiledRule, Source
 from omega.report import cross_corpus, render_cross
 
-CAR = Path("/Users/shunhonda/dev/csat/data/mitre/car")
-SIGMA = Path(__file__).resolve().parents[2] / "semantic-cyber/data/sigma-rules"
+CAR = Path(os.environ["OMEGA_CAR_CORPUS"]) if os.environ.get("OMEGA_CAR_CORPUS") else None
+SIGMA = Path(os.environ["OMEGA_SIGMA_CORPUS"]) if os.environ.get("OMEGA_SIGMA_CORPUS") else \
+    Path(__file__).resolve().parents[2] / "semantic-cyber/data/sigma-rules"
 
 
 def _rule(rid, ruleset, tags):
@@ -43,7 +45,7 @@ def test_field_axis_does_not_bridge():
     assert rep["pairwise_shared"]["car~sigma"] == 0     # sigma_field vs car_field -> disjoint vocab
 
 
-@pytest.mark.skipif(not (CAR.is_dir() and SIGMA.is_dir()), reason="corpora not present")
+@pytest.mark.skipif(not (CAR and CAR.is_dir() and SIGMA.is_dir()), reason="corpora not present")
 def test_bridge_cli(capsys):
     rc = main(["bridge", "--sigma", str(SIGMA), "--car", str(CAR)])
     out = capsys.readouterr().out

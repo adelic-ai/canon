@@ -2,6 +2,7 @@
 same agnostic IR, carries provenance, honestly defers its unparsed query logic, and that ATT&CK bridges CAR
 to Sigma while their field vocabularies do not (the predicted result)."""
 
+import os
 from pathlib import Path
 
 import pytest
@@ -11,8 +12,10 @@ from omega.ingest import car
 from omega.ingest.sigma import load_ir as sigma_load_ir
 from omega.ir import CompiledRule, Source
 
-CAR = Path("/Users/shunhonda/dev/csat/data/mitre/car")
-SIGMA = Path(__file__).resolve().parents[2] / "semantic-cyber/data/sigma-rules"
+# corpora are external data pointed at by env var (not shipped with the package)
+CAR = Path(os.environ["OMEGA_CAR_CORPUS"]) if os.environ.get("OMEGA_CAR_CORPUS") else None
+SIGMA = Path(os.environ["OMEGA_SIGMA_CORPUS"]) if os.environ.get("OMEGA_SIGMA_CORPUS") else \
+    Path(__file__).resolve().parents[2] / "semantic-cyber/data/sigma-rules"
 
 _ANALYTIC = """\
 title: Demo Analytic
@@ -49,14 +52,14 @@ def test_car_to_ir_maps_structured_axes(tmp_path):
     assert fields == {"exe", "parent_exe"}
 
 
-@pytest.mark.skipif(not CAR.is_dir(), reason="CAR corpus not present")
+@pytest.mark.skipif(not (CAR and CAR.is_dir()), reason="CAR corpus not present")
 def test_car_loads_corpus_clean():
     rules, report = car.load_ir(CAR)
     assert report.rules >= 100 and report.clean
     assert all(r.source and r.source.ruleset == "car" for r in rules)
 
 
-@pytest.mark.skipif(not (CAR.is_dir() and SIGMA.is_dir()), reason="corpora not present")
+@pytest.mark.skipif(not (CAR and CAR.is_dir() and SIGMA.is_dir()), reason="corpora not present")
 def test_attack_bridges_car_to_sigma():
     sigma_rules, _ = sigma_load_ir(SIGMA)
     car_rules, _ = car.load_ir(CAR)
