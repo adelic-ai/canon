@@ -489,10 +489,14 @@ version = "0.1.0"
 source = { editable = "packages/omega" }
 dependencies = [
     { name = "pysigma" },
+    { name = "pyyaml" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "pysigma", specifier = ">=1.4,<2" }]
+requires-dist = [
+    { name = "pysigma", specifier = ">=1.4,<2" },
+    { name = "pyyaml", specifier = ">=6" },
+]
 
 [[package]]
 name = "owlready2"
