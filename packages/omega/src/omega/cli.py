@@ -14,8 +14,9 @@ import argparse
 import sys
 from pathlib import Path
 
+from omega.ingest import car
 from omega.ingest.sigma import load_ir
-from omega.report import analyze, emit, render
+from omega.report import analyze, cross_corpus, emit, render, render_cross
 from omega.skos import relate
 
 
@@ -36,6 +37,12 @@ def _build_parser() -> argparse.ArgumentParser:
                      help="value-blind projection (default: field)")
     run.add_argument("--dimension", default="product", help="logsource dimension to break down by")
     run.add_argument("--min-rules", type=int, default=10, help="omit slices smaller than this")
+
+    bridge = sub.add_parser("bridge", help="ingest two rulesets and show how ATT&CK bridges them")
+    bridge.add_argument("--sigma", required=True, type=Path, help="Sigma ruleset directory")
+    bridge.add_argument("--car", required=True, type=Path, help="CAR analytics directory")
+    bridge.add_argument("--axis", default="attack", help="bridging axis (default: attack)")
+    bridge.add_argument("--out", type=Path, default=None, help="write bridge.json here")
     return p
 
 
@@ -64,8 +71,29 @@ def _run(args: argparse.Namespace) -> int:
     return 0
 
 
+def _bridge(args: argparse.Namespace) -> int:
+    try:
+        sigma_rules, sig_rep = load_ir(args.sigma)
+        car_rules, car_rep = car.load_ir(args.car)
+    except (FileNotFoundError, NotADirectoryError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    print(f"ingest: sigma {sig_rep.rules} rules, car {car_rep.rules} analytics "
+          f"(car deferred={car_rep.deferred})")
+    report = cross_corpus(sigma_rules + car_rules, axis=args.axis)
+    print(render_cross(report))
+    if args.out:
+        import json
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        args.out.write_text(json.dumps(report, indent=2))
+        print(f"\nwrote {args.out}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
     if args.cmd == "run":
         return _run(args)
+    if args.cmd == "bridge":
+        return _bridge(args)
     return 1

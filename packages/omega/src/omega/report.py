@@ -14,7 +14,7 @@ import json
 from collections import defaultdict
 from pathlib import Path
 
-from omega.axes import CONTENT, FIELD_SET
+from omega.axes import CONTENT, FIELD_SET, attributes
 from omega.fca import concepts
 from omega.ir import CompiledRule
 from omega.skos import counts, relate, to_turtle
@@ -84,6 +84,59 @@ def emit(rules: list[CompiledRule], out_dir: str | Path, *, blind: frozenset[str
     (out / "figures.json").write_text(json.dumps(report, indent=2))
     (out / "lattice.ttl").write_text(to_turtle(edges))
     return report
+
+
+def cross_corpus(rules: list[CompiledRule], *, axis: str = "attack", sample: int = 6) -> dict:
+    """The cross-corpus report: group ``rules`` by their provenance (``source.ruleset``) and measure how well
+    a shared ``axis`` BRIDGES the corpora. Consumes the provenance seam — this is what a merged, multi-ruleset
+    omega object looks like. ``attack`` is the free bridge (shared vocabulary); a field/clause axis will show
+    little overlap (each ruleset's own vocabulary — the mapping seam).
+
+    Returns per-corpus token coverage + what's unique to each, the pairwise overlap, and concrete
+    cross-corpus joins (a shared token and the rules from *each* corpus that carry it — the bridge, shown)."""
+    by: dict[str, list[CompiledRule]] = defaultdict(list)
+    for r in rules:
+        by[r.source.ruleset if r.source else "unknown"].append(r)
+    corpora = sorted(by)
+    toks = {c: set().union(*(attributes(r, axes={axis}) for r in by[c])) if by[c] else set() for c in corpora}
+
+    per = {}
+    for c in corpora:
+        others = set().union(*(toks[o] for o in corpora if o != c)) if len(corpora) > 1 else set()
+        per[c] = {"rules": len(by[c]), "tokens": len(toks[c]), "unique_to_it": len(toks[c] - others)}
+    pairwise = {f"{a}~{b}": len(toks[a] & toks[b])
+                for i, a in enumerate(corpora) for b in corpora[i + 1:]}
+    shared_all = set.intersection(*toks.values()) if len(toks) > 1 else set()
+
+    joins = []
+    for tok in sorted(shared_all)[:sample]:
+        hit = {c: [r.id for r in by[c] if tok in attributes(r, axes={axis})][:2] for c in corpora}
+        joins.append({"token": tok, "rules_by_corpus": hit})
+
+    return {
+        "axis": axis,
+        "corpora": corpora,
+        "per_corpus": per,
+        "pairwise_shared": pairwise,
+        "shared_by_all": len(shared_all),
+        "union": len(set().union(*toks.values())) if toks else 0,
+        "sample_joins": joins,
+    }
+
+
+def render_cross(report: dict) -> str:
+    """Human-readable cross-corpus bridge report."""
+    lines = [f"omega cross-corpus bridge — axis '{report['axis']}' over {report['corpora']}"]
+    for c, v in report["per_corpus"].items():
+        lines.append(f"  {c:8} rules={v['rules']:5}  {report['axis']}-tokens={v['tokens']:5}  "
+                     f"unique-to-it={v['unique_to_it']}")
+    lines.append(f"  pairwise shared: {report['pairwise_shared']}   shared-by-all: {report['shared_by_all']}"
+                 f"   union: {report['union']}")
+    lines.append("  concrete joins (a shared token bridging the corpora):")
+    for j in report["sample_joins"]:
+        parts = "  ".join(f"{c}={ids}" for c, ids in j["rules_by_corpus"].items())
+        lines.append(f"    {j['token']:26} {parts}")
+    return "\n".join(lines)
 
 
 def render(report: dict) -> str:
