@@ -30,6 +30,7 @@ class Concept:
 
     @property
     def size(self) -> int:
+        """How many rules collapsed into this concept (``> 1`` = the projection judges them the same)."""
         return len(self.members)
 
 
@@ -45,6 +46,7 @@ class Lattice:
 
     @property
     def n_concepts(self) -> int:
+        """Number of distinct concepts — ``n_rules`` vs this is the over-collapse ratio."""
         return len(self.concepts)
 
     @property

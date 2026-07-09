@@ -91,6 +91,7 @@ def _bridge(args: argparse.Namespace) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """CLI entry point — dispatch the ``run`` / ``bridge`` subcommand. Returns a process exit code."""
     args = _build_parser().parse_args(argv)
     if args.cmd == "run":
         return _run(args)

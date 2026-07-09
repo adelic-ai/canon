@@ -46,6 +46,7 @@ class Edge:
 
     @property
     def skos(self) -> str:
+        """The SKOS predicate for this edge's relation (e.g. ``skos:narrowMatch``)."""
         return SKOS[self.rel]
 
 

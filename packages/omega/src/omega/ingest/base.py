@@ -38,6 +38,7 @@ class ParseReport:
         self.deferred[kind] = self.deferred.get(kind, 0) + 1
 
     def record_error(self, path: Path, exc: Exception) -> None:
+        """Record a rejected file by its exception *kind* + path (so a bad rule is findable, not just tallied)."""
         kind = type(exc).__name__
         self.errors[kind] = self.errors.get(kind, 0) + 1
         self.error_paths.append((str(path), kind))
