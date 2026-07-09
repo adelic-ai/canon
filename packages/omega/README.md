@@ -94,4 +94,5 @@ rulesets → ingest adapters → [ IR ] → axes → FCA concepts → SKOS relat
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+Apache License 2.0 — see [LICENSE](LICENSE) and [NOTICE](NOTICE). The license covers omega's
+code only, not the external corpora it reads (Sigma, CAR), which carry their own licenses.

@@ -1,0 +1,8 @@
+omega
+Copyright 2026 Shun Honda
+
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+This product reads (but does not redistribute) external detection-rule corpora,
+each under its own license — e.g. Sigma (Detection Rule License) and MITRE CAR
+(Apache License 2.0). Those corpora are not included in this distribution.

@@ -3,6 +3,8 @@ name = "omega"
 version = "0.1.0"
 description = "FCA/SKOS rule-sameness over all of Sigma — structure first, behavior later."
 requires-python = ">=3.11"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
 dependencies = ["pysigma>=1.4,<2", "pyyaml>=6"]
 
 [project.scripts]
