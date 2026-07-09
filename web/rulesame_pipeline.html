@@ -63,11 +63,20 @@
   <p class="ser">adelic · build note</p>
   <h1>One Package, All of Sigma</h1>
   <p class="sub">The FCA/SKOS rule-sameness pipeline, end to end — reviewable piece by piece.</p>
-  <p class="stamp">a standalone package · every stage a module · every module a review gate</p>
+  <p class="stamp">a standalone package · every stage a module · built and reviewed piece by piece</p>
 
   <p class="lede">Doing it over, properly. Not the macOS slice and not throwaway scripts — one clean,
   standalone package that runs the whole thing over all <strong>3,748</strong> Sigma rules, built and reviewed
-  one stage at a time.</p>
+  one stage at a time. <strong>Now built:</strong> Stages 0&ndash;6 plus a second ruleset adapter, merged to
+  main, MIT-licensed and publish-ready.</p>
+
+  <div class="note good"><strong>Status — built.</strong> The whole pipeline runs as one command
+  (<code>python -m omega run --corpus &lt;dir&gt;</code>): 3,748 Sigma rules &rarr; 592 value-blind concepts vs
+  3,737 value-aware (6.3&times; over-collapse, one field-set concept swallowing 416 rules), a 14,887-edge SKOS
+  lattice, generalising across all 15 product slices. A <strong>second adapter (MITRE CAR)</strong> lands via
+  the same IR, and <code>python -m omega bridge</code> joins the two corpora through ATT&amp;CK — 112 shared
+  techniques, e.g. T1003 linking a CAR analytic to a Sigma rule with zero field mapping. Provenance
+  (<code>Source</code>) is carried on every rule. The stage cards below are the design; each is done.</div>
 
   <p>The job, end to end: consume every Sigma rule &rarr; lower it to a normalized <strong>IR</strong> &rarr;
   derive <strong>FCA</strong> concepts at each attribute granularity &rarr; express the graded relations as
@@ -209,22 +218,27 @@
     <div class="tags"><span class="badge new">reserved</span></div>
   </div>
 
-  <h2>Three decisions before Stage 0</h2>
+  <h2>Three decisions — all settled</h2>
 
   <ol class="dec">
-    <li><strong>Name + location.</strong> Suggest <code>packages/rulesame/</code> — or <code>sigma_sameness</code>,
-    or tie it to the series. Your call.</li>
+    <li><strong>Name + location.</strong> <span class="muted">(settled)</span> <code>omega</code>, at
+    <code>packages/omega/</code> — the limit the refinement tower converges to.</li>
     <li><strong>Standalone, pySigma the one dependency.</strong> <span class="muted">(settled)</span> Parsing is
     delegated to pySigma rather than re-owned; the analysis — attribute axes, FCA, the SKOS lattice — is ours,
     ported from the proven <code>rule_lattice</code> into clean modules you can read top to bottom. Self-contained
     from canon's <code>detection</code> package; the only outside dependency is the parser everyone already trusts.</li>
-    <li><strong>Coverage honesty.</strong> Make "what doesn't compile, and why" a first-class output. Recommend
-    yes — it is the difference between <em>all</em> of Sigma and the convenient part.</li>
+    <li><strong>Coverage honesty.</strong> <span class="muted">(settled)</span> "What doesn't compile, and why"
+    is a first-class output — the <code>ParseReport</code>'s <code>deferred</code> bag (Sigma correlation rules,
+    CAR's unparsed query-language implementations). The difference between <em>all</em> of Sigma and the
+    convenient part.</li>
   </ol>
 
-  <h2>Build rhythm</h2>
-  <p>Start at Stage 0. Build one stage, stop, you review, then the next — so you see every piece in sequence,
-  and nothing lands opaque. The review gate on each stage above is the checkpoint.</p>
+  <h2>Build rhythm — how it went</h2>
+  <p>Built one stage at a time, each reviewed before the next, so every piece landed in sequence and nothing
+  opaque. Stages 0&ndash;6 are done; the adapter architecture proved out when the <strong>CAR adapter (#2)</strong>
+  dropped in with no reshaping above the IR — ATT&amp;CK bridged the two corpora for free, while their field
+  vocabularies did not (the mapping seam, deliberately deferred). Stage 7 (the behavioural / catch-set layer)
+  stays reserved — it needs a firing engine, a separate later choice.</p>
 
   <footer>
     adelic · build note · the package behind "Are These Two Rules the Same?" — run over the whole corpus,
