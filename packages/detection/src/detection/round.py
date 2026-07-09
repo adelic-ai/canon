@@ -63,7 +63,7 @@ def select_detections(profile: dict, techniques, *, sigma_root: Path = SIGMA) ->
     detections as distinct concepts, so each fires. Best-peer = most specific (clause count); a
     fidelity/clean-catcher ranking slots in where labels exist."""
     present = set(profile["fields"])
-    chosen: dict = {}                                        # FCA signature -> best (technique, rule, name, score)
+    chosen: dict = {}                                        # content_signature -> best (technique, rule, name, score)
     for tech in techniques:
         for p, r in gather(tech, root=sigma_root):
             if not is_evaluable(r):
