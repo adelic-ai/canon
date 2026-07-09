@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Are These Two Rules the Same?</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --ink:#e7e9ef; --muted:#9aa3b2;
+    --line:#2a2f3a; --accent:#7db4ff; --accent2:#c79bff;
+    --good:#6fcf97; --warn:#f2c94c; --gap:#eb6f6f;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:18px/1.72 -apple-system,BlinkMacSystemFont,"Segoe UI",Georgia,serif}
+  .wrap{max-width:720px;margin:0 auto;padding:64px 26px 120px}
+  h1{font-size:34px;line-height:1.18;margin:0 0 10px;letter-spacing:-.012em;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+  .sub{color:var(--muted);font-size:19px;margin:0 0 8px;font-style:italic}
+  .stamp{color:var(--muted);font:13px/1.5 var(--mono);margin:0 0 40px;font-style:normal}
+  h2{font-size:15px;margin:52px 0 6px;padding-top:18px;border-top:1px solid var(--line);
+    text-transform:uppercase;letter-spacing:.07em;color:var(--accent2);font-weight:700;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+  h2 .n{color:var(--muted);margin-right:10px}
+  p{margin:16px 0}
+  a{color:var(--accent);text-decoration:none} a:hover{text-decoration:underline}
+  strong{color:#fff}
+  em{color:#eef0f6}
+  code{font-family:var(--mono);font-size:.82em;background:#1e222b;padding:1px 6px;border-radius:5px;color:#d7dcea}
+  pre{background:#10131a;border:1px solid var(--line);border-radius:9px;padding:15px 17px;
+    overflow-x:auto;font:13px/1.6 var(--mono);color:#d4d9e4;margin:20px 0}
+  pre .k{color:var(--accent2)} pre .s{color:var(--good)} pre .c{color:var(--muted)}
+  .lede{font-size:20px;line-height:1.6}
+  .note{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:9px;padding:14px 19px;margin:24px 0;font-size:16px;line-height:1.62}
+  .note.key{border-left-color:var(--accent2)} .note.gap{border-left-color:var(--gap)}
+  .note.good{border-left-color:var(--good)}
+  .muted{color:var(--muted)}
+  table{border-collapse:collapse;width:100%;margin:22px 0;font-size:14.5px;background:var(--panel);
+    border:1px solid var(--line);border-radius:9px;overflow:hidden;font-family:var(--mono)}
+  th,td{text-align:left;padding:9px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#1c212b;color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+  tr:last-child td{border-bottom:none} td.k{color:var(--accent);white-space:nowrap}
+  .arrow{color:var(--accent2);font-weight:600}
+  footer{margin-top:64px;color:var(--muted);font-size:14px;border-top:1px solid var(--line);padding-top:22px;
+    font-family:-apple-system,BlinkMacSystemFont,sans-serif}
+  .ser{color:var(--muted);font:13px/1.5 var(--mono);margin-bottom:30px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="ser">adelic · essay · part 1 of a series</p>
+  <h1>Are These Two Rules the Same?</h1>
+  <p class="sub">A bottom-up derivation of why detection needs the Semantic Web.</p>
+  <p class="stamp">on 3,748 real detection rules · everything reproducible from the corpus</p>
+
+  <p class="lede">The Semantic Web has an explanation problem. It is always pitched from the top down —
+  <em>a global web of machine-readable meaning</em> — and the pitch never lands, because nobody can see what
+  they would <em>build</em>. So let's not pitch it. Let's take one small, concrete question, push on it
+  honestly, and watch the famous constructions — concept lattices, graded relations — appear not as theory but
+  as the only answers left standing.</p>
+
+  <p>The question is this: <strong>are these two detection rules the same?</strong></p>
+
+  <p>It sounds trivial. It is not. By the end you will have rediscovered FCA and SKOS — two acronyms from the
+  Semantic Web stack — without ever being told to adopt them, because a pile of real rules will have forced
+  them on you. The point is not to sell the Semantic Web. It is to show that you re-derive its pieces the moment
+  you take <em>meaning</em> seriously on real data — which is the only honest reason to want them.</p>
+
+  <p class="muted" style="font-size:16px">A note on scope, stated up front so it can't drift: this justifies the
+  <em>constructions</em> — explicit concept structure and graded relations. It does <em>not</em> argue for the
+  whole W3C tower (reasoners, triple stores, the linked-data cloud). "Why you need these ideas," not "therefore
+  adopt everything."</p>
+
+  <h2><span class="n">1</span>What a rule is, just enough to be concrete</h2>
+
+  <p>The corpus is <a href="https://github.com/SigmaHQ/sigma">Sigma</a>, the open standard for detection rules;
+  we have <strong>3,748</strong> of them in a local copy. A rule reads fields off a log event and combines tests
+  with boolean logic. Stripped to essentials:</p>
+
+  <pre><span class="k">detection</span>:
+  <span class="k">selection</span>:
+    Image|endswith: <span class="s">'\mimikatz.exe'</span>
+  <span class="k">condition</span>: selection</pre>
+
+  <p>That single test is an <strong>atom</strong>, and it has three parts: a <strong>field</strong>
+  (<code>Image</code>), a <strong>predicate</strong> (<code>endswith</code> — how to compare), and a
+  <strong>value</strong> (<code>\mimikatz.exe</code>). A rule is a <strong>boolean combination of atoms</strong>
+  (<code>and</code>/<code>or</code>/<code>not</code>). And the predicate vocabulary is small — almost entirely
+  string operations:</p>
+
+  <table>
+    <tr><td class="k">= / glob</td><td>exact match, or wildcard if the value has <code>*</code>/<code>?</code></td></tr>
+    <tr><td class="k">contains</td><td>substring</td></tr>
+    <tr><td class="k">startswith / endswith</td><td>prefix / suffix</td></tr>
+    <tr><td class="k">re</td><td>regular expression</td></tr>
+    <tr><td class="k">cidr</td><td>IP-in-subnet</td></tr>
+    <tr><td class="k">gt / gte / lt / lte</td><td>numeric comparison</td></tr>
+  </table>
+
+  <p>Hold onto that smallness; it returns at the end as the crux. First we try, and fail, to answer the question
+  the easy way.</p>
+
+  <h2><span class="n">2</span>The naive answer: are the texts equal?</h2>
+
+  <p>The first instinct is to compare the rules as text. Two YAML files; are the bytes equal? This fails
+  immediately, because the same detection can be written many ways:</p>
+
+  <pre><span class="c"># rule A</span>            <span class="c"># rule B — same detection</span>
+  selection:           selection:
+    Image|endswith:      CommandLine|contains: <span class="s">'mimikatz'</span>
+      - <span class="s">'\mimikatz.exe'</span>      Image|endswith: <span class="s">'\mimikatz.exe'</span>
+    CommandLine|contains:
+      - <span class="s">'mimikatz'</span>
+  condition: selection   condition: selection</pre>
+
+  <p>Reordered keys, list-vs-inline, a stray space — byte-different, behaviorally identical. Text equality
+  answers <em>"different,"</em> and it is wrong. We need to compare what a rule <em>is</em>, not how it was
+  typed. So we abstract away from the syntax and compare structure.</p>
+
+  <h2><span class="n">3</span>Compare structure — and structure is already graded</h2>
+
+  <p>Forget the text; compare what the rules <em>are</em>. And here is the thing the naive question hides: the
+  honest answer is never just "same" or "different." Two rules can be <em>identical</em>; one can be a
+  <em>special case</em> of the other (it adds a condition); they can <em>overlap</em>; they can be
+  <em>disjoint</em>. The relationship between two rules is <strong>graded</strong> — it comes in degrees of
+  generality.</p>
+
+  <p>Two pieces of the Semantic Web are exactly the machinery for that, and they are <em>not</em> a sequence of
+  coarse-then-fine — they are two faces of the same structure:</p>
+
+  <ul style="font-size:16px;line-height:1.55">
+    <li><strong>FCA</strong> (Formal Concept Analysis) is the <em>method</em>: feed it objects (rules) and
+      attributes, and it <em>derives</em> a <strong>concept lattice</strong> — and a lattice is already a
+      hierarchy of <em>more-general / more-specific</em>. The order between concepts <em>is</em>
+      broader/narrower; FCA hands you the grades, not just buckets.</li>
+    <li><strong>SKOS</strong> (Simple Knowledge Organization System) is the <em>vocabulary</em>: it
+      <em>names</em> those relations — <code>exactMatch</code>, <code>broadMatch</code>,
+      <code>narrowMatch</code>, <code>closeMatch</code>.</li>
+  </ul>
+
+  <div class="note key"><strong>FCA derives the graded structure; SKOS expresses it.</strong> FCA's lattice
+  order and SKOS broader/narrower are the <em>same relation</em> seen from two sides — one computed from the
+  data, one written down. You don't go "FCA, then SKOS for grades." You use FCA to find the relations and SKOS
+  to say them. The instant you compare structure honestly, you are doing both.</div>
+
+  <h2><span class="n">4</span>The one real knob: what you feed it</h2>
+
+  <p>FCA needs <em>attributes</em>, and the whole result turns on which ones you pick. Take the naive choice —
+  a rule's <strong>field-set</strong>: "which fields does it read?" It collapses the syntactic noise nicely, and
+  for genuine duplicates it works. But it is <strong>value-blind</strong>, and across the corpus that bites hard.
+  Run it over Sigma and the value-blind key folds rules far harder than they deserve — in <em>every</em> product.
+  In Windows alone, a single field-set concept swallows <strong>903</strong> distinct detections — 903 different
+  commands and values — and files them all as one rule.</p>
+
+  <div class="note gap"><strong>903 distinct detections &rarr; 1 concept.</strong> Same field-set, 903 different
+  values; the key threw the values away. And it is no Windows quirk — the same collapse appears in all sixteen
+  Sigma products with enough rules to measure. It is the rule, not the exception.</div>
+
+  <p>To see <em>why</em>, zoom into a slice small enough to read by eye — the macOS rules. <strong>Twenty</strong>
+  of them — AppleScript through <code>osascript</code>, <code>base64 -d</code>, <code>touch</code> to backdate a
+  file, <code>chflags</code> to hide one, <code>csrutil disable</code> to turn off System Integrity Protection —
+  share the one field-set <code>{Image, CommandLine}</code>, and the value-blind key files all twenty as the same
+  rule. They are not. It threw the values away.</p>
+
+  <p>Crucially, <strong>this is not a flaw in FCA or SKOS — it is a flaw in the attributes.</strong> Feed FCA
+  richer attributes and the over-collapse vanishes. Include the <em>values</em> and the result sharpens — the
+  twenty become twenty concepts; across the macOS slice it tells all <strong>seventy-five</strong> rules apart,
+  and corpus-wide it separates every product completely, the 903 included. And include the
+  <strong>filters</strong>, too. Sigma's most common
+  idiom is a positive selection wrapped in allowlists; here is a real rule at
+  <code>proc_creation_win_susp_parent_execute_itself.yml</code>:</p>
+
+  <pre><span class="k">detection</span>:
+  <span class="k">selection</span>:
+    Image|fieldref: ParentImage          <span class="c"># a process whose image == its parent's</span>
+  <span class="k">filter_main_path</span>:
+    Image|startswith: [<span class="s">'C:\Program Files\'</span>, <span class="s">'C:\Program Files (x86)\'</span>]
+  <span class="k">filter_main_original_fn</span>:
+    OriginalFileName: [<span class="s">'Cmd.Exe'</span>, <span class="s">'PowerShell.EXE'</span>, ...]
+  <span class="k">filter_main_product</span>:
+    Product: [<span class="s">'Microsoft Office'</span>, <span class="s">'Firefox'</span>, ...]
+  <span class="k">condition</span>: selection <span class="k">and not</span> 1 of filter_*</pre>
+
+  <p>The filters are not hidden — they are sitting right there in the rule, and there is nothing stopping you
+  from feeding them to FCA. Tag each clause by polarity — positive selection clauses and negative filter
+  clauses — and put them all in the attribute set. Both kinds <em>narrow</em> the rule (a positive clause says
+  "must match more," a filter says "must match less"), so the lattice order — <em>more clauses, of either
+  polarity, is narrower</em> — lines up exactly with SKOS <code>narrowMatch</code>. Now two rules with the same
+  selection but different allowlists are correctly <em>distinct</em>, and "this rule is a stricter version of
+  that one" is a relation the lattice <em>states</em>.</p>
+
+  <p>One subtlety the same example quietly settles. That selection clause,
+  <code>Image|fieldref:&nbsp;ParentImage</code>, compares a field to <em>another field</em>, not to a literal
+  value — every other predicate is field-to-value; <code>fieldref</code> is field-to-field, a <em>relational</em>
+  attribute. It still goes straight into the formal context; it is simply a different <em>kind</em> of attribute
+  (a field-pair), not a value clause. "Structure can't represent that" is never the obstacle — the only question
+  is which kind of attribute each predicate becomes.</p>
+
+  <div class="note key">The lesson of the over-collapse is not "structure can't see the values or the filters."
+  It can — you just have to <em>include</em> them. The real knob is <strong>attribute granularity</strong>:
+  field-sets are too coarse; values-plus-filters are right. Same FCA, same SKOS — a richer formal context.</div>
+
+  <h2><span class="n">5</span>The seam: even complete structure isn't behavior</h2>
+
+  <p>So include everything — every field, every value, every filter, the whole boolean condition. You now have
+  the most faithful structural description of a rule you can write. And it is <em>still</em> not what the rule
+  <strong>does</strong>. Two reasons, and neither can be closed by adding more structure:</p>
+
+  <p><strong>Semantic equivalence.</strong> Different structures can catch the same thing.
+  <code>Image|endswith: '\mimikatz.exe'</code> and <code>CommandLine|contains: 'mimikatz'</code> are different
+  fields, different predicates, different values — distinct by <em>every</em> structural key, however rich — yet
+  they fire on the same events. The relation is sound in one direction only: identical structure
+  <em>guarantees</em> identical behavior, but the converse fails. Structure can't see the equivalence because it
+  is a fact about what the predicates <em>mean over data</em>, not about how they're spelled — and the predicate
+  vocabulary is so small that there are always many spellings of one catch.</p>
+
+  <p>You can watch this happen. Feed the value-aware key all seventy-five macOS rules and it returns
+  seventy-five distinct concepts and <em>zero</em> exact-match classes — it finds not a single pair of synonyms.
+  Not because there are none, but because the only sameness that matters here — <em>same catch, different
+  spelling</em> — is precisely the kind structure cannot see. And it is no small-sample artifact: across
+  <em>every</em> Sigma product the value-aware key's concept count equals the rule count exactly — not one
+  structural synonym in the whole corpus.</p>
+
+  <p><strong>Data-relativity.</strong> "What a rule catches" is relative to the log. Two rules can be
+  behaviorally identical on one dataset and divergent on another — an allowlist excludes something present in
+  one environment and absent in the next. A structural comparison is data-free; it cannot give you a
+  data-relative answer.</p>
+
+  <div class="note gap">No structural key — field-sets, full content signatures, SKOS grades — can tell you what
+  a rule <em>catches</em>. To know that, there is exactly one move left: <strong>run it.</strong> And running it
+  needs a detector, real events, and a notion of "fired on the same instances." That is a different machine, and
+  a different question — and it is where part two begins.</div>
+
+  <h2><span class="n">6</span>So — why do we need the Semantic Web?</h2>
+
+  <p>Because if you take one ordinary question — <em>are these two things the same?</em> — and refuse to lie
+  about the answer on real data, you are walked, step by forced step, into its constructions. Text equality
+  fails, so you compare structure — and structure is graded, which is FCA deriving a lattice and SKOS naming its
+  relations. The first attributes you try over-collapse, so you make the attributes richer — values, filters,
+  polarity — and the grades come right. None of it was abstract. Each piece was the cheapest tool that survived
+  contact with 3,748 real rules.</p>
+
+  <p>That is the honest case for the Semantic Web, and the only one worth making: you do not <em>adopt</em> it as
+  a vision; you <em>rediscover</em> its pieces, because the problem of meaning — what is the same, what is
+  related — forces them on anyone who works at the level of data and won't fake the answers.</p>
+
+  <p>And this was deliberately <em>one</em> ruleset. Everything here is Sigma — not because the construction is
+  Sigma-specific (it runs on atoms, not syntax) but because the honest way to earn these pieces is on a single
+  real corpus first. Carrying the same lattice across rulesets — CAR, Elastic, the rest — means lowering each to
+  a common set of atoms, and that lowering is its own step, not a free one; it comes later in the series.</p>
+
+  <p>And we have stopped one question short. We learned what a rule <em>says</em>, and proved it isn't what a
+  rule <em>does</em>: structure is sound but incomplete for behavior, and behavior is data-relative. The catch —
+  what these rules actually fire on, and the four-valued logic you need to combine many of them honestly — is
+  the behavioral axis, and it needs a detector. Part two runs the rules.</p>
+
+  <footer>
+    adelic · "Are These Two Rules the Same?" · part 1 of a series on detection, meaning, and honest verdicts.<br>
+    Every number here regenerates from the local Sigma corpus — the worked example is the macOS slice
+    (75 evaluable rules), reproduced by <code>experiments/fca_skos_figures.py</code>, which emits the concept
+    counts and the SKOS lattice as Turtle. Next: <em>what a rule does</em> — catch-sets, the behavioral ground
+    truth, and Belnap's four values.
+  </footer>
+
+</div>
+</body>
+</html>
