@@ -1,6 +1,7 @@
 """Stage 4 — SKOS graded relations. Pins the relation grades (exact/narrow/broad/related), tightness,
 why(), Turtle emit, and that relate() runs over the whole corpus and produces a graded lattice."""
 
+import os
 from pathlib import Path
 
 import pytest
@@ -9,7 +10,8 @@ from omega.axes import CONTENT
 from omega.ingest.sigma import load, load_ir, to_ir
 from omega.skos import counts, relate, relation, tightness, to_turtle, why
 
-SIGMA = Path(__file__).resolve().parents[2] / "semantic-cyber/data/sigma-rules"
+SIGMA = Path(os.environ["OMEGA_SIGMA_CORPUS"]) if os.environ.get("OMEGA_SIGMA_CORPUS") else \
+    Path(__file__).resolve().parents[2] / "semantic-cyber/data/sigma-rules"
 
 _LS = "logsource: {product: windows, category: process_creation}"
 _RULES = f"""\

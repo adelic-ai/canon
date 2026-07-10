@@ -2,6 +2,7 @@
 and the corpus-wide reproducible result."""
 
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -9,7 +10,8 @@ import pytest
 from omega.ingest.sigma import load, load_ir, to_ir
 from omega.report import analyze, by_dimension, emit, over_collapse, render
 
-SIGMA = Path(__file__).resolve().parents[2] / "semantic-cyber/data/sigma-rules"
+SIGMA = Path(os.environ["OMEGA_SIGMA_CORPUS"]) if os.environ.get("OMEGA_SIGMA_CORPUS") else \
+    Path(__file__).resolve().parents[2] / "semantic-cyber/data/sigma-rules"
 
 
 def _rule(t, product, sel):

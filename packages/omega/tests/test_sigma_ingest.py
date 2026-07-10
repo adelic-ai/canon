@@ -1,6 +1,7 @@
 """Stage 0 — the Sigma adapter's ingest. Pins that pySigma reads the whole vendored corpus with zero errors,
 and that the loader is total (records failures rather than raising) and deterministic."""
 
+import os
 from pathlib import Path
 
 import pytest
@@ -8,7 +9,8 @@ import pytest
 from omega.ingest.sigma import ParseReport, load
 
 # the vendored SigmaHQ corpus lives in a sibling package (data, not code)
-SIGMA = Path(__file__).resolve().parents[2] / "semantic-cyber/data/sigma-rules"
+SIGMA = Path(os.environ["OMEGA_SIGMA_CORPUS"]) if os.environ.get("OMEGA_SIGMA_CORPUS") else \
+    Path(__file__).resolve().parents[2] / "semantic-cyber/data/sigma-rules"
 
 
 @pytest.mark.skipif(not SIGMA.is_dir(), reason="vendored sigma-rules corpus not present")

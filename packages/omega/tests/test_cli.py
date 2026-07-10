@@ -2,13 +2,15 @@
 projection from the command line, and fails cleanly on a bad corpus path."""
 
 import json
+import os
 from pathlib import Path
 
 import pytest
 
 from omega.cli import main
 
-SIGMA = Path(__file__).resolve().parents[2] / "semantic-cyber/data/sigma-rules"
+SIGMA = Path(os.environ["OMEGA_SIGMA_CORPUS"]) if os.environ.get("OMEGA_SIGMA_CORPUS") else \
+    Path(__file__).resolve().parents[2] / "semantic-cyber/data/sigma-rules"
 
 _CORPUS = "\n---\n".join(
     f"title: R{i}\nid: 00000000-0000-0000-0000-00000000000{i}\n"

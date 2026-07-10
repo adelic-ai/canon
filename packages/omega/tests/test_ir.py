@@ -1,13 +1,15 @@
 """Stage 1 — map pySigma's AST to omega's agnostic IR. Pins atom extraction and, the load-bearing part,
 that filter blocks are read as -1 polarity from the condition; and that the mapper is total over the corpus."""
 
+import os
 from pathlib import Path
 
 import pytest
 
 from omega.ingest.sigma import load, load_ir, to_ir
 
-SIGMA = Path(__file__).resolve().parents[2] / "semantic-cyber/data/sigma-rules"
+SIGMA = Path(os.environ["OMEGA_SIGMA_CORPUS"]) if os.environ.get("OMEGA_SIGMA_CORPUS") else \
+    Path(__file__).resolve().parents[2] / "semantic-cyber/data/sigma-rules"
 
 _FILTER_RULE = """\
 title: Demo Filter

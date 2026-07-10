@@ -2,6 +2,7 @@
 collapses what a fine (value-aware) one separates, and that the projection is a free parameter (no hardcoded
 key). The corpus test reproduces the over-collapse end to end through omega's own pipeline."""
 
+import os
 from pathlib import Path
 
 import pytest
@@ -10,7 +11,8 @@ from omega.axes import CONTENT, FIELD_SET
 from omega.fca import concepts, subsumes
 from omega.ingest.sigma import load, load_ir, to_ir
 
-SIGMA = Path(__file__).resolve().parents[2] / "semantic-cyber/data/sigma-rules"
+SIGMA = Path(os.environ["OMEGA_SIGMA_CORPUS"]) if os.environ.get("OMEGA_SIGMA_CORPUS") else \
+    Path(__file__).resolve().parents[2] / "semantic-cyber/data/sigma-rules"
 
 _LS = "logsource: {product: windows, category: process_creation}"
 _RULES = f"""\
