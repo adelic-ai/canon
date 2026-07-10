@@ -14,7 +14,7 @@ same "needs a query parser" cost omega defers for SPL/EQL.
                                  deferred, while ATT&CK bridges for free)
 
 The atom-level query logic (SPL/EQL/pseudocode) is counted in the report as
-``deferred["unparsed-implementations"]`` — seen, honestly not analysed, not silently dropped. Every analytic
+``deferred["unparsed-implementations"]`` — seen, not analysed, not silently dropped. Every analytic
 carries a :class:`~omega.ir.Source` so it traces back to its CAR id regardless of what omega does downstream.
 """
 
@@ -74,7 +74,7 @@ def to_ir(analytic: dict, *, path: str | Path | None = None) -> CompiledRule:
 
 def load_ir(root: str | Path, *, pattern: str = "*.yaml") -> tuple[list[CompiledRule], ParseReport]:
     """The CAR adapter's contract entry point: parse every analytic under ``root`` into the agnostic IR plus
-    an honest :class:`ParseReport`. Total, deterministic. Analytics whose real logic lives in query-language
+    a :class:`ParseReport`. Total, deterministic. Analytics whose real logic lives in query-language
     implementations are still ingested at the structured level, and the skipped logic is counted in
     ``deferred['unparsed-implementations']`` — accountable, not hidden."""
     root = Path(root)

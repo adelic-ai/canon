@@ -17,7 +17,7 @@ from pathlib import Path
 
 @dataclass
 class ParseReport:
-    """Honest accounting of an ingest pass. ``files`` = source files seen; ``rules`` = rules returned;
+    """The accounting of an ingest pass. ``files`` = source files seen; ``rules`` = rules returned;
     ``deferred`` = a ruleset-agnostic bag of "seen but not fully analysed" counts (e.g.
     ``{"correlation": 2}`` for Sigma, ``{"unparsed-implementations": 99}`` for CAR); ``errors`` maps a parse
     exception *kind* to its count, with ``error_paths`` keeping ``(path, kind)`` so a bad rule can be found."""

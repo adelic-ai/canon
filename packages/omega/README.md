@@ -1,9 +1,9 @@
 # omega
 
 **FCA/SKOS rule-sameness over detection-rule corpora.** Given a body of detection rules (Sigma today, MITRE
-CAR too), omega answers a deceptively hard question — *are these two rules the same?* — and does it honestly:
-sameness is not absolute, it is **relative to a chosen semantic projection**, and omega makes that projection
-the knob.
+CAR too), omega answers a deceptively hard question — *are these two rules the same?* The answer it gives is
+that sameness is not absolute: it is **relative to a chosen semantic projection**, and omega makes that
+projection the knob.
 
 It lowers every rule to one ruleset-agnostic intermediate representation, derives the concept structure with
 **Formal Concept Analysis**, and expresses the graded relations (`exact` / `broad` / `narrow` / `close` /
@@ -81,7 +81,7 @@ rulesets → ingest adapters → [ IR ] → axes → FCA concepts → SKOS relat
   "same."
 - **fca.py / skos.py** — concepts under a projection, then their graded relations + Turtle.
 
-## Scope, stated honestly
+## Scope and limits
 
 - **Structural, not behavioural.** omega compares what a rule *is*, not what it *catches*. Two structurally
   different rules can fire on the same events; that equivalence is invisible to structure and needs a runtime,
@@ -90,7 +90,7 @@ rulesets → ingest adapters → [ IR ] → axes → FCA concepts → SKOS relat
   rules it could not *execute* (base64, field-references, correlation) — they still yield attributes.
 - **CAR is coarse (v1).** CAR analytics carry their logic as implementations in *other* query languages
   (SPL/EQL/pseudocode); omega ingests their structured axes (ATT&CK coverage, platforms, data-model
-  references) and counts the unparsed query logic honestly rather than dropping it.
+  references) and counts the unparsed query logic rather than dropping it.
 
 ## License
 

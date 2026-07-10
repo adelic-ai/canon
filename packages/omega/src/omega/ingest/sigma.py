@@ -1,6 +1,6 @@
 """The Sigma adapter — omega's ingest front-end for Sigma rules, and the ONLY place pySigma is imported.
 
-Stage 0 (this file, now): parse a ruleset directory via pySigma into ``SigmaRule`` objects plus an honest
+Stage 0 (this file, now): parse a ruleset directory via pySigma into ``SigmaRule`` objects plus a
 :class:`ParseReport`. Stage 1 (next, lands here too): map each rule's AST to omega's agnostic IR — after
 which no ``SigmaRule`` (and no pySigma import) escapes this adapter, and everything downstream is
 ruleset-neutral.
