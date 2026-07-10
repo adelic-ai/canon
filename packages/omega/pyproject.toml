@@ -1,7 +1,7 @@
 [project]
 name = "omega"
 version = "0.1.0"
-description = "FCA/SKOS rule-sameness over all of Sigma — structure first, behavior later."
+description = "Analyzes whether two detection rules are the same — ingests Sigma & MITRE CAR into a ruleset-agnostic IR, then derives FCA concepts and SKOS graded relations. Sameness is a tunable semantic projection."
 requires-python = ">=3.11"
 license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE"]
