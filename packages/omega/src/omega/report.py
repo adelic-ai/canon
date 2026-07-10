@@ -2,7 +2,7 @@
 
 Assembles the pipeline (IR → axes → FCA concepts → SKOS lattice) into the numbers the essay cites and emits
 them as stable artifacts (``figures.json`` + ``lattice.ttl``), so the claim regenerates rather than being
-asserted. The clean, tested replacement for the throwaway ``experiments/fca_skos_*`` scripts.
+asserted. The tested replacement for the one-off ``experiments/fca_skos_*`` scripts.
 
 Everything is parametric in the projection pair (``blind`` vs ``aware``) and in which logsource dimension to
 break down by — nothing privileged, per the axes discipline.

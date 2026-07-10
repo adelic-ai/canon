@@ -24,8 +24,8 @@ __all__ = ["ParseReport", "load", "to_ir", "load_ir"]
 
 def _is_correlation(rule: object) -> bool:
     """Correlation rules (multi-rule, windowed) are a different shape than a base detection rule; omega
-    analyses base rules first and counts correlations for later. Name-based, to stay robust across the pySigma
-    versions that have moved the class between modules."""
+    analyses base rules first and counts correlations for later. Name-based, to survive the pySigma versions
+    that have moved the class between modules."""
     return "Correlation" in type(rule).__name__
 
 
@@ -38,7 +38,7 @@ def load(root: str | Path, *, pattern: str = "*.yml") -> tuple[list[SigmaRule], 
 
     Raises ``FileNotFoundError`` / ``NotADirectoryError`` if ``root`` is not an existing directory — a wrong
     path is a caller bug, and returning a clean-but-empty report would let it hide behind ``clean``. "Total"
-    means robust to a *messy* corpus, not silent about a *missing* one.
+    means it tolerates a *messy* corpus, not that it stays silent about a *missing* one.
     """
     root = Path(root)
     if not root.exists():
