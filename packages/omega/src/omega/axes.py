@@ -38,22 +38,29 @@ def attributes(ir: CompiledRule, *, axes: frozenset[str] | set[str]) -> frozense
     for block in ir.blocks:
         prefix = ("+" if block.polarity > 0 else "-") if signed else ""
         for atom in block.atoms:
-            if "fieldreference" in atom.mods:                       # relational: value IS another field
-                if "fieldref" in axes and atom.field:
-                    for ref in atom.values:
-                        out.add(f"{prefix}fieldref:{atom.field}~{ref}")
-                continue
+            # A field-reference atom (its value IS another field) contributes a relational token under the
+            # fieldref axis — but it still READS its field and carries a value-aware predicate, so it must
+            # ALSO flow through the field/clause emission below. (Fix: the old early `continue` dropped the
+            # field entirely under the value-blind projection, over-collapsing the headline figure.)
+            if "fieldreference" in atom.mods and "fieldref" in axes and atom.field:
+                for ref in atom.values:
+                    out.add(f"{prefix}fieldref:{atom.field}~{ref}")
+
             if atom.field is None:                                  # keyword / whole-event item
                 if "clause" in axes:
                     for value in atom.values:
                         out.add(f"{prefix}keyword:{value}")
                 continue
+
             if "field" in axes:
                 out.add(f"{prefix}field:{atom.field}")
             if "clause" in axes:
-                mods = "|".join(atom.mods)
-                values = ",".join(atom.values)
-                out.add(f"{prefix}clause:{atom.field}|{mods}={values}")
+                # Delimiter-safe, order-normalised value-aware key. Values are joined on the ASCII unit
+                # separator (\x1f, never present in rule values), so a comma inside a value cannot masquerade
+                # as two values; values are SORTED (a Sigma value list is an order-independent OR / `all`);
+                # mods stay ORDERED (chained modifiers like base64|contains are sequential — sorting is wrong).
+                values = "\x1f".join(sorted(atom.values))
+                out.add(f"{prefix}clause:{atom.field}|{'|'.join(atom.mods)}={values}")
 
     if "logsource" in axes:
         for dimension, value in ir.logsource:

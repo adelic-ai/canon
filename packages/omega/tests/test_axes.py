@@ -4,6 +4,14 @@ whole point — value-aware separates rules that value-blind collapses."""
 
 from omega.axes import CONTENT, FIELD_SET, attributes
 from omega.ingest.sigma import load, to_ir
+from omega.ir import Atom, Block, CompiledRule
+
+
+def _rule(*atoms, polarity=1):
+    """A one-block rule from raw atoms — exercises the projection layer in isolation."""
+    return CompiledRule(id="x", title="x", logsource=(), tags=(),
+                        blocks=(Block(name="selection", polarity=polarity, atoms=tuple(atoms)),),
+                        condition="selection")
 
 _TWO_RULES = """\
 title: A
@@ -71,3 +79,45 @@ def test_presets_are_pure_logic(tmp_path):
     # adding the logsource axis refines: the product/category tags appear
     refined = attributes(a, axes=CONTENT | {"logsource"})
     assert "product:windows" in refined and "category:process_creation" in refined
+
+
+# ── regression pins for the projection-layer fixes ──────────────────────────────────────────────────
+
+def test_fieldreference_atom_still_reads_its_field():
+    """#1: a field read via field-reference must not vanish from the value-blind projection."""
+    fr     = Atom(field="SourceImage", mods=("fieldreference",), values=("ParentImage",))
+    normal = Atom(field="TargetImage", mods=("endswith",), values=("\\a.exe",))
+    ir = _rule(fr, normal)
+
+    field = attributes(ir, axes=FIELD_SET)
+    assert "field:SourceImage" in field          # was dropped by the early `continue`
+    assert "field:TargetImage" in field
+
+    # the relational token is an ADDITION under the fieldref axis, not a replacement
+    both = attributes(ir, axes={"field", "fieldref"})
+    assert "field:SourceImage" in both
+    assert "fieldref:SourceImage~ParentImage" in both
+
+    # and it no longer vanishes from the value-aware projection either
+    assert any(t.startswith("clause:SourceImage|") for t in attributes(ir, axes={"clause"}))
+
+
+def test_clause_comma_value_does_not_collide_with_two_values():
+    """#2a: one value containing a comma must not equal two separate values."""
+    one = _rule(Atom(field="CommandLine", mods=(), values=("a,b",)))
+    two = _rule(Atom(field="CommandLine", mods=(), values=("a", "b")))
+    assert attributes(one, axes={"clause"}) != attributes(two, axes={"clause"})
+
+
+def test_clause_is_invariant_to_value_order():
+    """#2b: a value list is an unordered OR — the token must not depend on author ordering."""
+    ab = _rule(Atom(field="Image", mods=("contains",), values=("cmd", "powershell")))
+    ba = _rule(Atom(field="Image", mods=("contains",), values=("powershell", "cmd")))
+    assert attributes(ab, axes={"clause"}) == attributes(ba, axes={"clause"})
+
+
+def test_clause_keeps_mods_ordered():
+    """Chained modifiers are sequential — base64|contains must NOT equal contains|base64."""
+    a = _rule(Atom(field="CommandLine", mods=("base64", "contains"), values=("x",)))
+    b = _rule(Atom(field="CommandLine", mods=("contains", "base64"), values=("x",)))
+    assert attributes(a, axes={"clause"}) != attributes(b, axes={"clause"})
