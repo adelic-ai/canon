@@ -1,14 +1,30 @@
 # omega
 
-**FCA/SKOS rule-sameness over detection-rule corpora.** Given a body of detection rules (Sigma today, MITRE
-CAR too), omega answers a deceptively hard question — *are these two rules the same?* The answer it gives is
-that sameness is not absolute: it is **relative to a chosen semantic projection**, and omega makes that
-projection the knob.
+**A research instrument working toward one map of detection knowledge — the major rule libraries, where they
+intersect and where they don't, resolved against MITRE ATT&CK.**
 
-It lowers every rule to one ruleset-agnostic intermediate representation, derives the concept structure with
-**Formal Concept Analysis**, and expresses the graded relations (`exact` / `broad` / `narrow` / `close` /
-`related`) as a **SKOS** graph you can serialise to RDF. The result is reproducible from the corpus, not
-asserted.
+omega is a research instrument, not a finished product. Its destination: a navigable view of the major detection
+libraries — Sigma, MITRE CAR, and more as adapters land — showing where they **overlap**, where they
+**diverge**, and where each is **silent**, all mapped onto **MITRE ATT&CK** as the common spine. The end state
+is a picture of *what detection knowledge exists* and how its pieces relate; this repo is the method being
+built toward it.
+
+Comparing detection libraries is harder than it looks, and the approach follows from two facts about why: the
+rulesets are written in different languages, and *"are two detections the same?"* has no absolute answer — it
+depends on how closely you look.
+
+- **One agnostic representation (the waist).** Every rule, whatever its dialect, is lowered to a single
+  ruleset-agnostic intermediate form; everything above reads only that — never a rule language — so a new
+  library is a new *adapter*, not a rewrite of the analysis.
+- **Sameness is a projection, not a verdict.** Two detections are "the same" only relative to a chosen
+  semantic projection (which fields, which values, which context) — so omega makes that projection an explicit
+  knob, and "same?" becomes a family of *graded* relations rather than a yes/no.
+- **Structure derived, then expressed.** Formal Concept Analysis derives the concept structure from the
+  corpus; the graded relations (`exact` / `broader` / `narrower` / `close` / `related`) are expressed as a
+  **SKOS** graph, serialisable to RDF — reproducible from the rules, not asserted.
+
+What follows is that method in use — the IR, the projection axes, the concept lattice, the cross-corpus bridge
+on ATT&CK. The specific numbers are demonstrations of the machinery, not the thesis.
 
 ## Install
 
@@ -39,9 +55,10 @@ omega over-collapse — 3748 rules
 
 writing `out/figures.json` (the numbers) and `out/lattice.ttl` (the SKOS graph, SPARQL-able).
 
-**The over-collapse**, in one line: keying rules on the *fields they read* (value-blind) folds 3,748 Sigma
-rules into 592 "concepts" — a single concept swallows 416 distinct detections. Keying on *field + value +
-polarity* (value-aware) tells 3,737 of them apart. The knob is the projection; nothing is privileged.
+**Reading that output — the projection knob at work.** Keying rules on the *fields they read* (value-blind)
+folds these Sigma rules into 592 "concepts," one of them swallowing 416 distinct detections; keying on *field +
+value + polarity* (value-aware) tells 3,737 apart. Same rules, two projections, a ~6× swing in what counts as
+"the same" — the machinery shown on one corpus, not a privileged verdict about it.
 
 ### Cross-corpus bridge
 
