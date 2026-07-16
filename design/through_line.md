@@ -67,9 +67,10 @@ by the structure, not fixed by taste.
 It has the DT tests (matched filter, energy, Goertzel, lock-in, CFAR, CUSUM), the **IT trio
 already ported** from signalforge into `information.py` (entropy / KL / MI, windowed variants, an
 MI shuffle-null), the `DetectionVerdict` five-fold assembly, and — checked against the code —
-**two end-to-end cells wired and tested**: `count × CFAR` and `entropy × CFAR`, each producing a
-verdict that validates against the PINNED `contracts/detection_verdict.schema.json`. The vertical
-slice composes. The real gap is Axis-A **breadth, and it is descriptive statistics, not IT**:
+**six producers wired and tested**: features `count / entropy / KL / MI / distinct-count` across the
+`CFAR` and `conformal` tests, each producing a verdict that validates against the PINNED
+`contracts/detection_verdict.schema.json`. The vertical slice composes across both the feature and
+test axes. The real gap is Axis-A **breadth, and it is descriptive statistics, not IT**:
 concentration (Gini, Herfindahl), cardinality / novelty (distinct-count, first-seen, rarity-rank)
 and spread (MAD, CoV) are absent. Adding those as ops, and wiring a few more cells, is the next
 step. (An earlier draft of this note said the IT features weren't ported — that was wrong; they
@@ -106,8 +107,8 @@ detector" (a product) with "build the validator" (the research). When in doubt: 
 - The substrate approach is **sound in design.** Phases of the provenance / validation spine are
   built and tested.
 - The detection battery's **vertical slice** (feature → test → five-fold verdict → PINNED
-  contract) is **built and tested** for two cells; the full feature × test grid and any
-  foreign-data validation are not.
+  contract) is **built and tested** for six producers (count / entropy / KL / MI / distinct-count
+  × CFAR / conformal); the full feature × test grid and any foreign-data validation are not.
 - **No skeptic has run any of this on data the user did not generate.** That is the bar, and it is
   unmet. Selection effects — "it works on our examples" — are not validation.
 

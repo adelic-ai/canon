@@ -60,12 +60,12 @@ set of **classical detectors** that bundle feature and test.
 Implemented and tested — **17 modules, 207 passing tests**, ported from the
 `~/dev/forge` quarry via the Step-0 audit (`design/forge_core_step0_audit.md`).
 
-**The vertical slice is proven, not just designed.** `test_verdict.py` wires two
-complete cells end-to-end — `count × CFAR` and `entropy × CFAR` — each producing a
-`DetectionVerdict` that validates against the PINNED
-`contracts/detection_verdict.schema.json`. Feature → test → five-fold provenance
-assembly → contract holds for a structurally different feature against the same
-test, which is what makes the producer pattern general.
+**The vertical slice is proven, not just designed.** `test_verdict.py` wires six
+producers end-to-end — features `count / entropy / KL / MI / distinct-count` across
+the `CFAR` and `conformal` tests — each producing a `DetectionVerdict` that validates
+against the PINNED `contracts/detection_verdict.schema.json`. Feature → test →
+five-fold provenance assembly → contract holds across *both* axes (feature and test),
+which is what makes the producer pattern general.
 
 The real gap is **Axis-A breadth, and it is descriptive statistics — not IT**: the
 IT trio (entropy / KL / MI, with windowed variants and an MI shuffle-null) is
