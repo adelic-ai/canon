@@ -60,8 +60,18 @@ set of **classical detectors** that bundle feature and test.
 Implemented and tested — **17 modules, 207 passing tests**, ported from the
 `~/dev/forge` quarry via the Step-0 audit (`design/forge_core_step0_audit.md`).
 
-The package is **DT-heavy, IT-light**: the decision axis and the classical
-detectors are rich, but Axis A (measurement) is thin. The fuller IT feature set —
-rarity, richer KL / MI against baselines — still lives in signalforge/Pickering
-and is the named next port. See `design/through_line.md` for where this sits in
-the larger picture.
+**The vertical slice is proven, not just designed.** `test_verdict.py` wires two
+complete cells end-to-end — `count × CFAR` and `entropy × CFAR` — each producing a
+`DetectionVerdict` that validates against the PINNED
+`contracts/detection_verdict.schema.json`. Feature → test → five-fold provenance
+assembly → contract holds for a structurally different feature against the same
+test, which is what makes the producer pattern general.
+
+The real gap is **Axis-A breadth, and it is descriptive statistics — not IT**: the
+IT trio (entropy / KL / MI, with windowed variants and an MI shuffle-null) is
+present, but concentration (Gini, Herfindahl), cardinality / novelty
+(distinct-count, first-seen, rare-value rank) and spread (MAD, CoV) are absent.
+Adding those as ops — and wiring a cell or two — is the next step. One logged TODO
+from the entropy cell: CFAR's closed-form Pfa is calibrated for power statistics,
+so a bounded statistic like entropy wants its own threshold calibration. See
+`design/through_line.md`.

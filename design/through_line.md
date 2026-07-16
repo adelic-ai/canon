@@ -63,13 +63,17 @@ The realization above has a concrete shape (`web/detection_battery.html`):
 A named detector is a *cell*: one feature × one test, deployed at a tier. The catalog is generated
 by the structure, not fixed by taste.
 
-**forge-core is that battery's primitive layer — and it is lopsided.** It has the DT tests (the full
-detector zoo: matched filter, energy, Goertzel, lock-in, CFAR, CUSUM) but a thin feature layer
-(`information.py` and little else). The IT features the cyber domain actually leans on — entropy,
-KL, MI, rarity — still live in **signalforge / Pickering**, not in forge-core. For a domain the
-`dsp_vs_it_split` note puts at ≈90% IT, forge-core is populated backwards from where the weight
-belongs. Closing that — porting the IT feature primitives in as Axis-A ops that feed the existing
-DT ops — is the named next step.
+**forge-core is that battery's primitive layer, and further along than an early read suggests.**
+It has the DT tests (matched filter, energy, Goertzel, lock-in, CFAR, CUSUM), the **IT trio
+already ported** from signalforge into `information.py` (entropy / KL / MI, windowed variants, an
+MI shuffle-null), the `DetectionVerdict` five-fold assembly, and — checked against the code —
+**two end-to-end cells wired and tested**: `count × CFAR` and `entropy × CFAR`, each producing a
+verdict that validates against the PINNED `contracts/detection_verdict.schema.json`. The vertical
+slice composes. The real gap is Axis-A **breadth, and it is descriptive statistics, not IT**:
+concentration (Gini, Herfindahl), cardinality / novelty (distinct-count, first-seen, rarity-rank)
+and spread (MAD, CoV) are absent. Adding those as ops, and wiring a few more cells, is the next
+step. (An earlier draft of this note said the IT features weren't ported — that was wrong; they
+were. The lesson: read the code, the docs undersold it three times.)
 
 ## 4. The top-level story
 
@@ -101,7 +105,9 @@ detector" (a product) with "build the validator" (the research). When in doubt: 
 
 - The substrate approach is **sound in design.** Phases of the provenance / validation spine are
   built and tested.
-- The detection battery is **designed and partly built**, not proven.
+- The detection battery's **vertical slice** (feature → test → five-fold verdict → PINNED
+  contract) is **built and tested** for two cells; the full feature × test grid and any
+  foreign-data validation are not.
 - **No skeptic has run any of this on data the user did not generate.** That is the bar, and it is
   unmet. Selection effects — "it works on our examples" — are not validation.
 
