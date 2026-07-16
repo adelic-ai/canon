@@ -1,0 +1,25 @@
+# canon CI — run the uv-workspace test suite on every push / merge request.
+#
+# pytest config (importlib mode, experiments/ excluded) lives in pyproject.toml
+# under [tool.pytest.ini_options]. Tests that need vendored corpora (Sigma, OTRF,
+# D3FEND, faker-kerberos) or optional extras (rdflib[rdf]) skip gracefully via
+# @pytest.mark.skipif when absent, so a bare runner stays green.
+#
+# Verified 2026-07-16 in a bare env (no data/): 920 passed, 3 skipped, 0 failed.
+# Python pinned to 3.12 (the .venv interpreter; every package wants >=3.11).
+
+stages: [test]
+
+test:
+  stage: test
+  image: python:3.12-slim
+  variables:
+    UV_CACHE_DIR: .uv-cache
+  cache:
+    key: uv-$CI_COMMIT_REF_SLUG
+    paths: [.uv-cache]
+  before_script:
+    - pip install --quiet uv
+    - uv sync
+  script:
+    - uv run pytest -q
