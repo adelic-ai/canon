@@ -22,4 +22,6 @@ Domain packages (`semantic-cyber`, future `semantic-geo`) sit downstream and sup
 
 ## Status
 
-Scaffold only. No implementation yet.
+Implemented and tested — 716 LOC across the six modules above, 44 passing tests (`pytest packages/semantic-core`), no stubs. `graph`, `reasoning`, and `validation` wrap rdflib / owlready2 / pySHACL; `fca` derives the implication basis and concept lattice; `bridges` and `protocols` expose the typed boundaries.
+
+Known limitation: the `Lattice` output is still a local Protocol (`protocols.Lattice`), not yet bound to `mathabc.order.Lattice` — that binding waits on mathabc-core being extracted into the workspace.
