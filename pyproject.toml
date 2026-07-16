@@ -10,5 +10,7 @@ dev = [
 [tool.pytest.ini_options]
 # importlib import mode + src layout: lets the three packages' identically-named
 # `tests` dirs coexist in one workspace run without sys.modules name collisions.
-addopts = "--import-mode=importlib"
+# --ignore-glob drops packages/*/experiments/ — unpackaged scratch/demo scripts
+# (some named *_test.py) whose sibling imports break a root collection run.
+addopts = "--import-mode=importlib --ignore-glob=*/experiments/*"
 testpaths = ["packages"]
