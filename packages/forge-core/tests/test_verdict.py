@@ -21,6 +21,7 @@ import numpy as np
 import pytest
 
 from forge_core.conformal import conformal_detect, conformal_guarantee_posture
+from forge_core.descriptive import windowed_distinct
 from forge_core.detection import ca_cfar
 from forge_core.information import (
     mi_shuffle_null,
@@ -742,4 +743,65 @@ def test_mi_conformal_is_a_fifth_producer_and_conforms():
     jsonschema.validate(verdict.to_contract(), json.loads(_SCHEMA_PATH.read_text()))
     assert verdict.guarantee.claimed == Tier.BOUNDED and verdict.guarantee.demotion is None
     assert verdict.guarantee.tier == Tier.WELL_FORMED  # capped by the unverified MI feature + decode
+    assert verdict.decision == TRUE and verdict.score > 0.0
+
+
+# ── sixth producer: distinct-count × CFAR (a DESCRIPTIVE feature, not IT) ──────
+#
+# The five producers above span the IT / volume feature axis (count / entropy / KL / MI) × two
+# tests. This one adds the first *descriptive-statistics* feature: cardinality — windowed
+# distinct-count — the non-IT Axis-A lens on the same fan-out. distinct-count is count-like and
+# unbounded (unlike bounded entropy), so CA-CFAR's square-law alpha is a natural fit here — the
+# calibration mismatch entropy×CFAR logged does not bite. Confirms the descriptive family emits the
+# same canonical verdict through the same path — the producer pattern spans the feature axis beyond IT.
+
+
+def _distinct_cfar_dag():
+    """raw category-code stream → decode → windowed_distinct → ca_cfar.
+
+    Same fan-out scenario as the entropy cell (a host talking to ~1 destination, then enumerating 16
+    distinct destinations in one window), read through cardinality instead of entropy."""
+    rng = np.random.default_rng(23)
+    W = 16
+
+    def baseline(n):
+        x = np.zeros(n)
+        flip = rng.random(n) < 0.05  # rarely a second destination
+        x[flip] = 1.0
+        return x.astype(np.float64)
+
+    codes = np.concatenate([baseline(240), np.arange(W, dtype=np.float64), baseline(240)])
+    raw = codes.tobytes()
+    raw_src = source(raw, evidence=True)
+    sig = decode_float64_stream(raw_src, fs=1.0, min_samples=21)
+    feat = windowed_distinct(sig, window=W, step=W)
+    root = ca_cfar(feat, guard=2, train=8, pfa=1e-3)
+    return raw, raw_src, sig, feat, root
+
+
+def _distinct_verdict():
+    raw, raw_src, sig, feat, root = _distinct_cfar_dag()
+    pfa = root.value()["pfa"]
+    decode_claims, _ = decode_guarantee_posture(sig)
+    return root, assemble_verdict(
+        root,
+        technique="T1046",  # Network Service Discovery — distinct-destination enumeration
+        confidence_evidence={root.id: Confidence.from_detector(True, pd=_PD, pfa=pfa)},
+        claims={**decode_claims, feat.id: Tier.WELL_FORMED, root.id: Tier.BOUNDED},
+        monitors={root.id: TRUE},
+        attestations={raw_src.id: _live_attestation(raw)},
+    )
+
+
+def test_distinct_cfar_fires_once_on_the_fanout_spike():
+    root, _ = _distinct_verdict()
+    assert root.value()["indices"].tolist() == [15], "the fan-out window is the single detection"
+
+
+def test_distinct_cfar_verdict_conforms_to_the_pinned_schema():
+    """The first DESCRIPTIVE-feature producer (cardinality, not IT) projects into the same
+    detection_verdict.schema.json — the producer pattern spans the feature axis beyond IT."""
+    _, verdict = _distinct_verdict()
+    jsonschema.validate(verdict.to_contract(), json.loads(_SCHEMA_PATH.read_text()))
+    assert verdict.guarantee.tier == Tier.WELL_FORMED  # capped by the unverified feature + decode
     assert verdict.decision == TRUE and verdict.score > 0.0
