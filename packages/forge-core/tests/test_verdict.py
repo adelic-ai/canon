@@ -21,7 +21,7 @@ import numpy as np
 import pytest
 
 from forge_core.conformal import conformal_detect, conformal_guarantee_posture
-from forge_core.descriptive import windowed_distinct
+from forge_core.descriptive import windowed_distinct, windowed_herfindahl
 from forge_core.detection import ca_cfar
 from forge_core.information import (
     mi_shuffle_null,
@@ -802,6 +802,65 @@ def test_distinct_cfar_verdict_conforms_to_the_pinned_schema():
     """The first DESCRIPTIVE-feature producer (cardinality, not IT) projects into the same
     detection_verdict.schema.json — the producer pattern spans the feature axis beyond IT."""
     _, verdict = _distinct_verdict()
+    jsonschema.validate(verdict.to_contract(), json.loads(_SCHEMA_PATH.read_text()))
+    assert verdict.guarantee.tier == Tier.WELL_FORMED  # capped by the unverified feature + decode
+    assert verdict.decision == TRUE and verdict.score > 0.0
+
+
+# ── seventh producer: HHI × CFAR (concentration — the mirror of fan-out) ──────
+#
+# distinct-count (sixth) catches fan-out: activity spreading across many entities. HHI catches its
+# mirror — CONCENTRATION: activity collapsing onto ONE entity ("one account doing everything"),
+# HHI spiking from ~1/W toward 1. A different scenario through the same descriptive-feature × CFAR
+# wiring. Like entropy, HHI is a bounded statistic (0, 1], so CA-CFAR's square-law alpha is the same
+# imperfect fit (conformal is the rigorous test — cf. the entropy×conformal producer); the ~16×
+# concentration spike fires cleanly regardless.
+
+
+def _hhi_cfar_dag():
+    """raw category-code stream → decode → windowed_herfindahl → ca_cfar.
+
+    Activity is normally SPREAD across many distinct entities (HHI ~ 1/W), then in one window a
+    single entity does everything (HHI → 1). The concentration mirror of the fan-out scenario."""
+    rng = np.random.default_rng(29)
+    W = 16
+
+    def spread(n):
+        # many distinct entities per window → HHI ~ 1/W (low concentration)
+        return rng.integers(0, 10_000, size=n).astype(np.float64)
+
+    codes = np.concatenate([spread(240), np.zeros(W, dtype=np.float64), spread(240)])
+    raw = codes.tobytes()
+    raw_src = source(raw, evidence=True)
+    sig = decode_float64_stream(raw_src, fs=1.0, min_samples=21)
+    feat = windowed_herfindahl(sig, window=W, step=W)
+    root = ca_cfar(feat, guard=2, train=8, pfa=1e-3)
+    return raw, raw_src, sig, feat, root
+
+
+def _hhi_verdict():
+    raw, raw_src, sig, feat, root = _hhi_cfar_dag()
+    pfa = root.value()["pfa"]
+    decode_claims, _ = decode_guarantee_posture(sig)
+    return root, assemble_verdict(
+        root,
+        technique="T1078",  # Valid Accounts — one account concentrating all activity
+        confidence_evidence={root.id: Confidence.from_detector(True, pd=_PD, pfa=pfa)},
+        claims={**decode_claims, feat.id: Tier.WELL_FORMED, root.id: Tier.BOUNDED},
+        monitors={root.id: TRUE},
+        attestations={raw_src.id: _live_attestation(raw)},
+    )
+
+
+def test_hhi_cfar_fires_once_on_the_concentration_spike():
+    root, _ = _hhi_verdict()
+    assert root.value()["indices"].tolist() == [15], "the single-entity window is the detection"
+
+
+def test_hhi_cfar_verdict_conforms_to_the_pinned_schema():
+    """Concentration (HHI) — the mirror scenario to fan-out, one entity dominating — emits the same
+    canonical verdict through the same path."""
+    _, verdict = _hhi_verdict()
     jsonschema.validate(verdict.to_contract(), json.loads(_SCHEMA_PATH.read_text()))
     assert verdict.guarantee.tier == Tier.WELL_FORMED  # capped by the unverified feature + decode
     assert verdict.decision == TRUE and verdict.score > 0.0
