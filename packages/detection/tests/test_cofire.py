@@ -9,12 +9,24 @@ events and pin the catch-layer divergence. Two regimes:
   more labeled instances go uncaught. seed=1 is deterministic, so the counts are pinnable.
 """
 
+import pytest
+
 from detection.cofire import cofire, cofire_synth
+from detection.sigma_panel import SIGMA
 from detection.synth.emit import labeled_events
 from detection.synth.inventory import build_inventory
 from detection.synth.timeline import build_timeline
 
+# The cofire_synth tests fire the real Sigma rule bundle at the synth events, so they need the
+# vendored corpus (packages/semantic-cyber/data/sigma-rules) — gitignored, absent in CI / clean
+# checkouts. Skip when it isn't there, matching test_audit.py / test_atoms.py. (test_cofire_labels_
+# partition_events below needs no corpus and stays unguarded.)
+_needs_sigma = pytest.mark.skipif(
+    not SIGMA.exists(), reason="vendored Sigma corpus (semantic-cyber/data/sigma-rules) not present"
+)
 
+
+@_needs_sigma
 def test_single_variant_claim_exceeds_catch_with_disjoint_catchers():
     r = cofire_synth("T1558.003", seed=1, variants=("rubeus",))
     assert r["rules_evaluable"] >= 10
@@ -33,6 +45,7 @@ def test_single_variant_claim_exceeds_catch_with_disjoint_catchers():
     assert sum(r["silent_causes"].values()) == r["rules_evaluable"] - r["rules_catching"]
 
 
+@_needs_sigma
 def test_variant_diversity_surfaces_catcher_and_exposes_gaps():
     single = cofire_synth("T1558.003", seed=1, variants=("rubeus",))
     diverse = cofire_synth("T1558.003", seed=1, variants=("rubeus", "powershell", "setspn"))
@@ -51,6 +64,7 @@ def test_variant_diversity_surfaces_catcher_and_exposes_gaps():
     assert diverse["catchers_with_fps"] == []
 
 
+@_needs_sigma
 def test_no_downgrade_roast_is_invisible_to_every_signature_rule():
     """The hardest case: a purpose-built-rig attacker requests AES tickets (no RC4 downgrade) with a
     low-signal PowerView footprint. The whole RC4 detection family is blind and no tool-name rule matches,
