@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reading sift — the terms under the scanner</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --ink:#e6e8ee; --muted:#9aa3b2;
+    --line:#2a2f3a; --accent:#7db4ff; --accent2:#c79bff;
+    --good:#6fcf97; --warn:#f2c94c; --gap:#eb6f6f;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1080px;margin:0 auto;padding:48px 28px 96px}
+  h1{font-size:30px;margin:0 0 6px;letter-spacing:-.01em}
+  .sub{color:var(--muted);margin:0 0 4px;font-size:18px}
+  .stamp{color:var(--muted);font:13px/1.5 var(--mono);margin:0 0 32px}
+  h2{font-size:21px;margin:48px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+  h3{font-size:16px;margin:26px 0 6px;color:var(--accent2)}
+  p{margin:10px 0}
+  code{font-family:var(--mono);font-size:.88em;background:#1e222b;padding:1px 5px;border-radius:4px}
+  pre{background:#10131a;border:1px solid var(--line);border-radius:8px;padding:14px 16px;
+    overflow-x:auto;font-family:var(--mono);font-size:13px;line-height:1.55;color:#d4d9e4}
+  .note{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:8px;padding:14px 18px;margin:18px 0}
+  .note.gap{border-left-color:var(--gap)}
+  .note.key{border-left-color:var(--accent2)}
+  .note.good{border-left-color:var(--good)}
+  .muted{color:var(--muted)}
+  ul{margin:10px 0;padding-left:22px}
+  li{margin:7px 0}
+  strong{color:#fff}
+  table{border-collapse:collapse;width:100%;margin:18px 0;font-size:14px;background:var(--panel);
+    border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  th,td{text-align:left;padding:10px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#1c212b;color:var(--muted);font-weight:600;font-size:12px;
+    text-transform:uppercase;letter-spacing:.04em}
+  tr:last-child td{border-bottom:none}
+  td.k{font-weight:600;white-space:nowrap;color:var(--accent)}
+  .good{color:var(--good)} .gap{color:var(--gap)} .warn{color:var(--warn)}
+  .lede{font-size:17px}
+  .flag{font-family:var(--mono);font-size:12px;font-weight:700}
+  .flag.load{color:var(--warn)} .flag.mech{color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p style="font:13px/1.5 var(--mono,monospace);margin:0 0 22px"><a href="../index.html" style="color:#7db4ff;text-decoration:none">← Canon index</a></p>
+  <h1>Reading sift — the terms under the scanner</h1>
+  <p class="sub">A glossary to scrutinize what the code actually does, not that it runs.</p>
+  <p class="stamp">sift · <em>Impressions on Data Security Engineering</em> · a materialized sketch · <span class="muted">detect · score · decide</span></p>
+
+  <p class="lede"><strong>sift</strong> is a materialized sketch: an idea about data-security detection made concrete and
+  runnable, not a hardened product. It scans files for PII and secrets, and instead of thresholding each pattern match in
+  isolation it treats the scan as <strong>thousands of hypothesis tests at once</strong> — <em>is this match real, or a
+  coincidence?</em> — and controls the false-discovery rate across them. This page pins down the ~two-dozen load-bearing
+  terms in that pipeline so the mechanism can be scrutinized, not taken on faith.</p>
+
+  <div class="note">
+    <strong>Legend.</strong> <span class="flag load">⚠ load-bearing</span> — conceptually subtle; where a misunderstanding
+    or an overclaim would live. <span class="flag mech">○ mechanical</span> — just needs a crisp definition.
+  </div>
+
+  <h2>1 · The three layers</h2>
+  <p>Everything below hangs off one pipeline. Keeping the layers separate is the whole design — a detector is not a
+  decision, and a score is not a p-value.</p>
+  <pre>files → <b>detect</b> candidates (regex · checksum · entropy)
+      → <b>score</b> each: a coincidence statistic (base × context)
+      → <b>decide</b>: Benjamini–Hochberg over the scores, per document
+      → verdict + coverage (including what could not be read)</pre>
+  <p>The idea sift carries: <strong>detection, evidence-scoring, and the global decision are three separable things.</strong>
+  A regex finds candidates; a coincidence score ranks them; a multiple-testing procedure decides which survive. Swap any
+  layer without touching the others.</p>
+
+  <h2>2 · Monte-Carlo, permutation, Phipson–Smyth — untangled</h2>
+  <div class="note key">
+    <p style="margin-top:0"><strong>Are we permuting p-values? No — and that phrase hides three separate ideas.</strong></p>
+    <ul>
+      <li><strong>Monte-Carlo null.</strong> To know how a statistic behaves <em>by chance</em>, you need its distribution
+        under H₀. Rather than derive it with math, you <em>sample</em> it: draw many null examples, compute the statistic on
+        each. In sift the <strong>benign corpus is the sampler</strong> — every detector firing on benign data is one draw of
+        the statistic under "this is a coincidence."</li>
+      <li><strong>Permutation null</strong> is a <em>special case</em> of a Monte-Carlo null where the null draws come from
+        <em>shuffling the labels</em> of real data (valid because, under H₀, the labels are exchangeable). sift has no labels
+        to shuffle — it samples a benign population instead. Same family, different null-generating mechanism.</li>
+      <li><strong>Phipson–Smyth</strong> is not "the permutation method." It is a one-line correction for turning <em>any</em>
+        finite empirical null into a p-value. The naive estimate <code>b/N</code> (fraction of null draws at least as extreme)
+        is biased and can hit <strong>0</strong> — an invalid p-value, because you merely failed to sample far enough into the
+        tail. The fix is <code>(b+1)/(N+1)</code>. That <code>+1</code> is the whole content, and it is exactly
+        <code>NullModel.pvalue</code>: <code>(1 + #{T_null ≤ t}) / (1 + N)</code>.</li>
+    </ul>
+    <p style="margin-bottom:0">So: sift does a <strong>sampled (Monte-Carlo) empirical null, not a permutation</strong>, and
+    borrows Phipson–Smyth's <code>+1</code> because it applies to any finite null. The sampling happens on the <em>data</em>,
+    to build the null distribution of the <em>statistic</em>; the p-value is read off only at the end. Nothing shuffles
+    p-values.</p>
+  </div>
+  <p>One knot lives right here: the test statistic <code>T</code> sift calibrates <em>is itself</em> the heuristic
+  "p-value" (<code>base × context</code>). So two objects both look p-ish — the heuristic score (a ranking statistic, not
+  valid) and the calibrated empirical p-value (the valid one). Keep them distinct.</p>
+
+  <h2>3 · The glossary</h2>
+
+  <h3>The decision layer — statistics</h3>
+  <table>
+    <thead><tr><th>Term</th><th></th><th>What it is · why it matters · where it lives</th></tr></thead>
+    <tbody>
+      <tr><td class="k">p-value</td><td><span class="flag load">⚠</span></td>
+        <td>P(a statistic at least this extreme | H₀ true). sift's heuristic <code>base × context</code> scores are
+          <em>not</em> this; the calibrated empirical ones are. <span class="muted">sits.py / calibrate.py</span></td></tr>
+      <tr><td class="k">null hypothesis H₀</td><td><span class="flag load">⚠</span></td>
+        <td>Here: "this match is a coincidence, not real sensitive data." Everything is defined <em>relative</em> to it —
+          change H₀ and every p-value changes.</td></tr>
+      <tr><td class="k">super-uniform / valid p-value</td><td><span class="flag load">⚠</span></td>
+        <td><code>P(p ≤ α | H₀) ≤ α</code> for every α. The property Benjamini–Hochberg <em>requires</em>; correct ordering
+          alone does not supply it. This is the crux of the whole calibration. <span class="muted">proven in
+          test_calibrate.py</span></td></tr>
+      <tr><td class="k">FDR — false discovery rate</td><td><span class="flag load">⚠</span></td>
+        <td>Expected fraction of your <em>flagged</em> items that are wrong: <code>E[FP / (FP+TP)]</code>. What BH controls.
+          Not the same as flagging accuracy overall.</td></tr>
+      <tr><td class="k">FWER</td><td><span class="flag mech">○</span></td>
+        <td>Probability of <em>any</em> false flag; what Bonferroni controls. Stricter and less useful at scale — contrast
+          only, sift does not use it.</td></tr>
+      <tr><td class="k">Benjamini–Hochberg step-up</td><td><span class="flag load">⚠</span></td>
+        <td>Sort p ascending; find the largest rank <code>k</code> with <code>p₍ₖ₎ ≤ (k/m)·q</code>; flag all up to
+          <code>k</code>. The procedure itself. <span class="muted">stats.py</span></td></tr>
+      <tr><td class="k">q — the FDR level</td><td><span class="flag mech">○</span></td>
+        <td>The target false-discovery rate you set (0.05). The one dial on the decision.</td></tr>
+      <tr><td class="k">test statistic (T)</td><td><span class="flag load">⚠</span></td>
+        <td>The scalar you rank and threshold on. sift <em>reuses the heuristic score</em> as <code>T</code> — smaller =
+          stronger evidence — then recalibrates it. <span class="muted">calibrate.py</span></td></tr>
+      <tr><td class="k">multiple testing</td><td><span class="flag load">⚠</span></td>
+        <td>Thousands of simultaneous tests inflate false positives (test enough coincidences and some clear any fixed
+          bar). The reason BH exists at all.</td></tr>
+      <tr><td class="k">empirical / Monte-Carlo null</td><td><span class="flag load">⚠</span></td>
+        <td>The null distribution of <code>T</code>, estimated by sampling a benign population rather than by formula.
+          <span class="muted">calibrate.py: synth_benign → build_null</span></td></tr>
+      <tr><td class="k">Phipson–Smyth <code>+1</code></td><td><span class="flag load">⚠</span></td>
+        <td><code>(b+1)/(N+1)</code> — the finite-sample correction so an empirical p-value is never 0 (§2).
+          <span class="muted">NullModel.pvalue</span></td></tr>
+      <tr><td class="k">empirical CDF / <code>bisect_right</code></td><td><span class="flag mech">○</span></td>
+        <td>The mechanic that counts <code>#{T_null ≤ t}</code> against the sorted null — the fraction of benign firings at
+          least as sensitive.</td></tr>
+      <tr><td class="k">per-document vs estate-wide FDR</td><td><span class="flag load">⚠</span></td>
+        <td>BH's threshold is <code>(k/m)·q</code>; pool the whole estate and <code>m</code> explodes, so <code>q/m → 0</code>
+          and nothing survives at scale (155k files → zero). sift controls FDR <em>per file</em>. <span class="muted">scan.py</span></td></tr>
+      <tr><td class="k">π₀ (true-null proportion)</td><td><span class="flag load">⚠</span></td>
+        <td>Fraction of tests that are genuinely null. BH's <em>actual</em> FDR is <code>π₀·q ≤ q</code>, so π₀ says how
+          conservative it really is. Not computed yet — see §5.</td></tr>
+      <tr><td class="k">PRDS / independence</td><td><span class="flag load">⚠</span></td>
+        <td>BH's proof assumes the p-values are independent or positively dependent (PRDS). Candidates within one document may
+          be neither — an assumption worth examining, not assuming.</td></tr>
+      <tr><td class="k">precision · recall · TP/FP/FN</td><td><span class="flag mech">○</span></td>
+        <td>Recall = caught / (caught + missed real). Precision = right / (right + false alarm). FDR tightening trades recall
+          down for precision up.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>The measurement layer — information theory</h3>
+  <table>
+    <thead><tr><th>Term</th><th></th><th>What it is · why it matters · where it lives</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Shannon entropy (bits/char)</td><td><span class="flag load">⚠</span></td>
+        <td><code>−Σ p_c log₂ p_c</code> over the string's own character frequencies — the <em>detector</em> for
+          secret-shaped tokens. Caveat: for short strings it approaches <code>log₂(length)</code> regardless of alphabet, so
+          it cannot tell a 9-digit SSN from a 9-char key — hence the length floor. <span class="muted">stats.py</span></td></tr>
+      <tr><td class="k">KL divergence · mutual information</td><td><span class="flag mech">○</span></td>
+        <td>Named in the <code>forge_core</code> lineage but <strong>not used in sift</strong> — flagged only so they are not
+          assumed to be in play here.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>The detectors — domain validators</h3>
+  <table>
+    <thead><tr><th>Term</th><th></th><th>What it is · why it matters · where it lives</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Luhn checksum</td><td><span class="flag load">⚠</span></td>
+        <td>The mod-10 check on payment-card numbers (double every second digit from the right, sum, total ≡ 0 mod 10). About
+          <strong>1 in 10</strong> random numbers pass — which is <em>why</em> a card's <code>base = 0.1</code>.
+          <span class="muted">sits.py: luhn_ok</span></td></tr>
+      <tr><td class="k">SSN structural validity</td><td><span class="flag load">⚠</span></td>
+        <td>Area / group / serial <em>range</em> rules (area not 000/666/900–999, group not 00, serial not 0000) — <em>not</em>
+          a checksum. Roughly <strong>77%</strong> of random 9-digit strings pass, so a bare SSN is weak evidence:
+          <code>base = 0.77</code>. <span class="muted">sits.py: ssn_structural_ok</span></td></tr>
+      <tr><td class="k">entropy floor + length floor</td><td><span class="flag mech">○</span></td>
+        <td>A token must clear both (≥ 20 chars, ≥ 4.0 bits/char) before the secret detector considers it — the guard around
+          the short-string caveat above.</td></tr>
+      <tr><td class="k">secret prefixes</td><td><span class="flag mech">○</span></td>
+        <td><code>sk_</code>, <code>AKIA</code>, <code>ghp_</code>, <code>-----BEGIN</code>… — the discriminator separating a
+          real key (<code>base 0.02</code>) from an ordinary high-entropy token (<code>base 0.3</code>).</td></tr>
+      <tr><td class="k">context factor / window</td><td><span class="flag load">⚠</span></td>
+        <td>Multiplies a score <em>down</em> (×0.02) when a type keyword ("ssn", "card number", "api key") sits within 40
+          chars. The <code>keyword_rate</code> fragility — how often that proximity happens <em>by chance</em> — lives here.
+          <span class="muted">sits.py / calibrate.py</span></td></tr>
+      <tr><td class="k"><code>base × context</code></td><td><span class="flag load">⚠</span></td>
+        <td>sift's coincidence-p-value model: structural coincidence rate (<code>base</code>) times contextual evidence
+          (<code>context</code>). Sound as an <em>ordering</em>; only a real p-value after calibration (§4).</td></tr>
+    </tbody>
+  </table>
+
+  <h2>4 · The p-values are relative to the corpus</h2>
+  <div class="note key">
+    <p style="margin-top:0">An empirical p-value only means <em>"how often a coincidence <strong>in this population</strong>
+    looks at least this sensitive."</em> And coincidences differ by corpus:</p>
+    <ul>
+      <li>a <strong>source repo</strong> is full of git SHAs, UUIDs, base64 blobs;</li>
+      <li>a <strong>legal archive</strong> is case numbers and dates;</li>
+      <li>a <strong>database export</strong> is sequential IDs and foreign keys.</li>
+    </ul>
+    <p style="margin-bottom:0">So the calibrated p-values — and therefore which findings survive BH — <strong>depend on the
+    estate being scanned.</strong> The shipped synthetic null is a <em>generic</em> model of "structured benign tokens"; for
+    the FDR bound to hold on a given scan, the null should be built from a benign slice of <em>that same estate</em>
+    (<code>sift calibrate --corpus …</code>, read locally, never committed). Validity is relative to how well the calibration
+    population matches the scanned one — that relativity is the point, not a caveat.</p>
+  </div>
+  <p>This is what "materialized sketch" means precisely: the <strong>mechanism</strong> is concrete and runnable, but the
+  <strong>numbers</strong> are only as real as the calibration corpus. The rung-2 synthetic default demonstrates the
+  machinery; rung 3 (a per-estate null) is the version whose bound you would actually trust.</p>
+
+  <h2>5 · The sketch — measuring the p-values BH consumes</h2>
+  <p>The natural next study is to <strong>diagnose the distribution of the p-values feeding BH</strong>, rather than assert
+  it is well-behaved. What that would contain:</p>
+  <ul>
+    <li><strong>The p-value histogram.</strong> Under a valid setup, true nulls are Uniform(0,1). So on benign data the
+      histogram should be flat; on mixed data it should be a flat floor (nulls) plus a spike near 0 (true positives). The
+      <em>shape is the diagnostic</em> — a non-flat null floor means the p-values are miscalibrated.</li>
+    <li><strong>Estimate π₀</strong> from the flat part of that histogram. Because BH's real FDR is <code>π₀·q</code>, π₀ tells
+      you how much headroom you actually have (and lets you sharpen to an adaptive/Storey procedure if wanted).</li>
+    <li><strong>The BH plot.</strong> Plot sorted <code>p₍ₖ₎</code> against the line <code>(k/m)·q</code>; the crossing point
+      <em>is</em> the decision. Seeing it shows how stable the threshold is — whether one candidate moving flips the cut.</li>
+    <li><strong>The calibration curve.</strong> Generalize the existing super-uniformity test into a curve: empirical
+      <code>P(p ≤ α)</code> versus α on held-out benign data. On the diagonal or below = valid; above = anti-conservative.</li>
+    <li><strong>The dependence question (PRDS).</strong> Measure whether candidates within a document are independent enough
+      for BH's guarantee, or whether the per-document pooling needs a dependence-robust variant (Benjamini–Yekutieli).</li>
+  </ul>
+  <div class="note">
+    <p style="margin:0">These are all <em>measurements of the mechanism</em>, computed on synthetic or local data — the same
+    discipline as the rest of sift: state the property, then check it, rather than claim it.</p>
+  </div>
+
+  <p class="stamp" style="margin-top:40px">sift is Apache-2.0 · <a href="https://github.com/adelic-ai/sift" style="color:#7db4ff;text-decoration:none">github.com/adelic-ai/sift</a> · the scan of any real data stays local and never touches git.</p>
+</div>
+</body>
+</html>

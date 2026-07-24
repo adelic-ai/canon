@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canon — The Sigma rule lattice: what the corpus actually looks like</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --ink:#e6e8ee; --muted:#9aa3b2;
+    --line:#2a2f3a; --accent:#7db4ff; --accent2:#c79bff;
+    --good:#6fcf97; --warn:#f2c94c; --gap:#eb6f6f;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1080px;margin:0 auto;padding:48px 28px 96px}
+  h1{font-size:30px;margin:0 0 6px;letter-spacing:-.01em}
+  .sub{color:var(--muted);margin:0 0 4px;font-size:18px}
+  .stamp{color:var(--muted);font:13px/1.5 var(--mono);margin:0 0 32px}
+  h2{font-size:21px;margin:48px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+  h3{font-size:16px;margin:26px 0 6px;color:var(--accent2)}
+  p{margin:10px 0}
+  code{font-family:var(--mono);font-size:.88em;background:#1e222b;padding:1px 5px;border-radius:4px}
+  pre{background:#10131a;border:1px solid var(--line);border-radius:8px;padding:14px 16px;
+    overflow-x:auto;font-family:var(--mono);font-size:13px;line-height:1.55;color:#d4d9e4}
+  .note{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:8px;padding:14px 18px;margin:18px 0}
+  .note.gap{border-left-color:var(--gap)}
+  .note.key{border-left-color:var(--accent2)}
+  .note.good{border-left-color:var(--good)}
+  .muted{color:var(--muted)}
+  ul{margin:10px 0;padding-left:22px}
+  li{margin:7px 0}
+  strong{color:#fff}
+  table{border-collapse:collapse;width:100%;margin:18px 0;font-size:14px;background:var(--panel);
+    border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  th,td{text-align:left;padding:10px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#1c212b;color:var(--muted);font-weight:600;font-size:12px;
+    text-transform:uppercase;letter-spacing:.04em}
+  tr:last-child td{border-bottom:none}
+  td.k{font-weight:600;white-space:nowrap;color:var(--accent)}
+  td.n{font-family:var(--mono);text-align:right;white-space:nowrap}
+  .good{color:var(--good)} .gap{color:var(--gap)} .warn{color:var(--warn)}
+  .lede{font-size:17px}
+  .fam{color:var(--accent);font-weight:600}
+  .var{color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p style="font:13px/1.5 var(--mono,monospace);margin:0 0 22px"><a href="../index.html" style="color:#7db4ff;text-decoration:none">← Canon index</a></p>
+  <h1>The Sigma rule lattice — what the corpus actually looks like</h1>
+  <p class="sub">Not clean categories. A graded relation graph: a few true synonyms, a thin subsumption skeleton, and a dense web of loose overlap.</p>
+  <p class="stamp">canon · result · 2026-06-20 · <span class="muted">333 structured rules · T1003.001 + T1547.001 + T1059.001 · the SKOS-graded rule lattice</span></p>
+
+  <p class="lede">The flat field-set "FCA" key grouped rules into "concepts" by which fields they read — and
+  <em>over-collapsed</em>, folding value-distinct detections into one. The content-aware <strong>SKOS-graded
+  lattice</strong> instead relates every pair by what it <em>matches</em>: <code>exactMatch</code> (true synonym),
+  <code>broadMatch</code>/<code>narrowMatch</code> (subsumption — a navigable order), <code>relatedMatch</code>
+  (overlap, IDF-graded). Run over 333 structured rules across three techniques, here is what the corpus
+  <em>actually</em> is.</p>
+
+  <h2>The shape — dedup is rare; structure is graded overlap</h2>
+  <table>
+    <thead><tr><th>Relation</th><th>SKOS</th><th class="n">edges</th><th>meaning</th></tr></thead>
+    <tbody>
+      <tr><td class="k">exact</td><td><code>skos:exactMatch</code></td><td class="n">1</td>
+        <td>true synonym — identical matching content AND structure (the <em>only</em> real dedup, below)</td></tr>
+      <tr><td class="k">close</td><td><code>skos:closeMatch</code></td><td class="n">1</td>
+        <td>same clauses, <em>different composition</em> (an OR/structure difference) — near-synonym, not exact</td></tr>
+      <tr><td class="k">broader</td><td><code>skos:broadMatch</code></td><td class="n">17</td>
+        <td>a general rule subsumes a stricter one</td></tr>
+      <tr><td class="k">narrower</td><td><code>skos:narrowMatch</code></td><td class="n">5</td>
+        <td>the stricter side of the same relation</td></tr>
+      <tr><td class="k gap">related</td><td><code>skos:relatedMatch</code></td><td class="n">633</td>
+        <td>share a clause or two, neither subsumes — <strong>96% of all edges</strong>, IDF-tightness median 0.14 (uniformly <em>loose</em>)</td></tr>
+    </tbody>
+  </table>
+  <div class="note key">
+    <strong>The headline finding.</strong> Of 657 relations, only <strong>1 is a true synonym</strong> and
+    ~22 are subsumption; the other <strong>633 are loose overlap.</strong> So the corpus does <em>not</em>
+    partition into clean categories — it's a web of rules that share a clause but each detect something
+    distinct. The flat field-set key would have collapsed much of that 633 into "equivalence classes" by
+    shared fields — <em>conflating overlap with equivalence.</em> The graded lattice is what tells them apart.
+    (<code>exactMatch</code> is structure-aware: it requires identical composition, not just identical clauses —
+    so the one pair that shares clauses but composes them differently is <code>closeMatch</code>, not a synonym.)
+  </div>
+
+  <h2>Categories that genuinely exist (1) — subsumption families</h2>
+  <p>The meaningful "category → members" mapping: a <span class="fam">general rule</span> and the
+  <span class="var">stricter variants</span> that narrow it by adding a specific malicious marker. The general
+  rule is the concept; each variant is a specialization (its matches ⊆ the general's).</p>
+  <table>
+    <thead><tr><th>General rule (the category)</th><th>Stricter variants (members)</th></tr></thead>
+    <tbody>
+      <tr><td class="fam">Non Interactive PowerShell Process Spawned</td>
+        <td class="var">ConvertTo-SecureString Cmdlet Usage · Exchange PowerShell Snap-Ins Usage ·
+          HackTool — CrackMapExec PowerShell Obfuscation · Invocation of Crypto-Classes from "Cryptography" ·
+          Malicious Base64-Encoded PowerShell Keywords … <span class="muted">(non-interactive PowerShell, each
+          narrowed by a specific command marker)</span></td></tr>
+      <tr><td class="fam">Remote Thread Creation Via PowerShell</td>
+        <td class="var">Potential Credential Dumping Attempt Via PowerShell · …Remote Thread · Remote Thread
+          Creation in Uncommon Target</td></tr>
+      <tr><td class="fam">Scheduled Task Executing Payload from Registry</td>
+        <td class="var">Scheduled Task Executing <em>Encoded</em> Payload from Registry</td></tr>
+      <tr><td class="fam">DumpMinitool Execution</td>
+        <td class="var">Suspicious DumpMinitool Execution</td></tr>
+    </tbody>
+  </table>
+  <div class="note good">
+    These read exactly right: <em>"non-interactive PowerShell"</em> is the broad surface, and each variant
+    pins a specific abuse (base64, CrackMapExec, crypto-classes). Firing strategy falls out of the order —
+    fire the <em>specific</em> variant for precision; the <em>general</em> rule is the recall fallback.
+  </div>
+
+  <h2>The edges as text — the subsumption forest</h2>
+  <p>The 22 subsumption edges form a small <strong>forest</strong> (a partial order, drawn as an ASCII tree:
+  parent ⊃ child means the parent's matches contain the child's; <code>t</code> = IDF-tightness, how much
+  information the shared clauses carry). The 633 <code>relatedMatch</code> edges are <em>not</em> drawn — they
+  are a dense web, not a tree; rendering them as text would be 633 unordered lines. This forest is the entire
+  navigable skeleton of the corpus.</p>
+  <pre>Non Interactive PowerShell Process Spawned          ·  the broad surface (18 specializations)
+├─ ConvertTo-SecureString Cmdlet Usage Via CommandLine            t=0.48
+├─ HackTool - CrackMapExec PowerShell Obfuscation                 t=0.48
+├─ Potential WMI Lateral Movement WmiPrvSE Spawned PowerShell     t=0.48
+├─ Potential Powershell ReverseShell Connection                   t=0.48
+├─ Net WebClient Casing Anomalies                                 t=0.48
+├─ Potential PowerShell Obfuscation Via Reversed Commands         t=0.48
+├─ PowerShell Base64 Encoded Invoke Keyword                       t=0.33
+├─ Invocation Of Crypto-Classes From The "Cryptography" …        t=0.32
+├─ Exchange PowerShell Snap-Ins Usage                             t=0.32
+├─ Malicious Base64 Encoded PowerShell Keywords in Command Lines  t=0.32
+├─ Unusually Long PowerShell CommandLine                          t=0.25
+├─ Suspicious Encoded PowerShell Command Line                     t=0.24
+├─ Suspicious XOR Encoded PowerShell Command                      t=0.20
+├─ Potential Encoded PowerShell Patterns In CommandLine           t=0.19
+├─ Potential PowerShell Command Line Obfuscation                  t=0.19
+├─ Suspicious PowerShell Parent Process                           t=0.17
+├─ PowerShell Base64 Encoded WMI Classes                          t=0.16
+└─ (each child narrows the surface with one specific marker)
+
+Remote Thread Creation Via PowerShell               ·  injection surface
+├─ Potential Credential Dumping Attempt Via PowerShell            t=0.59
+└─ Remote Thread Creation Via PowerShell In Uncommon Target       t=0.43
+
+DumpMinitool Execution                              ·  tool surface
+└─ Suspicious DumpMinitool Execution                              t=0.72
+
+Scheduled Task Executing Payload from Registry      ·  persistence surface
+└─ Scheduled Task Executing Encoded Payload from Registry         t=0.81</pre>
+  <div class="note">
+    Two readings fall out of the <code>t</code> column. The <em>PowerShell-spawned</em> hub has uniformly
+    <strong>low</strong> tightness (0.16–0.48): its children share only the generic
+    "non-interactive PowerShell" clause and each adds a high-information marker — a wide, shallow surface. The
+    two small pairs (<em>DumpMinitool</em> 0.72, <em>Scheduled-Task</em> 0.81) are <strong>tight</strong>: the
+    specific rule is the general one plus one word ("Suspicious", "Encoded") — near-duplicates that just barely
+    avoid <code>exactMatch</code>.
+  </div>
+
+  <h2>The rules in the structured edges — titles &amp; IDs</h2>
+  <p>The 28 rules that participate in a <code>broad</code>/<code>narrow</code>/<code>exact</code> edge (the
+  navigable structure; the other ~305 sit only in the <code>related</code> web). IDs are the SigmaHQ rule
+  UUIDs (8-char prefix), so each row is checkable against the upstream corpus.</p>
+  <table>
+    <thead><tr><th>ID</th><th>Sigma rule title</th><th>role in the forest</th></tr></thead>
+    <tbody>
+      <tr><td class="n">f4bbd493</td><td>Non Interactive PowerShell Process Spawned</td><td class="fam">root (18 children)</td></tr>
+      <tr><td class="n">eeb2e3dc</td><td>Remote Thread Creation Via PowerShell</td><td class="fam">root (2 children)</td></tr>
+      <tr><td class="n">86588b36</td><td>Scheduled Task Executing Payload from Registry</td><td class="fam">root (1 child)</td></tr>
+      <tr><td class="n">dee0a7a3</td><td>DumpMinitool Execution</td><td class="fam">root (1 child)</td></tr>
+      <tr><td class="n">74403157</td><td>ConvertTo-SecureString Cmdlet Usage Via CommandLine</td><td class="var">variant</td></tr>
+      <tr><td class="n">25676e10</td><td>Exchange PowerShell Snap-Ins Usage</td><td class="var">variant</td></tr>
+      <tr><td class="n">6f8b3439</td><td>HackTool - CrackMapExec PowerShell Obfuscation</td><td class="var">variant</td></tr>
+      <tr><td class="n">ad856965</td><td>Invocation Of Crypto-Classes From The "Cryptography" Namespace</td><td class="var">variant</td></tr>
+      <tr><td class="n">f26c6093</td><td>Malicious Base64 Encoded PowerShell Keywords in Command Lines</td><td class="var">variant</td></tr>
+      <tr><td class="n">c86133ad</td><td>Net WebClient Casing Anomalies</td><td class="var">variant</td></tr>
+      <tr><td class="n">cdf05894</td><td>Potential Encoded PowerShell Patterns In CommandLine</td><td class="var">variant</td></tr>
+      <tr><td class="n">d7bcd677</td><td>Potential PowerShell Command Line Obfuscation</td><td class="var">variant</td></tr>
+      <tr><td class="n">b6b49cd1</td><td>Potential PowerShell Obfuscation Via Reversed Commands</td><td class="var">variant</td></tr>
+      <tr><td class="n">edc2f8ae</td><td>Potential Powershell ReverseShell Connection</td><td class="var">variant</td></tr>
+      <tr><td class="n">692f0bec</td><td>Potential WMI Lateral Movement WmiPrvSE Spawned PowerShell</td><td class="var">variant</td></tr>
+      <tr><td class="n">6385697e</td><td>PowerShell Base64 Encoded Invoke Keyword</td><td class="var">variant</td></tr>
+      <tr><td class="n">1816994b</td><td>PowerShell Base64 Encoded WMI Classes</td><td class="var">variant</td></tr>
+      <tr><td class="n">ca2092a1</td><td>Suspicious Encoded PowerShell Command Line</td><td class="var">variant</td></tr>
+      <tr><td class="n">754ed792</td><td>Suspicious PowerShell Parent Process</td><td class="var">variant</td></tr>
+      <tr><td class="n">bb780e0c</td><td>Suspicious XOR Encoded PowerShell Command</td><td class="var">variant</td></tr>
+      <tr><td class="n">d0d28567</td><td>Unusually Long PowerShell CommandLine</td><td class="var">variant</td></tr>
+      <tr><td class="n">99b97608</td><td>Remote Thread Creation Via PowerShell In Uncommon Target</td><td class="var">variant</td></tr>
+      <tr><td class="n">c4eeeeae</td><td>Scheduled Task Executing Encoded Payload from Registry</td><td class="var">variant</td></tr>
+      <tr><td class="n">eb1c4225</td><td>Suspicious DumpMinitool Execution</td><td class="var">variant</td></tr>
+      <tr><td class="n">58cb02d5</td><td>Alternate PowerShell Hosts Pipe</td><td>closeMatch (same clauses, diff structure)</td></tr>
+      <tr><td class="n">ac7102b4</td><td>New PowerShell Instance Created</td><td>closeMatch (same clauses, diff structure)</td></tr>
+      <tr><td class="n">0f920ebe</td><td>Potential Credential Dumping Attempt Via PowerShell</td><td>exactMatch class</td></tr>
+      <tr><td class="n">fb656378</td><td>Potential Credential Dumping Attempt Via PowerShell Remote Thread</td><td>exactMatch class</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Categories that genuinely exist (2) — the true synonym (the only real dedup)</h2>
+  <table>
+    <thead><tr><th class="n">#</th><th>exactMatch class — identical matching content AND composition, different rule</th></tr></thead>
+    <tbody>
+      <tr><td class="n">1</td><td>Potential Credential Dumping Attempt Via PowerShell &nbsp;≡&nbsp; …Via PowerShell Remote Thread</td></tr>
+    </tbody>
+  </table>
+  <p class="muted">One pair out of 333 rules. "Dedup" — the thing the flat key claimed lots of — is almost
+  nonexistent at the content level. The previously-counted second pair (<em>Alternate PowerShell Hosts Pipe</em>
+  / <em>New PowerShell Instance Created</em>) is now <code>closeMatch</code>, not exact: they share clauses but
+  compose them differently, and structure-aware <code>exactMatch</code> no longer calls that a synonym.</p>
+
+  <h2>What the result means</h2>
+  <ul>
+    <li><strong>The corpus is a graph, not a partition.</strong> 96% of relations are loose overlap, so
+      "categorize Sigma" is the wrong frame — the lattice <em>relates</em>, it doesn't <em>cluster</em>. The
+      product is the relation graph (emitted as a <a href="../semantic/intermediate_representation.html">SKOS RDF
+      graph</a>: <code>SELECT ?a ?b WHERE { ?a skos:broadMatch ?b }</code> for the subsumption skeleton).</li>
+    <li><strong>The subsumption families are the actionable structure</strong> — general surface + stricter
+      variants; the order tells you which to fire for precision vs recall.</li>
+    <li><strong>This is all <em>structural</em> (what rules match), not <em>behavioral</em> (what they
+      catch).</strong> Two rules can be lattice-"related" yet catch totally different instances, or
+      lattice-disjoint yet catch the same attack via different fields. The <strong>catch-set</strong>
+      grounding (run rules over labeled telemetry, group by co-caught instances) is what would
+      <em>correct</em> these edges — the keystone, gated on labeled data.</li>
+  </ul>
+
+  <div class="note">
+    <strong>One line.</strong> Across 333 rules the corpus is 1 synonym, ~22 subsumption pairs, and 633 loose
+    overlaps — so Sigma doesn't dedup into categories; it forms a graded relation graph whose only clean
+    structure is the subsumption families (general rule → stricter variants), and whose true grouping awaits
+    catch-set grounding.
+  </div>
+</div>
+</body>
+</html>

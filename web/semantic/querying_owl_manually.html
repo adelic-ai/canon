@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canon — Querying OWL manually</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --ink:#e6e8ee; --muted:#9aa3b2;
+    --line:#2a2f3a; --accent:#7db4ff; --accent2:#c79bff;
+    --good:#6fcf97; --warn:#f2c94c; --gap:#eb6f6f;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1000px;margin:0 auto;padding:48px 28px 96px}
+  .backlink{font:13px/1.5 var(--mono);margin:0 0 22px}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  h1{font-size:29px;margin:0 0 6px;letter-spacing:-.01em}
+  .sub{color:var(--muted);margin:0 0 4px;font-size:17px}
+  .stamp{color:var(--muted);font:13px/1.5 var(--mono);margin:0 0 30px}
+  h2{font-size:21px;margin:46px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+  h3{font-size:16px;margin:24px 0 6px;color:var(--accent)}
+  p{margin:11px 0}
+  code{font-family:var(--mono);font-size:.88em;background:#1e222b;padding:1px 5px;border-radius:4px}
+  strong{color:#fff}
+  .lede{font-size:18px;line-height:1.55}
+  .note{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:8px;padding:14px 18px;margin:20px 0}
+  .note.key{border-left-color:var(--accent2)}
+  .note.gap{border-left-color:var(--gap)}
+  ul,ol{margin:12px 0;padding-left:22px}
+  li{margin:7px 0}
+  pre{background:#0c0e13;border:1px solid var(--line);border-radius:8px;padding:14px 16px;
+    overflow-x:auto;font:13px/1.55 var(--mono);margin:14px 0}
+  pre .c{color:var(--muted)}            /* comment */
+  pre .k{color:var(--accent2)}          /* keyword / SPARQL verb */
+  pre .s{color:var(--good)}             /* string / literal */
+  pre .o{color:var(--ink)}              /* output */
+  .out{border-left-color:var(--good)}
+  footer{margin-top:60px;color:var(--muted);font-size:13px;border-top:1px solid var(--line);padding-top:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="backlink"><a href="../index.html">← Canon index</a></p>
+
+  <h1>Querying OWL manually</h1>
+  <p class="sub">An OWL ontology in a file is just RDF triples. There are two acts: query what's <em>written</em>, and query what <em>follows</em>.</p>
+  <p class="stamp">canon · hands-on · 2026-06-10 · runnable: design/probes/d3fend/query_d3fend.py · data: packages/semantic-cyber/data/d3fend.ttl (45,139 triples)</p>
+
+  <p class="lede">All output below is verified against canon's real D3FEND ontology — not illustrative.
+  The one finding that justifies doing this by hand: <code>d3f:ServiceTicket</code> does not exist
+  (the notes and a test fixture both referenced it); the real class is <code>d3f:KerberosTicket</code>.
+  You catch that in one query; you'd never catch it by trusting the prose.</p>
+
+  <h2>The one thing to internalize: OWL-in-a-file is just triples</h2>
+  <p>A <code>.ttl</code> is a pile of <code>(subject, predicate, object)</code> statements. There is
+  no magic "OWL object" — the OWL <em>axioms</em> are themselves ordinary triples that happen to use
+  <code>owl:</code> / <code>rdfs:</code> predicates. So "querying OWL" splits into two genuinely
+  different acts:</p>
+  <ul>
+    <li><strong>Query IT</strong> — look at the triples that are <em>written down</em> (SPARQL / direct lookups).</li>
+    <li><strong>Query THROUGH it</strong> — follow <code>subClassOf</code> / restriction <em>paths</em>,
+      or run a <em>reasoner</em> to get triples that <em>logically follow</em> but aren't written.</li>
+  </ul>
+  <p>That distinction is the whole game. Most of what you want is the second.</p>
+
+  <h2>Querying IT — SPARQL over the asserted triples</h2>
+  <p>The tool is <code>rdflib</code>. Load the graph, run SPARQL:</p>
+  <pre><span class="k">import</span> rdflib
+g = rdflib.Graph(); g.parse(<span class="s">"packages/semantic-cyber/data/d3fend.ttl"</span>, format=<span class="s">"turtle"</span>)
+
+g.query(<span class="s">'''PREFIX d3f: &lt;http://d3fend.mitre.org/ontologies/d3fend.owl#&gt;
+           PREFIX rdfs:&lt;http://www.w3.org/2000/01/rdf-schema#&gt;
+           <span class="k">SELECT</span> ?c <span class="k">WHERE</span> { ?c rdfs:subClassOf d3f:DigitalArtifact }'''</span>)</pre>
+  <pre class="note out"><span class="c"># DigitalInformation
+# DigitalInformationBearer        &larr; only 2: the taxonomy is DEEP, not WIDE</span></pre>
+  <p><code>SELECT … WHERE { triple patterns }</code> with <code>?vars</code> is the bread and butter.
+  <code>ASK { … }</code> returns a boolean ("does this relation hold?"). That is the
+  <em>one-hop, literal</em> reading — what's directly stated.</p>
+
+  <h2>Querying THROUGH it — three mechanisms, in rising power</h2>
+
+  <h3>1. Property paths — transitivity without a reasoner</h3>
+  <p>Append <code>+</code> (one-or-more) or <code>*</code> (zero-or-more) to a predicate and SPARQL
+  walks the chain for you:</p>
+  <pre><span class="k">SELECT</span> ?s <span class="k">WHERE</span> { d3f:KerberosTicket rdfs:subClassOf<span class="k">+</span> ?s }</pre>
+  <pre class="note out"><span class="c"># -> AccessToken -> Credential -> DigitalInformationBearer
+#    -> DigitalArtifact -> Artifact -> D3FENDCore</span></pre>
+  <p>This is the subsumption reasoning the <code>d3fend.py</code> walker does by hand — and it's what
+  makes the join work: a defense that <code>monitors Credential</code> covers a stolen
+  <code>KerberosTicket</code> <em>because</em> <code>KerberosTicket subClassOf+ Credential</code>.
+  Confirm it with <code>ASK</code>:</p>
+  <pre><span class="k">ASK</span> { d3f:KerberosTicket rdfs:subClassOf<span class="k">+</span> d3f:Credential }   <span class="c"># -> True</span>
+<span class="c"># sanity: does d3f:ServiceTicket exist at all?            -> False</span></pre>
+
+  <h3>2. Walking into restrictions — the actual meat of OWL</h3>
+  <p>The interesting content isn't <code>subClassOf</code> between named classes — it's the
+  <strong><code>owl:Restriction</code></strong> blank nodes. "T1003.001 accesses a Process" is encoded as:</p>
+  <pre><span class="o">&lt;T1003.001-class&gt;</span> rdfs:subClassOf [ <span class="k">a</span> owl:Restriction ;
+                                  owl:onProperty     d3f:accesses ;
+                                  owl:someValuesFrom d3f:Process ] .</pre>
+  <p>So to read "what does this technique act on," you query <em>into</em> the anonymous restriction node:</p>
+  <pre><span class="k">SELECT</span> ?prop ?art <span class="k">WHERE</span> {
+  ?t  d3f:attack-id <span class="s">"T1003.001"</span> .
+  ?t  rdfs:subClassOf ?restr .
+  ?restr <span class="k">a</span> owl:Restriction ;
+         owl:onProperty     ?prop ;
+         owl:someValuesFrom ?art .
+}</pre>
+  <pre class="note out"><span class="c"># --accesses--> Process
+# --accesses--> AuthenticationService</span></pre>
+  <div class="note gap"><strong>Gotcha:</strong> the <em>parent</em> class <code>T1003</code> carries
+  <strong>no</strong> restrictions — they live on the sub-techniques (<code>T1003.001</code> …). The
+  <code>d3fend.py</code> walker handles that bidirectionally (a query on the parent picks up the
+  children's restrictions, and vice-versa). Query a parent and get nothing, and this is why.</div>
+  <p>The other half of the join — "which defensive techniques act on Process?" — is the same walk from
+  the defense side:</p>
+  <pre class="note out"><span class="c"># Application-basedProcessIsolation --isolates--> Process
+# HostReboot                        --terminates--> Process
+# Kernel-basedProcessIsolation      --isolates--> Process   ...</span></pre>
+
+  <h3>3. A reasoner — entailment SPARQL can't reach</h3>
+  <p>Property paths give you transitivity. A full OWL reasoner (<code>owlready2</code>, wrapped in
+  <code>semantic_core/reasoning.py</code>) additionally <em>infers new triples</em> — most importantly,
+  <strong>classifying an individual into a class by its properties</strong> ("a Process opening a
+  VM_READ handle to lsass <em>is-a</em> CredentialDumpingEvent"). That is the detection-as-subsumption
+  move. You <code>materialize()</code> the entailed closure, then query the enriched graph.</p>
+
+  <h2>The performance rule you'll hit immediately</h2>
+  <p><code>d3fend.py</code> records that one query — a <em>double</em> <code>subClassOf*</code> with
+  <strong>both ends unbound</strong> (all-pairs cross-join) — hung 20+ min in rdflib on the real 3.4MB
+  ontology. The rule that falls out:</p>
+  <ul>
+    <li><strong>Seed-bound</strong> path queries (one end fixed, like every query above —
+      <code>d3f:KerberosTicket subClassOf+ ?s</code>) are <strong>fast</strong> even in plain rdflib
+      (sub-ms to ~100ms).</li>
+    <li><strong>All-pairs</strong> (<code>?a subClassOf* ?b . ?b subClassOf* ?c</code>) blows up.</li>
+    <li>For repeated closure work, <strong>reason / materialize once at the schema</strong>, then
+      per-event queries are cheap typed lookups — never run the reasoner per event.</li>
+  </ul>
+
+  <h2>How to actually poke at it</h2>
+  <p>Three options, increasing ceremony:</p>
+  <ul>
+    <li><strong>The script</strong>: <code>.venv/bin/python design/probes/d3fend/query_d3fend.py</code>
+      — edit a query, re-run. Start here.</li>
+    <li><strong>A REPL</strong>: <code>.venv/bin/python</code>, then <code>import rdflib</code>, parse,
+      and <code>for r in g.query(q): print(r)</code>. Good for one-offs.</li>
+    <li><strong>A real triplestore</strong> (Oxigraph / Jena / GraphDB) if you outgrow rdflib's SPARQL
+      engine — they optimize the joins rdflib doesn't. Not needed yet.</li>
+  </ul>
+
+  <div class="note key">
+    The point of doing it by hand: the manual query already caught that <code>d3f:ServiceTicket</code>
+    is a fiction. You find that in one <code>ASK</code>; you'd never find it by trusting the prose.
+    Verify the data, tier-and-use the schema.
+  </div>
+
+  <footer>Canon · web/querying_owl_manually.html · 2026-06-10. Related:
+    <a href="d3fend_tbox_vs_log_abox.html">D3FEND (schema) vs log-RDF (data)</a> ·
+    <a href="../detection/agent_as_analyst.html">Does RDF/OWL help an AI act as an analyst?</a></footer>
+
+</div>
+</body>
+</html>

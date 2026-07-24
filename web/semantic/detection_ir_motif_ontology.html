@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canon — Detection IR: a motif ontology with verified emitters</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --ink:#e6e8ee; --muted:#9aa3b2;
+    --line:#2a2f3a; --accent:#7db4ff; --accent2:#c79bff;
+    --good:#6fcf97; --warn:#f2c94c; --gap:#eb6f6f;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1080px;margin:0 auto;padding:48px 28px 96px}
+  h1{font-size:30px;margin:0 0 6px;letter-spacing:-.01em}
+  .sub{color:var(--muted);margin:0 0 4px;font-size:18px}
+  .stamp{color:var(--muted);font:13px/1.5 var(--mono);margin:0 0 32px}
+  h2{font-size:21px;margin:48px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+  h3{font-size:16px;margin:26px 0 6px;color:var(--accent2)}
+  p{margin:10px 0}
+  code{font-family:var(--mono);font-size:.88em;background:#1e222b;padding:1px 5px;border-radius:4px}
+  pre{background:#10131a;border:1px solid var(--line);border-radius:8px;padding:14px 16px;
+    overflow-x:auto;font-family:var(--mono);font-size:13px;line-height:1.55;color:#d4d9e4}
+  .note{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:8px;padding:14px 18px;margin:18px 0}
+  .note.gap{border-left-color:var(--gap)}
+  .note.key{border-left-color:var(--accent2)}
+  .note.good{border-left-color:var(--good)}
+  .muted{color:var(--muted)}
+  ul{margin:10px 0;padding-left:22px}
+  li{margin:7px 0}
+  strong{color:#fff}
+  table{border-collapse:collapse;width:100%;margin:18px 0;font-size:14px;background:var(--panel);
+    border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  th,td{text-align:left;padding:10px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#1c212b;color:var(--muted);font-weight:600;font-size:12px;
+    text-transform:uppercase;letter-spacing:.04em}
+  tr:last-child td{border-bottom:none}
+  td.k{font-weight:600;white-space:nowrap;color:var(--accent)}
+  .good{color:var(--good)} .gap{color:var(--gap)} .warn{color:var(--warn)}
+  .lede{font-size:17px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p style="font:13px/1.5 var(--mono,monospace);margin:0 0 22px"><a href="../index.html" style="color:#7db4ff;text-decoration:none">← Canon index</a></p>
+  <h1>Detection IR — a motif ontology with verified emitters</h1>
+  <p class="sub">The relation is the invariant. The language is a phrasebook. The port is fidelity-attested.</p>
+  <p class="stamp">canon · design · 2026-06-18 · <span class="muted">molecule = a bonded gadget · emitter = a per-language phrasebook</span></p>
+
+  <p class="lede">A throwaway finder — walk the events, grab the <code>EID1</code> whose command line contains
+  <code>comsvcs</code>, join it to the <code>EID10</code> lsass read on <code>ProcessGuid</code> — was written to locate a
+  labeled instance, then discarded. Two objections, both correct, open the whole design: <strong>(1)</strong> discarding the
+  selector violates canon's own thesis, and <strong>(2)</strong> the language it was written in is incidental — the
+  <em>relation</em> is the invariant. (2) is the seam: detection logic wants an intermediate representation that <em>is</em>
+  the relation, with a per-language emitter on each side.</p>
+
+  <div class="note gap">
+    <strong>The irony.</strong> <code>_comsvcs_positive()</code> is how the label "this <code>EID10</code> is the malicious
+    read" was produced. <em>warrant-is-relational</em> says trustworthiness lives in the derivation, not the result — so the
+    selector's source belongs in the provenance DAG as the <code>prov:Activity</code> that derived the positive entity.
+    Discard it and "how did you know?" has no content-addressed answer. canon opened the exact hole it exists to close.
+  </div>
+
+  <h2>1 · The unit is a molecule, not an atom</h2>
+  <p>The right granularity is a recurring <strong>composite</strong>, not a single AST node.</p>
+  <table>
+    <thead><tr><th>Granularity</th><th>Problem</th></tr></thead>
+    <tbody>
+      <tr><td class="k">atom — <code>field == value</code></td>
+        <td>the IR is just an AST with no semantic content; you re-implemented a parser and gained nothing.</td></tr>
+      <tr><td class="k">whole rule</td>
+        <td>nothing is reusable — you cannot share <code>spawn→access</code> across the twelve rules that use it.</td></tr>
+      <tr><td class="k good">molecule — <code>spawn ⋈ access on ProcessGuid</code></td>
+        <td>a small bonded gadget <em>with</em> detection meaning. The reusable, queryable unit.</td></tr>
+    </tbody>
+  </table>
+  <p>The H<sub>2</sub>O analogy is exact: <strong>the bond is the point.</strong> The join <em>key</em> is what gives
+  <code>spawn ⋈ access</code> emergent detection-semantics that <code>field-equals</code> and <code>EID-filter</code> do not
+  have alone — just as H<sub>2</sub>O's polarity is absent from H and O. An atom is an operator with no detection meaning; a
+  molecule is the bonded gadget that has one.</p>
+
+  <div class="note key">
+    <strong>These molecules already exist in canon, un-named as such.</strong> The primitive families <em>are</em> the
+    catalog — <code>fanout</code> (entity→distribution), <code>coordination</code>/MI (two streams→dependence),
+    <code>subgraph</code> <code>MotifSpec</code> (multi-EID join), field-match (<code>sigma_eval</code>). <strong>Atlas</strong>
+    is meant to be exactly this library. The IR is not new construction — it gives the primitives canon already has a
+    <strong>queryable RDF surface + emitters.</strong>
+  </div>
+
+  <h2>2 · RDF is the IR; the molecule is a symbol; the language is a phrasebook</h2>
+  <p>A detection is a <strong>graph of molecule-symbols</strong> (RDF, content-addressed). Each target language has an
+  <strong>emitter</strong> mapping symbols → that language's code. Not a novel architecture — a proven one.</p>
+
+  <div class="note good">
+    <strong>The strong precedent — OpenMath / OMDoc / MMT</strong> (canon's own mathabc thread). Content dictionaries are a
+    content-addressed ontology of <em>operations</em>; an OpenMath object is a graph of those symbols; every CAS has a
+    <strong>phrasebook</strong> translating symbols → that system's code. That is precisely "a code-symbol ontology that
+    translates to any language" — already built for mathematics. <strong>The detection-IR is OpenMath phrasebooks for
+    detection operations.</strong>
+  </div>
+  <p>Same family, different domain: <strong>pySigma</strong> backends (Sigma AST → Splunk/KQL), <strong>CodeQL</strong> (code
+  as a relational IR queried in one language over many), <strong>Semgrep</strong> (one pattern across languages via a common
+  AST), <strong>MITRE CAR</strong> (pseudocode → Splunk/EQL/Sigma). The molecule ontology is the content-dictionary layer; the
+  emitters are the phrasebooks.</p>
+
+  <h2>3 · "Trivially translate to any language" is the part to delete</h2>
+  <p>Structure ports trivially — the graph is just data. <strong>Semantics do not.</strong> This is exactly where OpenMath
+  phrasebooks are real work, not a free lunch:</p>
+  <pre>Rust  ends_with        (byte semantics)        ≠  Python .lower().endswith()  (Unicode casefold)
+SPL   eventstats        (streaming window)      ≠  pandas groupby              (materialized)
++ null handling · case-insensitivity · timezone &amp; ordering in the temporal join</pre>
+  <p>The honest version: the RDF makes the <strong>structure</strong> language-agnostic; each emitter still needs per-target
+  semantic care <em>and a check that the emit preserves meaning</em>. That check is canon's own machinery, eating its own
+  tail:</p>
+  <div class="note key">
+    <pre>motif-IR  →  emit to language X  →  ATTEST the emit's fidelity vs a labeled corpus  →  warranted port</pre>
+    Does the Rust emit cover the same labeled instances as the Python emit? That is exactly <code>attest_fidelity</code> —
+    Belnap coverage of an artifact against ground truth. So the claim is not "trivial translation" but
+    <strong>verified translation</strong>: language-agnosticism becomes a <em>fidelity-attested property</em>, not an assumed
+    one. The only words to strike are "trivially / for free."
+  </div>
+
+  <h2>4 · Sigma→RDF ingestion is the first emitter pair, not a separate project</h2>
+  <p>The coverage map and the SPARQL-vs-code split both wanted a Sigma→RDF ingestion. In this frame it is a
+  <strong>special case of the IR</strong>:</p>
+  <ul>
+    <li>A Sigma rule <strong>parses into a motif graph</strong> — <code>selection</code>/<code>filter</code> blocks become
+      field-match and suppression molecules; a correlation rule becomes a join molecule.</li>
+    <li><code>sigma_eval</code> (interpreter) and pySigma (compiler) become <strong>two emitters from the same graph</strong>,
+      not two independent implementations of "what the rule means." Their agreement on a corpus is a fidelity check between
+      emitters (§3).</li>
+    <li>Once rules are in RDF, the <strong>knowledge-layer questions become SPARQL</strong> — "which evaluable process_access
+      rules claim T1003.001," the coverage/adjacency map, FCA/SKOS dedup of synonyms — instead of bespoke Python globbing YAML.
+      Per-event <em>firing</em> stays code (the hot path); only the <em>knowledge</em> queries move onto the graph.</li>
+  </ul>
+  <p>So the ingestion is the IR's proof-of-concept: one molecule vocabulary (field-match + suppression), two emitters, one
+  fidelity check between them, one SPARQL knowledge surface.</p>
+
+  <h2>5 · What this unifies</h2>
+  <table>
+    <thead><tr><th>Thread</th><th>Role in the IR</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Atlas</td><td>the molecule ontology (the content dictionary) — its formal surface.</td></tr>
+      <tr><td class="k">dataset-generator</td><td>the pieces are molecules run in the <em>emit</em> direction; the discarded selector is one. A scenario is a motif graph with an "emit events" phrasebook.</td></tr>
+      <tr><td class="k">SKOS-graded seam</td><td>how a molecule maps across schemas (OCSF data-side, Sigma rule-side) — a graded, justified, load-bearing-gated edge, not a free identity.</td></tr>
+      <tr><td class="k">warrant-is-relational</td><td>why the selector/emitter source must be content-addressed in the provenance: <em>which code computed the relation</em> is part of the warrant.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>6 · Honest scope — what this is not</h2>
+  <ul>
+    <li><strong>Not a universal transpiler.</strong> Cross-language semantic equivalence is undecidable in general; the IR
+      buys structural portability + a verification harness (fidelity), not guaranteed equivalence.</li>
+    <li><strong>Does not subsume the hot path into SPARQL</strong> (§4) — firing stays code. The SPARQL emitter is a
+      correctness <strong>oracle</strong> + the knowledge-query surface, <em>not</em> the firing path. Measured: the built
+      <code>eval_sparql</code> ran the OTRF agreement check in <strong>368s → 11s</strong> (parsing the <code>ASK</code> once),
+      still ~1–2 orders slower than the Python predicate — per-event SPARQL means <em>allocate a graph → insert triples →
+      invoke a general planner</em> for one boolean. Intrinsic, not a tuning bug; on billions of events SPARQL lags fatally. So
+      the tiers are literal: <strong>hot path = the emitted predicate</strong> (Python now, Rust later, attested-equivalent);
+      <strong>cold path = SPARQL over the rule graph</strong> — small, rarely-changing, hence precomputable/cacheable — and even
+      there "SPARQL lags" is really "rdflib lags": a real triple store (Oxigraph, Jena, Neptune, QLever) runs the same SPARQL
+      competitively. The agreement attestation (§3) licenses running the fast emitter in place of the oracle.</li>
+    <li><strong>The molecule vocabulary is earned, not designed up front.</strong> Extract a molecule only when ≥2 real
+      detections share it (concrete-first, the <code>Binding</code> discipline). A speculative ontology of unused motifs is the
+      failure mode to avoid.</li>
+    <li><strong>"Any language" is per-emitter work</strong>, each emitter fidelity-gated before it is trusted (§3).</li>
+  </ul>
+
+  <h2>7 · Smallest first slice</h2>
+  <pre>1. molecule dataclass + tiny RDF serialization for TWO molecules: field-match, suppression
+2. parse the comsvcs Sigma rule into that motif graph                         (the ingestion)
+3. two emitters: sigma_eval-shaped Python  +  a SPARQL ASK/SELECT over the graph
+4. ATTEST the two emitters against each other on OTRF — they must agree (Belnap true)
+   on every labeled event, else the IR is lossy and the diff localizes where
+5. content-address the motif graph + record _comsvcs_positive as a prov:Activity
+   in the verdict's provenance — closing the §0 hole</pre>
+  <p class="muted">Do not build the Rust emitter, the full ontology, or correlation molecules first — layers 2+. The first
+  slice proves one thing: one detection, two emitters, agreement attested.</p>
+
+  <div class="note good">
+    <strong>BUILT (2026-06-18).</strong> <code>detection/motif.py</code> + <code>test_motif.py</code>, 9 tests, ~11s.
+    <code>FieldMatch</code>/<code>Suppression</code> molecules; <code>from_sigma</code> → content-addressed
+    <code>MotifGraph</code>; two emitters (<code>eval_python</code> reusing <code>sigma_eval</code>'s primitive so it's
+    identical-by-construction, + <code>to_sparql</code>/<code>eval_sparql</code>); <code>attest_emitter_agreement</code> ran both
+    over <strong>every OTRF event → coverage=true, zero disagreements</strong> — the IR is sound for this rule, language-agnosticism
+    earned not assumed; and <code>record_selector_provenance</code> makes the discarded <code>_comsvcs_positive</code> a
+    content-addressed <code>prov:Activity</code> (op dual-typed <code>urn:canon:op#comsvcs_positive_select</code>), closing §0.
+  </div>
+
+  <div class="note">
+    <strong>One line.</strong> The relation is the invariant; the language is a phrasebook; the port is fidelity-attested —
+    so "language-agnostic" stops being a wish and becomes a <em>measured property</em>, by the same machinery that warrants
+    every other canon claim.
+  </div>
+</div>
+</body>
+</html>

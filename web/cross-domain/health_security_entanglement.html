@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canon — Health × security: entangled, not core</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --ink:#e6e8ee; --muted:#9aa3b2;
+    --line:#2a2f3a; --accent:#7db4ff; --accent2:#c79bff;
+    --good:#6fcf97; --warn:#f2c94c; --gap:#eb6f6f;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1020px;margin:0 auto;padding:48px 28px 96px}
+  .backlink{font:13px/1.5 var(--mono);margin:0 0 22px}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  h1{font-size:28px;margin:0 0 6px;letter-spacing:-.01em}
+  .sub{color:var(--muted);margin:0 0 4px;font-size:17px}
+  .stamp{color:var(--muted);font:13px/1.5 var(--mono);margin:0 0 30px}
+  h2{font-size:21px;margin:46px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+  h3{font-size:16px;margin:24px 0 6px;color:var(--accent)}
+  p{margin:11px 0}
+  code{font-family:var(--mono);font-size:.86em;background:#1e222b;padding:1px 5px;border-radius:4px}
+  strong{color:#fff}
+  .lede{font-size:18px;line-height:1.55}
+  .note{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:8px;padding:14px 18px;margin:20px 0}
+  .note.key{border-left-color:var(--accent2)}
+  .note.gap{border-left-color:var(--gap)}
+  .note.core{border-left-color:var(--good)}
+  ul,ol{margin:12px 0;padding-left:22px}
+  li{margin:7px 0}
+  ol.shares{counter-reset:s;list-style:none;padding-left:0}
+  ol.shares li{position:relative;padding:10px 0 10px 40px;border-bottom:1px solid var(--line)}
+  ol.shares li:last-child{border-bottom:none}
+  ol.shares li::before{counter-increment:s;content:counter(s);position:absolute;left:0;top:9px;
+    width:25px;height:25px;border:1px solid var(--line);border-radius:50%;text-align:center;
+    line-height:25px;font:13px/1 var(--mono);color:var(--accent)}
+  table{border-collapse:collapse;width:100%;margin:18px 0;font-size:13.5px;background:var(--panel);
+    border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#1c212b;color:var(--muted);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em}
+  tr:last-child td{border-bottom:none}
+  td.k{font-family:var(--mono);font-size:12.5px;white-space:nowrap}
+  .core{color:var(--good)} .adj{color:var(--warn)} .park{color:var(--muted)}
+  footer{margin-top:60px;color:var(--muted);font-size:13px;border-top:1px solid var(--line);padding-top:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="backlink"><a href="../index.html">← Canon index</a></p>
+
+  <h1>Health × security: entangled, not core</h1>
+  <p class="sub">Two readings of one telemetry stream. Consume it, emit the byproduct — don't become an observability platform.</p>
+  <p class="stamp">canon · design conversation · 2026-06-12 · companion to completeness_channel.html · scope note</p>
+
+  <p class="lede">A routinely-missing field is a critical problem — and not only for the SOC. Security and
+  system health run on the <strong>same telemetry</strong>, so a persistent gap is a defect in a shared
+  asset. This panel names the entanglement honestly, and then draws the boundary that keeps canon
+  detection-first.</p>
+
+  <h2>Entangled, not just adjacent</h2>
+  <p>"Adjacent" undersells it. Security and health are entangled in three concrete ways:</p>
+  <ol class="shares">
+    <li><strong>Shared telemetry.</strong> The same events feed detection <em>and</em> performance monitoring,
+      capacity planning, debugging, compliance. (OCSF and OpenTelemetry are <em>converging</em> precisely
+      because the field/event vocabulary serves both.)</li>
+    <li><strong>Shared math.</strong> canon's battery is modality-agnostic — a CUSUM on request latency is the
+      <em>same primitive</em> as a CUSUM on auth volume; KL on service-error distributions is the same as on
+      credential fan-out. The anomaly layer doesn't know which it's watching.</li>
+    <li><strong>Shared anomalies.</strong> A service crash, a disk filling, a latency spike are health signals
+      that are <em>sometimes also</em> security signals (a crash can be an exploit; a disk filling can be
+      exfil staging). The signal spaces overlap.</li>
+  </ol>
+  <p>They diverge in only two places: <strong>interpretation</strong> (bug or adversary?) and
+  <strong>owner</strong> (SRE or SOC?). And the disambiguation is the validity fold's same three causes —
+  innocent / pipeline / attack — resolved the same way (correlation, held <code>NONE</code> until evidence
+  breaks the tie). So it is not two adjacent domains; it is <strong>two interpretations of one system-state
+  stream</strong>, splitting only at triage.</p>
+
+  <h2>Necessity is consumer-relative</h2>
+  <p>The completeness channel split fields into "necessary / not-necessary <em>for this finding</em>." Widen
+  the lens and the same field is <strong>necessary for a different consumer</strong>: a field the SOC
+  correctly drops as detection-irrelevant may be exactly what the SRE team needs for capacity planning or the
+  billing team needs for chargeback. So the "not-necessary" bucket isn't garbage — <strong>it's another
+  team's load-bearing signal.</strong> That's why those gaps are <em>carried and routed</em>, never dropped.</p>
+
+  <h2>The dependency is asymmetric: health → security</h2>
+  <p>Security's observability <em>is a function of</em> system health. Degraded telemetry health directly
+  produces security blind spots — you cannot detect what the pipeline dropped. So poor health isn't merely
+  adjacent to a security problem; it <strong>manufactures</strong> security problems: every persistent gap
+  widens the <code>NONE</code> frontier. Health → security, more than the reverse.</p>
+
+  <h2>The byproduct — honest detection emits a health signal</h2>
+  <p>Here is the part that keeps this from being scope creep. canon <em>must</em> track telemetry completeness
+  to be truthful about <code>NONE</code> — and that tracking <em>is</em> a telemetry-quality artifact the
+  infra team wants ("forwarder X drops 3% of EID1 fields; sensor on DC-01 stopped populating GrantedAccess
+  Tuesday"). So canon generates an infra-health product <strong>as a side effect of being epistemically
+  honest about its own gaps</strong> — same pattern as the regime-ledger emitting learning signal as a
+  byproduct. Do the honest thing; a valuable secondary artifact falls out, with a different customer.</p>
+
+  <div class="note key">
+    <strong>Stance: forensic instrument over telemetry.</strong> At the substrate level, health and security
+    are one forensic problem — reconstruct what happened from incomplete evidence, honestly. They split only
+    at interpretation/triage. So: <strong>consume</strong> health where it bears on security (the
+    observability gate, the completeness channel), <strong>emit</strong> the health byproduct to its owners,
+    but don't try to <strong>be</strong> an SRE platform. Recognize the entanglement; don't dissolve into it.
+  </div>
+
+  <h2>Where this sits — core vs adjacent vs parked</h2>
+  <p>This panel exists to be remembered <em>and bounded</em>. The current focus is detection and the core; the
+  entangled things are acknowledged, not forgotten, not chased.</p>
+  <table>
+    <thead><tr><th>band</th><th>what</th></tr></thead>
+    <tbody>
+      <tr><td class="k core">CORE — focus now</td>
+        <td>the detection logic + detection structure · <strong>entry points</strong> · the
+          <strong>relational provenance graph</strong> (how nodes relate — PROV entities/activities + used /
+          wasGeneratedBy / wasInformedBy edges; the substrate backbone you reason over).</td></tr>
+      <tr><td class="k adj">ADJACENT — consume / emit, not core</td>
+        <td><strong>system health</strong> (this panel — byproduct + observability gate) ·
+          <strong>source-custody provenance</strong> (signed logs, in-toto/DSSE, "from Splunk vs direct
+          Sysmon"). Note: custody is honest-<code>NONE</code> on all current/unsigned data anyway — inert
+          until signing is wired, so deprioritizing it now costs nothing.</td></tr>
+      <tr><td class="k park">PARKED — future-important</td>
+        <td><strong>detection availability / path orchestration</strong> — organizing <em>when</em> logs are
+          available and <em>through what path</em> they arrive, and structuring detection around that. Distinct
+          from both entry points and detection logic; the plumbing/timing substrate under detection. Reason
+          about it later.</td></tr>
+    </tbody>
+  </table>
+  <div class="note core">
+    <strong>The two meanings of "provenance" — don't conflate them.</strong>
+    <strong>Relational provenance</strong> (the PROV-O graph of how nodes relate) is <em>core</em> — it's the
+    structure detection reasons over. <strong>Custody / source provenance</strong> (signing, where-from) is
+    <em>adjacent</em> and deprioritized now. Same word, different layers: one is <em>the structure itself</em>,
+    the other is <em>trust in the source of the structure</em>.
+  </div>
+
+  <footer>Canon · web/health_security_entanglement.html · 2026-06-12. Related:
+    <a href="../detection/completeness_channel.html">the completeness channel</a> ·
+    <a href="../detection/process_provenance_graph.html">OS execution as a PROV graph</a> ·
+    <a href="../detection/abduction_loop.html">the abduction loop</a> ·
+    <a href="../detection/scaling_the_loop.html">scaling the loop</a></footer>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canon — OS Execution as a Content-Addressed PROV Graph</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --ink:#e6e8ee; --muted:#9aa3b2;
+    --line:#2a2f3a; --accent:#7db4ff; --accent2:#c79bff;
+    --good:#6fcf97; --warn:#f2c94c; --gap:#eb6f6f;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1080px;margin:0 auto;padding:48px 28px 96px}
+  h1{font-size:30px;margin:0 0 6px;letter-spacing:-.01em}
+  .sub{color:var(--muted);margin:0 0 4px;font-size:18px}
+  .stamp{color:var(--muted);font:13px/1.5 var(--mono);margin:0 0 32px}
+  h2{font-size:21px;margin:48px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+  p{margin:10px 0}
+  code{font-family:var(--mono);font-size:.88em;background:#1e222b;padding:1px 5px;border-radius:4px}
+  pre{background:#10131a;border:1px solid var(--line);border-radius:8px;padding:14px 16px;
+    overflow-x:auto;font-family:var(--mono);font-size:13px;line-height:1.5;color:#d4d9e4}
+  .note{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:8px;padding:14px 18px;margin:18px 0}
+  .note.gap{border-left-color:var(--gap)}
+  .note.key{border-left-color:var(--accent2)}
+  .note.good{border-left-color:var(--good)}
+  .muted{color:var(--muted)}
+  ul{margin:10px 0;padding-left:22px}
+  li{margin:7px 0}
+  strong{color:#fff}
+  table{border-collapse:collapse;width:100%;margin:18px 0;font-size:14px;background:var(--panel);
+    border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  th,td{text-align:left;padding:10px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#1c212b;color:var(--muted);font-weight:600;font-size:12px;
+    text-transform:uppercase;letter-spacing:.04em}
+  tr:last-child td{border-bottom:none}
+  td.k{font-weight:600;white-space:nowrap;color:var(--accent)}
+  .good{color:var(--good)} .gap{color:var(--gap)} .warn{color:var(--warn)}
+  .lede{font-size:17px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p style="font:13px/1.5 var(--mono,monospace);margin:0 0 22px"><a href="../index.html" style="color:#7db4ff;text-decoration:none">← Canon index</a></p>
+  <h1>OS execution as a content-addressed PROV graph</h1>
+  <p class="sub">The substrate's <em>native</em> input — wider than detection, and the same shape as canon.</p>
+  <p class="stamp">canon · process provenance · 2026-06-05 · <span class="muted">packages/detection/experiments/process_provenance_graph.py</span></p>
+
+  <p class="lede">A Sysmon process-create log is a <em>flattened view of system-execution provenance</em>: each event
+  records a process, the binary it ran (with its hash), the user, the command line, and its parent. That is
+  <strong>already a PROV graph</strong> — Entity / Activity / Agent. So the substrate ingests it <strong>natively</strong>,
+  with no imaging or gridding (unlike point-process signals, which the battery must impose a grid on). Detection is one
+  <em>fold</em> over this graph; the graph itself is wider — forensics, audit, causality, blast-radius all read the same object.</p>
+
+  <h2>The mapping</h2>
+  <table>
+    <thead><tr><th>Log field</th><th>PROV node</th><th>Role</th></tr></thead>
+    <tbody>
+      <tr><td class="k">process execution</td><td><code>prov:Activity</code></td><td>the run</td></tr>
+      <tr><td class="k">binary (by hash)</td><td><code>prov:Entity</code>, id = content hash</td><td>what ran — content-addressed</td></tr>
+      <tr><td class="k">User</td><td><code>prov:Agent</code> (<code>wasAssociatedWith</code>)</td><td>who</td></tr>
+      <tr><td class="k">parent → child</td><td><code>prov:wasInformedBy</code></td><td>composition / causality</td></tr>
+      <tr><td class="k">CommandLine, UtcTime</td><td>attributes</td><td>how / when</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Each eventID is a typed motif; the graph is interlocking motifs</h2>
+  <p>The mapping above is one eventID. Generalize it: <strong>an eventID type defines the <em>shape</em> of a
+  neighborhood — a graph motif</strong> (which node-roles and edge-types are present), and each <strong>record
+  is a concrete subgraph</strong> that instantiates it. <span class="muted">(added 2026-06-12)</span></p>
+  <pre>EID1  process create   {process} ─wasInformedBy→ {parent}  ├─wasAssociatedWith→ {user}  └─used→ {image binary}
+EID3  network          {process} ─→ {src endpoint} ─→ {dst endpoint}
+EID10 process access   {source process} ─accesses→ {target process}   (+ GrantedAccess mask)
+EID11 file create      {process} ─→ {file}</pre>
+  <p>These per-event subgraphs <strong>do not stay separate — they stitch into the global graph at shared,
+  content-addressed nodes.</strong> A parent in one EID1 is the <em>same node</em> as the subject of an earlier
+  EID1; a process is shared across its EID1 / EID3 / EID10 / EID11 motifs (joined by <code>ProcessGuid</code> /
+  CID); a binary hash is shared wherever it runs. So the provenance graph isn't authored top-down — it is
+  <strong>assembled bottom-up, one typed motif at a time</strong>, the motifs interlocking at shared identities.
+  An entity accumulates a <em>richer</em> neighborhood from every eventID that touches it — and that accumulated
+  neighborhood <em>is</em> the "context" a detection validates.</p>
+
+  <div class="note key">
+    <strong>A multi-eventID detection is a subgraph pattern spanning motifs.</strong> The lsass case:
+    <pre>EID1  motif :  rundll32 ─used→ comsvcs.dll cmdline      (the spawn)
+EID10 motif :  rundll32 ─accesses(VM_READ)→ lsass       (the read)
+                    └────────── joined at the shared rundll32 node (ProcessGuid / CID) ──────────┘
+   = ONE pattern across TWO motifs  =  the detection</pre>
+    So detection scales as a hierarchy of neighborhood size — <strong>field → motif (1 EID) → multi-motif
+    (multi-EID) → multi-entity (campaign, multi-host)</strong> — and a detection is a pattern-match at the right
+    scale. Bigger pattern = richer neighborhood, with two consequences: it is <strong>more
+    completeness-sensitive</strong> (every constituent EID must be present — missing EID10 ⇒ the pattern can't
+    close ⇒ <code>NONE</code>, not clean), and it depends on <strong>cross-EID entity resolution</strong> (the
+    <code>ProcessGuid</code> / CID join is what assembles the bigger neighborhood from the separate motifs).
+  </div>
+
+  <h2>Run on real data — OTRF LSASS_campaign_03</h2>
+  <pre>process executions (Activities):        127
+distinct binaries by HASH (Entities):    28   &lt;- 127 runs collapse to 28 content-addressed nodes (free dedup, Merkle)
+distinct users (Agents):                  5   [SYSTEM, LOCAL/NETWORK SERVICE, pedro.gustavo, pupy.godoy]
+total RDF triples:                       789
+PROV-O Turtle written:                process_graph.ttl (66,743 bytes)</pre>
+
+  <div class="note key">
+    <strong>One-hash-three-roles, made literal.</strong> Canon's keystone — node id = provenance entity = custody digest —
+    has been abstract (a CID over a computation node). Here it is a real binary hash:
+    <pre>process : C:\Users\pupy.godoy\Downloads\winx64_payload.exe
+user    : PANDALAB\pedro.gustavo          &lt;- prov:Agent
+parent  : C:\Windows\explorer.exe         &lt;- prov:wasInformedBy
+hash    : sha256:dfc6459d…1137ddd7        &lt;- node id = provenance entity = custody digest</pre>
+    The hash is at once the <strong>node identity</strong> (same binary across hosts = one node), the <strong>provenance
+    entity</strong> (what executed), and the <strong>custody digest</strong> (checkable against known-good / known-bad).
+    The OS execution graph is where canon's central design idea is literally true.
+  </div>
+
+  <div class="note good">
+    <strong>Custody partially wakes up.</strong> Custody has been <code>NONE</code> all along because logs are unsigned —
+    and the <em>log's</em> chain still needs signing. But the <strong>binary hash is checkable</strong>: a process's image
+    hash can be matched to threat-intel (known-bad) or a baseline (known-good). That is <em>binary-integrity</em> (live now,
+    for free, from the <code>Hashes</code> field), distinct from <em>log-custody</em> (still needs signing). The first real
+    custody signal in the program.
+  </div>
+
+  <div class="note">
+    <strong>What the structural view surfaced for free.</strong> <code>winx64_payload.exe</code> sits in
+    <code>pupy.godoy</code>'s Downloads but ran as <code>pedro.gustavo</code> — a credential pivot the flat log obscures and
+    the provenance graph makes visible. Structure answers questions shape can't.
+  </div>
+
+  <h2>Why this is "almost canon, but wider and more native"</h2>
+  <ul>
+    <li><strong>Same shape as canon.</strong> The graph is the substrate's own <code>Entity</code>/<code>Activity</code>
+      PROV-O — the exact representation the provenance fold already emits. Detection is one fold over it; the justified
+      verdict is one view of a flagged subgraph.</li>
+    <li><strong>Wider.</strong> The execution graph serves forensics, audit, causality, and blast-radius — detection is one
+      question you can ask of it, not the whole point.</li>
+    <li><strong>More native.</strong> The battery must impose a grid on point-process logs to get <em>shape</em> (timing,
+      volume) — lossy, the "imager" problem. A provenance-bearing log (parent→child links) needs <em>no</em> grid for
+      <em>structure</em> (lineage, composition, reachability) — it is already a typed DAG. So the split is: structured,
+      provenance-bearing logs are ingested natively; only signal / point-process data needs the imaging transform.</li>
+  </ul>
+
+  <h2>Prior art + honest scope</h2>
+  <p>This is a mature field — <strong>whole-system provenance</strong> (CamFlow, which emits W3C PROV; SPADE) and
+  <strong>provenance-based intrusion detection</strong> (the PIDS line). Canon's edge is not "we built a provenance graph"
+  (everyone has) — it is the <strong>justification + honest-NONE layer</strong> on the graph: a flagged subgraph carrying its
+  guarantee tier, its custody (binary-integrity live, log-custody NONE), and what it could not check.</p>
+  <div class="note gap">
+    <strong>Two honest limits.</strong> <span class="gap">Proven vs potential</span> — this is a 127-event slice on one host;
+    native provenance ingestion is demonstrated, not yet a product. <span class="gap">Scale</span> — whole-system provenance
+    is millions of events per host per day; storage and graph blow-up are the field's central struggle, which is exactly where
+    the cost-fold / localize / coarse-first disciplines have to carry their weight (localize around flagged subgraphs; never
+    materialize the whole graph).
+  </div>
+
+  <p class="stamp" style="margin-top:40px">Source: <code>packages/detection/experiments/process_provenance_graph.py</code>
+  on real <code>OTRF/Security-Datasets · LSASS_campaign_03</code>. Point-in-time readout, not a live document.</p>
+</div>
+</body>
+</html>

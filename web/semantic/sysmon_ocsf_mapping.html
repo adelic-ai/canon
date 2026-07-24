@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canon — Sysmon EventID 1 → OCSF: the mapping by operation type</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --ink:#e6e8ee; --muted:#9aa3b2;
+    --line:#2a2f3a; --accent:#7db4ff; --accent2:#c79bff;
+    --good:#6fcf97; --warn:#f2c94c; --gap:#eb6f6f;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1040px;margin:0 auto;padding:48px 28px 96px}
+  .backlink{font:13px/1.5 var(--mono);margin:0 0 22px}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  h1{font-size:28px;margin:0 0 6px;letter-spacing:-.01em}
+  .sub{color:var(--muted);margin:0 0 4px;font-size:17px}
+  .stamp{color:var(--muted);font:13px/1.5 var(--mono);margin:0 0 30px}
+  h2{font-size:21px;margin:46px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+  p{margin:11px 0}
+  code{font-family:var(--mono);font-size:.86em;background:#1e222b;padding:1px 5px;border-radius:4px}
+  strong{color:#fff}
+  .lede{font-size:17px}
+  .note{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:8px;padding:14px 18px;margin:20px 0}
+  .note.key{border-left-color:var(--accent2)}
+  .note.gap{border-left-color:var(--gap)}
+  ul,ol{margin:12px 0;padding-left:22px}
+  li{margin:7px 0}
+  table{border-collapse:collapse;width:100%;margin:18px 0;font-size:13px;background:var(--panel);
+    border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#1c212b;color:var(--muted);font-weight:600;font-size:11.5px;
+    text-transform:uppercase;letter-spacing:.04em}
+  tr:last-child td{border-bottom:none}
+  td.src{font-family:var(--mono);font-size:12.5px;color:var(--ink);white-space:nowrap}
+  td.dst{font-family:var(--mono);font-size:12.5px;color:var(--accent)}
+  .op{font:11px/1.4 var(--mono);padding:1px 7px;border-radius:20px;border:1px solid var(--line);white-space:nowrap}
+  .op-rename{color:var(--muted)}
+  .op-xform{color:var(--accent);border-color:#2f4a6b}
+  .op-sem{color:var(--accent2);border-color:#4a3a6b}
+  .op-drop{color:var(--gap);border-color:#5c2f2f}
+  .legend{font-size:13px;color:var(--muted);margin:6px 0 0}
+  .legend .op{margin-right:5px}
+  pre{background:#10131a;border:1px solid var(--line);border-radius:8px;padding:14px 16px;
+    overflow-x:auto;font-family:var(--mono);font-size:13px;line-height:1.55;color:#d4d9e4}
+  footer{margin-top:60px;color:var(--muted);font-size:13px;border-top:1px solid var(--line);padding-top:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="backlink"><a href="../index.html">← Canon index</a></p>
+
+  <h1>Sysmon EventID 1 → OCSF: the mapping by operation type</h1>
+  <p class="sub">OCSF defines the destination addresses and types. The parse is yours — and it's six different operations, not one rename.</p>
+  <p class="stamp">canon · ingestion mechanics · 2026-06-12 · companion to ocsf_json_vs_rdf.html</p>
+
+  <p class="lede">The tempting picture is a lookup table (<code>CommandLine → cmd_line</code>). The real mapping is a
+  <strong>spectrum of operations</strong>, and the pure rename is the easy minority. Here is a real Sysmon
+  <code>EventID 1</code> (process creation) → OCSF <strong>Process Activity</strong> (<code>class_uid 1007</code>) mapping,
+  annotated by what each field actually requires.</p>
+
+  <table>
+    <thead><tr><th>Sysmon EID1 field</th><th>OCSF address</th><th>operation</th></tr></thead>
+    <tbody>
+      <tr><td class="src">CommandLine</td><td class="dst">process.cmd_line</td><td><span class="op op-rename">rename / re-address</span></td></tr>
+      <tr><td class="src">ProcessId</td><td class="dst">process.pid</td><td><span class="op op-rename">rename + type (str→int)</span></td></tr>
+      <tr><td class="src">Image</td><td class="dst">process.file.path</td><td><span class="op op-rename">rename / re-address</span></td></tr>
+      <tr><td class="src">basename(Image)</td><td class="dst">process.name</td><td><span class="op op-xform">derive (not a source field)</span></td></tr>
+      <tr><td class="src">Hashes "SHA256=…,MD5=…"</td><td class="dst">process.file.hashes[]</td><td><span class="op op-xform">parse string → [{algorithm, value}]</span></td></tr>
+      <tr><td class="src">User "CORP\svc_backup"</td><td class="dst">process.user.{name, domain}</td><td><span class="op op-xform">split one value → two</span></td></tr>
+      <tr><td class="src">UtcTime "2021-06-11 09:01:…"</td><td class="dst">time</td><td><span class="op op-xform">convert → epoch millis (int)</span></td></tr>
+      <tr><td class="src">IntegrityLevel "High"</td><td class="dst">process.integrity_id</td><td><span class="op op-xform">enum map (string → id)</span></td></tr>
+      <tr><td class="src">ParentImage</td><td class="dst">process.parent_process.file.path</td><td><span class="op op-rename">rename + re-nest</span></td></tr>
+      <tr><td class="src">ParentProcessId</td><td class="dst">process.parent_process.pid</td><td><span class="op op-rename">rename + re-nest</span></td></tr>
+      <tr><td class="src">Computer <span style="color:var(--muted)">(log envelope)</span></td><td class="dst">device.hostname</td><td><span class="op op-xform">from envelope, not payload</span></td></tr>
+      <tr><td class="src">— <span style="color:var(--muted)">(you know EID1)</span></td><td class="dst">class_uid=1007, activity_id=1</td><td><span class="op op-sem">constant — the semantic call</span></td></tr>
+      <tr><td class="src">FileVersion / Company / Product</td><td class="dst"><span style="color:var(--muted)">(no clean OCSF home)</span></td><td><span class="op op-drop">unmapped → extension / dropped</span></td></tr>
+    </tbody>
+  </table>
+  <p class="legend">
+    <span class="op op-rename">rename</span> address remap &nbsp;
+    <span class="op op-xform">transform</span> value parse / convert / split / derive &nbsp;
+    <span class="op op-sem">semantic</span> the interpretive call &nbsp;
+    <span class="op op-drop">lossy</span> no destination
+  </p>
+
+  <h2>The six operations hiding in "put this value at that address"</h2>
+  <ol>
+    <li><strong>Pure re-address</strong> — <code>CommandLine → process.cmd_line</code>. A key remap into a nested path. The bulk
+      of fields, and the only part that's a "naming convention" lookup.</li>
+    <li><strong>Value transform</strong> — <code>Hashes</code> is a single compound <em>string</em>; OCSF wants an <em>array of
+      objects</em>. You parse / destructure the value. Not a rename.</li>
+    <li><strong>Format / enum / split normalization</strong> — <code>UtcTime</code> string → epoch-millis int;
+      <code>IntegrityLevel "High"</code> → enum id; <code>User "CORP\svc_backup"</code> → two fields.</li>
+    <li><strong>Constant / class assignment</strong> — <code>class_uid=1007</code>, <code>activity_id=1</code> aren't in the
+      record at all. You <em>assign</em> them because you decided <strong>"Sysmon EID1 ≡ OCSF Process Activity / Launch."</strong>
+      This is the interpretive heart, and it's per-EventID, not per-field.</li>
+    <li><strong>Flat → nested restructuring</strong> — Sysmon is flat; OCSF distributes it across a tree
+      (<code>Parent*</code> sinks under <code>process.parent_process.*</code>, <code>Image+Hashes</code> under
+      <code>process.file.*</code>).</li>
+    <li><strong>Envelope vs payload merge</strong> — <code>device.hostname</code> comes from the Windows Event Log wrapper
+      (<code>System.Computer</code>), not Sysmon's <code>EventData</code>. The mapper reads two levels.</li>
+  </ol>
+  <div class="note gap">
+    <strong>Lossy both ways.</strong> Sysmon fields with no OCSF home (<code>FileVersion</code>, <code>Company</code>,
+    <code>OriginalFileName</code>) get shoved into an extension or dropped; OCSF fields Sysmon never provides stay null. So the
+    mapper is a fallible artifact — <strong>a claim with a measurable fidelity</strong>, and the natural home for a fidelity
+    attestation ("this mapper, on this corpus, preserved these fields, dropped those, asserted EID1≡1007").
+  </div>
+
+  <h2>Why <code>EventID</code> leads — it's the type selector, not just a column</h2>
+  <p>A log row, in the usual mental model, is a tuple: <code>{timestamp, processId, process, eventID, user, …}</code> — and
+  <code>eventID</code> looks like one column among many. But it isn't. <strong>The <code>eventID</code> is the type tag that
+  selects the record's whole structure</strong> — which fields are present, what they mean, and (operation 4) which OCSF class
+  the row becomes. In coordinate terms it's a <strong>meta-coordinate</strong>: it picks the subspace, and the remaining fields
+  locate the point <em>within</em> that subspace.</p>
+  <pre>eventID            =  WHICH axes apply        (EID1 → Process-Activity space; EID10 → Process-Access space)
+the other fields   =  the POSITION on them     (the "context" of this occurrence)</pre>
+  <p>That's why monitoring leads with the eventID: it tells you which space you're in before the rest of the row means anything.</p>
+
+  <h2>From mapping to detection: verify the context</h2>
+  <p>And this is the bridge to what canon actually does. <strong>An event type is neutral.</strong> <code>EID1</code> — a process
+  started — happens constantly; the eventID alone is never malicious. What is or isn't malicious lives entirely in the
+  <strong>context</strong>: the values of the other coordinates and the neighborhood they pin (the process, its parent, the
+  user, the binary). <code>rundll32</code> starting is fine; <code>rundll32</code> starting with
+  <code>comsvcs.dll, MiniDump</code> against lsass under <code>svc_backup</code> at 3am is not.</p>
+  <p>So detection here is not "hunt for bad events." It is, given an event of a known type, <strong>validate that its context is
+    correct</strong> — a three-way outcome:</p>
+  <table>
+    <thead><tr><th>outcome</th><th>meaning</th><th>which check</th></tr></thead>
+    <tbody>
+      <tr><td class="dst" style="color:var(--good)">context correct</td><td>consistent with a legitimate occurrence of this type</td><td>per-entity baseline (does this process normally do this?)</td></tr>
+      <tr><td class="dst" style="color:var(--warn)">potentially malicious</td><td>anomalous context, no known-bad signature → investigate</td><td>battery deviation, no signature match → <code>NONE</code> / escalate</td></tr>
+      <tr><td class="dst" style="color:var(--gap)">definitely malicious</td><td>context matches a known attack pattern</td><td>framework signature (Sigma / CAR verifier)</td></tr>
+    </tbody>
+  </table>
+  <div class="note key">
+    The <code>eventID</code> does double duty: it selects the <em>subspace</em> (which fields are the context) <strong>and</strong>
+    it <em>routes which context-checks apply</em> — <code>EID1</code> → process-lineage legitimacy; <code>EID10</code> → the
+    GrantedAccess mask; an auth event → the logon context. Event type + data-component → the applicable verifier set. Detection
+    becomes per-event context-validation, dispatched by type.
+  </div>
+
+  <footer>Canon · web/sysmon_ocsf_mapping.html · 2026-06-12. Related:
+    <a href="ocsf_json_vs_rdf.html">OCSF / JSON vs RDF</a> ·
+    <a href="../detection/w_coordinate_system.html">the W's as a coordinate system</a> ·
+    <a href="../detection/abduction_loop.html">the abduction loop</a></footer>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canon — The Justified-Verdict Substrate</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --ink:#e6e8ee; --muted:#9aa3b2;
+    --line:#2a2f3a; --accent:#7db4ff; --accent2:#c79bff;
+    --good:#6fcf97; --warn:#f2c94c; --gap:#eb6f6f;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1080px;margin:0 auto;padding:48px 28px 96px}
+  h1{font-size:30px;margin:0 0 6px;letter-spacing:-.01em}
+  .sub{color:var(--muted);margin:0 0 4px;font-size:18px}
+  .stamp{color:var(--muted);font:13px/1.5 var(--mono);margin:0 0 32px}
+  h2{font-size:21px;margin:48px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+  p{margin:10px 0}
+  code{font-family:var(--mono);font-size:.88em;background:#1e222b;padding:1px 5px;border-radius:4px}
+  .note{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:8px;padding:14px 18px;margin:18px 0}
+  .note.gap{border-left-color:var(--gap)}
+  .note.key{border-left-color:var(--accent2)}
+  .muted{color:var(--muted)}
+  ul{margin:10px 0;padding-left:22px}
+  li{margin:7px 0}
+  strong{color:#fff}
+  table{border-collapse:collapse;width:100%;margin:18px 0;font-size:14px;background:var(--panel);
+    border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  th,td{text-align:left;padding:10px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#1c212b;color:var(--muted);font-weight:600;font-size:12px;
+    text-transform:uppercase;letter-spacing:.04em}
+  tr:last-child td{border-bottom:none}
+  td.k{font-weight:600;white-space:nowrap;color:var(--accent)}
+  .good{color:var(--good)} .gap{color:var(--gap)} .warn{color:var(--warn)}
+  .lede{font-size:17px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p style="font:13px/1.5 var(--mono,monospace);margin:0 0 22px"><a href="../index.html" style="color:#7db4ff;text-decoration:none">← Canon index</a></p>
+  <h1>The uniform justified-verdict substrate</h1>
+  <p class="sub">Every alert carries its receipts.</p>
+  <p class="stamp">canon · crystallization · 2026-06-04 · <span class="muted">design/justified_verdict_substrate.md</span></p>
+
+  <p class="lede">The detector battery is a <em>vehicle</em>; this is the thing it demonstrates and the
+  thing of value. In a traditional SIEM the justification for an alert <em>exists</em> but is scattered
+  (rule in one place, author in git, data lineage in a pipeline config) and the <em>epistemic</em> parts —
+  confidence calibration, feed integrity, the assumptions, whether two independent measures agreed — are
+  written down <strong>nowhere</strong>, left to an analyst to reconstruct. Canon makes the justification a
+  <strong>fold of the same content-addressed object as the result</strong>: it travels <em>with</em> the
+  alert, machine-readable, walkable on demand from one provenance CID.</p>
+
+  <div class="note key">
+    <strong>The claim, scoped honestly.</strong> The substrate uniformly <em>carries</em> honest,
+    fully-attached justification for any detector's output — shape standardized, content preserved. It does
+    <em>not</em> yet prove every attached check is operationally valuable (the cross-checks' <em>mechanics</em>
+    are wired; whether a <code>both</code> catches a real problem is deferred).
+  </div>
+
+  <h2>A concrete case: "it fired on it, but the drill-down is blank"</h2>
+  <p>The everyday version of the problem. A detection fires on an EID's value or its existence — so the event
+  <em>was</em> there at detection time — but you click into the alert and the drill-down is empty. You go check
+  manually; still nothing. A mystery. <span class="muted">(added 2026-06-12)</span></p>
+  <p>It is not magic; it sorts into three buckets — and the whole frustration is that a normal SIEM
+  <strong>can't tell you which</strong>, because nothing records the link between <em>what fired</em> and
+  <em>what's retrievable</em>:</p>
+  <table>
+    <thead><tr><th>bucket</th><th>cause</th><th>reading</th></tr></thead>
+    <tbody>
+      <tr><td class="k good">A · still there, looking wrong</td>
+        <td>drill-down query mismatch (time / index / extraction); you fired on a <em>derived</em> value not in the raw; time skew; permissions</td>
+        <td>most common · benign · a <em>retrieval</em> bug</td></tr>
+      <tr><td class="k warn">B · benignly gone</td>
+        <td>retention expiry (the notable outlived the raw); summary / acceleration kept the aggregate, not the event</td>
+        <td>common · benign · a lifecycle artifact</td></tr>
+      <tr><td class="k gap">C · concerningly gone</td>
+        <td>deletion / tampering / anti-forensics — it was there when it fired, then was cleared</td>
+        <td>rare · the one you actually care about</td></tr>
+    </tbody>
+  </table>
+  <div class="note key">
+    <strong>What carrying input-lineage buys.</strong> Because the verdict carries the <strong>CID of the event
+    it fired on</strong> (and the index / transform it came through), the drill-down is not a fresh fragile
+    query that might mismatch — it is a <strong>walk back along the provenance edge</strong>. Resolve that CID:
+    <strong>present → bucket A</strong> (the data's right here; your drill-down query was wrong);
+    <strong>absent → a gap with a recorded reason</strong> that separates <span class="warn">B</span>
+    (aged-out Tuesday per retention, custody intact) from <span class="gap">C</span> (deleted <em>before</em> its
+    retention window — anti-forensics). The derived-value trap is caught too: the normalized node edges back to
+    the raw CID, so "you fired on <code>process.cmd_line</code>; here is the raw <code>CommandLine</code> it came
+    from" is answerable. <strong>The mystery becomes a resolved provenance question — distinguished, not guessed
+    — and bucket C stops hiding among A and B.</strong>
+  </div>
+  <div class="note gap">
+    <strong>Honest limit.</strong> If the raw is genuinely expired, canon can't retrieve it either. But "expired
+    Tuesday, custody intact" is a completely different object than a silent blank — it is the <code>NONE</code>
+    <em>carrying why it is NONE</em>. The value isn't <em>always-retrieve</em>; it is <strong>never-mystery</strong>.
+  </div>
+
+  <h2>Shape standardized, content preserved — the abstraction boundary</h2>
+  <p>Every verdict has the <strong>same slots</strong> (the <code>detection_verdict.schema.json</code>
+  contract): <code>decision</code> · <code>score</code> · <code>w_record</code> · <code>guarantee</code> ·
+  <code>custody</code> · <code>validity</code> · <code>trustworthiness</code> · <code>cross_check</code> ·
+  <code>calibration</code> · <code>provenance</code> (CID). But each detector <strong>earns those slots by
+  its own mechanics</strong> — the substrate never forces one cross-check or one calibrator on everyone:</p>
+
+  <table>
+    <thead><tr><th>Detector family</th><th>Cross-check (independent measure)</th><th>Calibrator</th></tr></thead>
+    <tbody>
+      <tr><td class="k">fan-out</td><td>distinct-count ⟷ entropy</td><td>conformal (FAR ≤ α)</td></tr>
+      <tr><td class="k">off-hours</td><td>conformal rarity ⟷ literal off-hours</td><td>conformal (FAR ≤ α)</td></tr>
+      <tr><td class="k">coordination</td><td>MI ⟷ Pearson correlation</td><td>FDR (level q, Benjamini–Hochberg)</td></tr>
+    </tbody>
+  </table>
+
+  <p>That is the right boundary, and the failure mode it avoids: <em>"every detector must use the same
+  check"</em> would be a leaky abstraction. <em>"every detector must carry a check, earned by its own
+  mechanics"</em> is a <strong>narrow waist</strong> — one stable interchange, content varying freely above
+  it. Worked examples: <code>worked_example_spray_verdict.py</code> (fan-out, real data) and
+  <code>worked_example_coordination_verdict.py</code> (coordination — the most different: FDR + MI⟷correlation).</p>
+
+  <h2>Detector-agnostic — why the substrate is the transferable capability</h2>
+  <p><code>assemble_verdict</code> / <code>emit_detection_verdict</code> know nothing about fan-out or MI;
+  they take <em>any</em> detector's outputs and produce a justified verdict. So the deliverable is not
+  "canon's three detectors" — it is <strong>"wrap any detector → an alert that carries its receipts."</strong>
+  The three families are the <em>proof the substrate generalizes</em>, not the product. This is the cleanest
+  answer to research-vs-product: the product-like core is this substrate, already separable from the
+  specific detectors.</p>
+
+  <h2>The honesty disciplines, visible in one verdict</h2>
+  <ul>
+    <li><strong><code>None</code> vs <code>False</code></strong> — an unanswered claim is <code>none</code>,
+      never a faked <code>false</code> ("we didn't check" ≠ "it's clean"). Custody on an unsigned corpus is
+      <code>none</code>; trustworthiness derives from it; the chain is not faked.</li>
+    <li><strong>Earned-only <code>when</code></strong> — the temporal ∀-validate verdict defaults
+      <code>none</code>; a detector claims <code>when=true</code> <em>only</em> by actually running a temporal
+      check. The audit that found and propagated this fix across all producers is the defining capability:
+      <strong>a system that caught its own unearned assertion.</strong></li>
+    <li><strong><code>Both</code> as a soundness alarm</strong> — <code>decision</code> and
+      <code>cross_check</code> fuse independent paths with <code>kjoin</code>; disagreement surfaces as
+      <code>both</code>, not an averaged-away middle.</li>
+    <li><strong>Earned, demotable guarantee tier</strong> — the tier a result gets is computed from what held
+      on its input, capped at the unattested floor, not asserted.</li>
+    <li><strong>Self-falsifying provenance</strong> — the verdict's PROV-O graph is SHACL-validated
+      (<code>well_formed</code> is <em>checked</em>, not claimed); a malformed graph fails and the violation
+      is surfaced.</li>
+    <li><strong>Self-scoring grounding</strong> — <code>w_record.score</code> <em>lowers</em> itself for W's
+      it didn't ground (an unvalidated <code>when</code> and ungrounded <code>where</code>/<code>how</code>
+      make a detection score <em>down</em>, not falsely up).</li>
+  </ul>
+
+  <h2>What's demonstrated vs deferred</h2>
+  <div class="note">
+    <p><span class="good">■ Demonstrated:</span> the substrate carries the uniform honest shape across the
+    whole battery, on real (fan-out / off-hours) and synthetic (coordination) data; the justification is
+    attached and walkable; the honesty disciplines are mechanical — including the substrate catching its own
+    overclaim.</p>
+    <p><span class="gap">■ Deferred (named, not hidden):</span> the cross-checks' <em>operational</em> value
+    (does a <code>both</code> flag something real?); the machine-checked numeric proof tier (an honest
+    recorded-absence today); MI's operational value on real coordination data.</p>
+  </div>
+  <p>The milestone is <strong>"uniform, honest, attached justification, detector-agnostic"</strong> — not
+  "all of it operationally proven." Keeping that line is itself the thesis.</p>
+</div>
+</body>
+</html>

@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canon — Schema impedance as a SKOS-graded, justified mapping</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --ink:#e6e8ee; --muted:#9aa3b2;
+    --line:#2a2f3a; --accent:#7db4ff; --accent2:#c79bff;
+    --good:#6fcf97; --warn:#f2c94c; --gap:#eb6f6f;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1080px;margin:0 auto;padding:48px 28px 96px}
+  h1{font-size:30px;margin:0 0 6px;letter-spacing:-.01em}
+  .sub{color:var(--muted);margin:0 0 4px;font-size:18px}
+  .stamp{color:var(--muted);font:13px/1.5 var(--mono);margin:0 0 32px}
+  h2{font-size:21px;margin:48px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+  h3{font-size:17px;margin:26px 0 6px;color:#cdd3df}
+  p{margin:10px 0}
+  code{font-family:var(--mono);font-size:.88em;background:#1e222b;padding:1px 5px;border-radius:4px}
+  pre{font-family:var(--mono);font-size:13px;line-height:1.5;background:#1a1e26;border:1px solid var(--line);
+    border-radius:8px;padding:14px 18px;margin:18px 0;overflow-x:auto;color:#d3d8e2}
+  pre code{background:none;padding:0;font-size:inherit}
+  pre.verbatim{white-space:pre-wrap;border-left:3px solid var(--accent2);background:#181a22}
+  .vlabel{font:12px/1.5 var(--mono);color:var(--accent2);margin:18px 0 4px;text-transform:uppercase;letter-spacing:.06em}
+  .note{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:8px;padding:14px 18px;margin:18px 0}
+  .note.gap{border-left-color:var(--gap)}
+  .note.key{border-left-color:var(--accent2)}
+  .muted{color:var(--muted)}
+  ul{margin:10px 0;padding-left:22px}
+  li{margin:7px 0}
+  strong{color:#fff}
+  .good{color:var(--good)} .gap{color:var(--gap)} .warn{color:var(--warn)}
+  .lede{font-size:17px}
+  blockquote{margin:18px 0;padding:10px 18px;border-left:3px solid var(--accent2);
+    background:var(--panel);border-radius:0 8px 8px 0;color:var(--ink)}
+  dl{margin:14px 0;border:1px solid var(--line);border-radius:8px;background:var(--panel);overflow:hidden}
+  dt{font-family:var(--mono);font-size:13px;color:var(--accent);padding:10px 16px 2px}
+  dd{margin:0 0 8px;padding:0 16px 8px;color:var(--ink);font-size:14.5px;border-bottom:1px solid var(--line)}
+  dd:last-child{border-bottom:none}
+  dd .muted{color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p style="font:13px/1.5 var(--mono,monospace);margin:0 0 22px"><a href="../index.html" style="color:#7db4ff;text-decoration:none">← Canon index</a></p>
+  <h1>Schema impedance as a SKOS-graded, justified mapping</h1>
+  <p class="sub">Cross-platform type correspondence is "very close but no guarantee." Represent the closeness honestly — graded, justified, contestable — instead of flattening it to equality.</p>
+  <p class="stamp">canon · session synthesis · 2026-06-16 · <span class="muted">impedance → SKOS grade → justified/callable → load-bearing demotion → contested commons</span></p>
+
+  <p class="lede">A detection written against one platform's schema silently fails against another's, even when the
+  underlying event is identical, because the two name or encode the same fact differently. The fix is not to pretend
+  the schemas are equal — it is to model the mapping as a <strong>graded relation that carries its own reasons</strong>,
+  let the grade affect a verdict only where it is load-bearing, and keep the whole thing contestable.</p>
+
+  <div class="note">
+    <strong>Terms, tersely.</strong>
+    <dl>
+      <dt>impedance</dt><dd>Two schemas describe the same fact with different field names or value encodings, so a rule matching one silently misses the other. <span class="muted">Borrowed from signal engineering: connected, but nothing transfers.</span></dd>
+      <dt>SKOS</dt><dd>Simple Knowledge Organization System — a W3C vocabulary for relating concepts <em>across</em> schemes, with graded mapping relations (below).</dd>
+      <dt>exactMatch</dt><dd>The two concepts are equivalent; interchangeable with confidence. <span class="muted">= agreement.</span></dd>
+      <dt>closeMatch</dt><dd>Similar enough to swap in <em>some</em> applications, explicitly NOT equivalent. <span class="muted">The "close but no guarantee" case.</span></dd>
+      <dt>broadMatch / narrowMatch</dt><dd>One concept is more general / more specific than the other. The hierarchical (position) axis.</dd>
+      <dt>support set</dt><dd>The fields/aspects a detection's predicate actually reads. A mismatch matters only if it lands here.</dd>
+      <dt>load-bearing</dt><dd>The differing dimension is in the rule's support set — the mismatch can change the outcome.</dd>
+      <dt>demote</dt><dd>Lower the verdict's earned guarantee tier, recorded and shown on demand. <span class="muted">Never a silent change.</span></dd>
+      <dt>verdict</dt><dd>A <code>DetectionVerdict</code> instance; its <code>.provenance</code> is the CID into a PROV-O DAG holding every fact behind it.</dd>
+      <dt>Belnap BOTH</dt><dd>The four-valued logic's "conflict" value — agreement <em>and</em> credible dissent at once; a soundness flag, not a coin-flip.</dd>
+    </dl>
+  </div>
+
+  <h2>1 · The problem: impedance</h2>
+  <p>A SigmaHQ Kerberoasting rule keys on raw-Windows <code>ServiceName</code> / <code>TicketEncryptionType</code>.
+  Our corpus (Splunk-CIM) carries the same 4769 RC4 ticket as <code>Service_Name</code> / <code>Ticket_Encryption_Type</code>.
+  Same event, same attack — <code>block_matches</code> looks up <code>ServiceName</code>, finds nothing, the rule doesn't
+  fire. A schema mismatch <em>masquerading as a non-detection.</em></p>
+  <p>Two structural answers, complementary, both lossy:</p>
+  <pre><code>OCSF      (data-side)  normalize each source INTO a common schema once; detect against OCSF
+pySigma   (rule-side)  keep data native; transform the RULE per-schema (field-mapping pipelines)</code></pre>
+  <div class="note gap"><strong>Not the same as a model difference.</strong> Impedance is a <em>naming/encoding</em>
+  mismatch a field-map fixes. The Rubeus EID-4611 logon artifact vs the behavioral 4769 fan-out is two <em>different
+  events</em> — no field-map bridges that. Keep them separate.</div>
+
+  <h2>2 · The formalism: a graded relation, not equality</h2>
+  <p>Cross-scheme correspondence is a SKOS mapping relation. There are <strong>two gradings</strong>:</p>
+  <ul>
+    <li><strong>Tightness</strong> — exact / close / related. How safe it is to treat them as the same.</li>
+    <li><strong>Position</strong> — broad / narrow. Which direction the mismatch goes (generalize vs specialize).</li>
+  </ul>
+  <p>Canon already uses the <em>position</em> axis: the Sigma panel's FCA/SKOS dedup orders rules by broader/narrower
+  field-sets (<code>{TargetImage}</code> is broader than <code>{GrantedAccess, CallTrace}</code>). This is the same
+  lattice generalized from "which rule is broader" to "which platform's type is broader."</p>
+
+  <h2>3 · The grade must be justified and callable — not a label</h2>
+  <p>A SKOS grade you cannot justify back to its inputs is exactly the asserted-not-earned result canon refuses. So the
+  mapping edge is itself a <strong>justified verdict</strong> — a fold over per-dimension difference leaves — and the
+  instance answers "why this grade?" on demand.</p>
+  <pre><code>@dataclass(frozen=True)
+class DiffScore:
+    dimension: str       # name | value-encoding | semantic-scope | osi-layer | cardinality | ...
+    score: float         # contribution to the mismatch (0 = identical)
+    source_defn: str     # pointer to THIS platform's definition of the concept
+    target_defn: str     # pointer to the OTHER's definition
+
+@dataclass(frozen=True)
+class TypeMapping:
+    source: str; target: str
+    relation: str                    # exact | close | broad | narrow | related  (the SKOS bucket)
+    subscores: tuple[DiffScore, ...] # what the grade folds over
+    osi_layer:  int | None           # the coordinate-system view: WHERE the concept sits
+    coordinate: tuple | None         # node coordinate in concept space
+    neighbors:  tuple[str, ...]      # relative position to neighbors
+
+    def magnitude(self) -> float: ...        # quantitative distance (vs the qualitative bucket)
+    def why(self) -> "Justification": ...    # relation + subscores + definition pointers, shown on demand
+    def is_load_bearing(self, support: set) -> bool: ...   # is the differing dimension in the rule's support?
+    def demotes(self, tier, *, load_bearing: bool): ...    # gated effect — never a silent pass</code></pre>
+  <p>The grade carries the <strong>reason</strong> (which dimension differs), the <strong>sub-scores</strong>,
+  <strong>pointers to each platform's actual definition</strong>, and <strong>positional metadata</strong> — OSI/IP
+  layer, a node coordinate, relative position to neighbors. <span class="muted">SKOS gives the qualitative bucket;
+  magnitude is a further layer — don't fake precision.</span></p>
+
+  <h2>4 · Storage vs effect: the grade always exists; only its consequence is gated</h2>
+  <div class="note key"><strong>Two things, never conflated.</strong>
+    <ul>
+      <li><span class="good">Always stored:</span> the grade + its reasons. Computed once, intrinsic to the edge,
+      independent of any detection. <em>Every grade points to its reasons, full stop.</em></li>
+      <li><span class="warn">Gated:</span> the <em>demotion consequence</em> on a particular verdict. A closeMatch on a
+      field a rule never reads is <strong>inert</strong> — no demotion.</li>
+    </ul>
+  </div>
+  <p>So demotion is a join, and it needs <em>both</em> gates:</p>
+  <pre><code>demote(verdict)  ⟺   (grade ≠ exactMatch)        # not agreement
+                  ∧   (load-bearing)               # the differing dimension is in the rule's support set</code></pre>
+  <p>Agreement kills the penalty; non-agreement on an unused field also kills it. You need <em>disagreement the detection
+  actually leans on</em>. And <strong>inert ≠ unrecorded</strong>: the verdict still carries "field X is a closeMatch,
+  here's why, but this detection doesn't use X → no demotion." The non-demotion is itself shown on demand.</p>
+  <p class="muted">"Takes effect" = a recorded tier demotion in the verdict's guarantee (mechanical, demotable). Surfacing
+  a demoted verdict for analyst review is a downstream consequence, not the mechanism. The transparent per-dimension
+  grade exists so the user (or an agent) can reason for themselves whether the difference is load-bearing on <em>this</em>
+  detection — part mechanical (is the field in the support set?), part semantic (does <code>0x17</code> vs
+  <code>RC4-HMAC</code> flip the predicate?).</p>
+
+  <div class="note key"><strong>[Future — examine closely] Three definitions, per event.</strong>
+  Load-bearing above is stated syntactically — <em>is the field in the support set?</em> — but it is
+  deeper: whether a difference bites is a function of <strong>three definitions</strong> meeting at the
+  <em>detection event</em> — the source field def, the target field def, and the <em>detection's own
+  definition</em>. The same edge-grade is load-bearing for one detection and inert for another, by what
+  each <em>asserts</em> about the field (presence vs literal-equality vs numeric-compare; <code>0x17</code>
+  vs <code>RC4-HMAC</code> is inert if only presence is tested, load-bearing if compared literally — and
+  "which" is a fact about the <em>detection's</em> definition, not the field's). Because a Sigma rule is a
+  fairly formal predicate, much of "does this difference matter to THIS detection" is computable from the
+  rule's AST crossed with the dimension the edge differs on — shrinking the judgment residual.</div>
+
+  <h2>5 · The verdict object — everything routes back to provenance</h2>
+  <p>A detection result is a <code>DetectionVerdict</code> instance. Its <code>.provenance</code> is the root CID into a
+  content-addressed PROV-O DAG; walking it (<code>to_prov</code> / <code>lineage</code>) recovers <em>every fact</em> —
+  the W-record (who/what/when/where/how), the five folds (confidence, custody, guarantee, temporal, value), and the
+  corroboration edges. Enough to <strong>almost mechanically render a report or a chart.</strong></p>
+  <pre><code>verdict (instance)
+  └─ .provenance = CID ─▶ PROV-O DAG
+        ├─ W-record:  who / what / when / where / how
+        ├─ folds:     confidence · custody · guarantee · temporal · value
+        ├─ corroboration edges:  sigma_corroboration → rule-class entities
+        └─ mapping edges:        TypeMapping.why() → per-dimension diffs + definitions</code></pre>
+  <div class="note"><strong>Storage stance.</strong> On a Splunk-notable eval the verdict artifact is an
+  ephemeral tmp file <em>tagged with the notable id</em>; <strong>retention is the customer's SIEM policy</strong>,
+  not canon's. And it is reconstructable from the content-addressed inputs — re-derivable from the retained notable +
+  the deterministic DAG. Don't reinvent storage. <span class="muted">Gaps: the report/chart renderer and a persisted
+  verdict store aren't built — the data model supports both trivially.</span></div>
+
+  <h2>6 · The edges as a living, contested commons</h2>
+  <p>A grade is not a one-time assignment — it is a contestable claim that <strong>accrues peer review over time</strong>,
+  and the reviews are themselves canon-native verdicts. None of the machinery is new:</p>
+  <dl>
+    <dt>Dawid–Skene</dt><dd>EM that jointly estimates the true grade AND each reviewer's reliability from disagreeing labels. Reviewer-reliability-as-telemetry is the latent parameter it already recovers.</dd>
+    <dt>credibility theory (Bühlmann)</dt><dd>Actuarial per-entity reliability weighting — the per-entity baseline, pointed at reviewers. A reviewer's track record weights their next grade.</dd>
+    <dt>review = argument, not vote</dt><dd>Because the grade is justified, a review carries its reasons; weight by justification quality + track record, not raw count. <span class="muted">Majority ≠ correct, especially for expert schema judgments.</span></dd>
+  </dl>
+  <p><strong>Even agreement is contestable.</strong> An exactMatch is a claim with provenance, not a fact; an AI or human
+  can contest it. A credible contestation doesn't silently flip the edge — it enters a recorded <em>contested</em> state
+  (Belnap-<code>BOTH</code>-flavored: agreement + credible dissent = a soundness flag), cataloged and analyzed.</p>
+  <div class="note key"><strong>Layer split.</strong>
+    <ul>
+      <li><strong>Core (canon):</strong> the edge is a justified, contestable verdict with provenance. Reviews and
+      reviewer-reliability are <em>just more verdicts</em> — same machinery, recursive. Works with one reviewer, scales
+      to a crowd unchanged.</li>
+      <li><strong>Ecosystem (the "other business"):</strong> contribution / governance / attribution — opt-in, OSS,
+      named-or-anonymous, recognition. Separable and undecided.</li>
+    </ul>
+  </div>
+  <div class="note gap"><strong>Don't hand-wave the failure modes.</strong> Reputation systems get gamed — collusion,
+  sockpuppets, majority-tyranny, cold-start. Dawid–Skene + credibility-weighting down-weight bad raters but don't
+  immunize; the justification-weighting (a graded <em>argument</em> is auditable, a vote isn't) is the real defense.
+  Convergence is likely but not guaranteed — a persistently-contested edge is <em>honest signal</em> (genuine platform
+  ambiguity), not noise to resolve away.</div>
+
+  <h2>7 · The electrical-engineering analog</h2>
+  <p>It goes past the borrowed word "impedance." The core analog is the <strong>reflection coefficient</strong> — and
+  it lines up structurally, including the two-axis grading.</p>
+  <p>When a source and load impedance don't match, not all the signal transfers — some reflects. The reflection
+  coefficient <code>Γ = (Z_load − Z_source) / (Z_load + Z_source)</code> is a <strong>complex number in the unit
+  disk</strong>: <code>Γ=0</code> is a perfect match (all transfers), <code>|Γ|=1</code> is total mismatch (all
+  reflects). A complex number carries <em>magnitude and phase</em> — "how much" and "which way" — which is exactly the
+  tightness-vs-position split we insisted on.</p>
+  <pre><code>Γ = 0                 ⇄  exactMatch     (perfect transfer, no penalty)
+small |Γ|             ⇄  closeMatch     (mostly transfers, some loss)
+|Γ| → 1               ⇄  no real match  (nothing transfers)
+|Γ|  (magnitude)      ⇄  tightness      (HOW MUCH mismatch)
+∠Γ   (phase)          ⇄  position       (WHICH WAY — inductive/capacitive ≈ broad/narrow)
+
+VSWR / return loss          ⇄  scalar magnitude / demotion cost (one number for "how bad")
+S-parameters / Smith chart  ⇄  per-dimension sub-scores, shown on demand (decomposed "why")
+frequency band in use       ⇄  load-bearing (a mismatch only costs you IN the band you use)
+matching network/transformer⇄  OCSF / pySigma pipelines (literally "impedance matching")
+common ground / reference   ⇄  OCSF as the shared schema everyone is measured against
+VNA calibration (SOLT)      ⇄  the grade is a claim needing validation; defns = reference plane</code></pre>
+  <p>The <strong>load-bearing</strong> gate is the cleanest: impedance is frequency-dependent, <code>Z(ω)</code>, and a
+  mismatch only degrades your signal where your spectrum has power. A bad match at a frequency you don't use is inert —
+  exactly "a closeMatch on a field the rule never reads doesn't demote."</p>
+  <div class="note gap"><strong>Where it breaks — and the break is the point.</strong> <code>Γ</code> is a physical,
+  measurable quantity underwritten by Maxwell's equations: you measure it, it's true. A semantic grade has <em>no
+  underwriting physics</em> — there's no equation for "is <code>ServiceName</code> the same concept as
+  <code>Service_Name</code>." The analogy gives the <em>shape</em> (graded, magnitude+phase, band-gated, calibrated,
+  decomposable) but not the <em>ground truth</em>. Which is exactly why canon needs the parts a transmission line never
+  does — justification, contestability, a peer-reviewed commons. A coax cable doesn't need its reflection coefficient
+  peer-reviewed; a semantic edge does. The faint analog even there is <strong>metrology</strong>: trust via traceability
+  to community-maintained reference standards (NIST). Reviewer credibility ≈ calibration traceability.</div>
+  <div class="note"><strong>[Correction owed]</strong> "No underwriting physics" just above is too strong.
+  The field definitions — and the emitted-value behavior — ARE the reference plane, pointable to the exact
+  differing part. The grade is an <em>inference</em> over that ground: <strong>computable where the specs
+  are formal</strong> (datatype / enum / value-domain → broad/narrow as set containment), <strong>judgment
+  only in the residual</strong> (semantic identity not reducible to type + values, e.g. <code>source_ip</code>
+  vs <code>nat_ip</code>; silent specs; intent). Not "no physics" — rather "the specs are the law, written
+  partly in prose and sometimes silent, so applying it has an interpretive step, with the formal fraction
+  computed outright." To be reframed in the body when this area is examined.</div>
+  <p class="muted">Canon already lives in EE on the <em>detection</em> side — the battery is radar/sonar DSP lineage
+  (CFAR, matched filtering, conformal). This puts the same physics-borrowed thinking on the <em>integration</em> side.
+  The matched filter maximizes SNR against a known template; impedance mismatch in that template degrades the
+  correlation. Same family, one layer over.</p>
+
+  <p class="vlabel">Verbatim — session discussion · 2026-06-16</p>
+  <pre class="verbatim">Yes — and it goes well past the borrowed word. The core analog is the **reflection coefficient**, and it's almost uncomfortably good.
+
+In EE, when a source and load impedance don't match, not all the signal transfers — some reflects. The reflection coefficient is
+
+    Γ = (Z_load − Z_source) / (Z_load + Z_source)
+
+and it's a **complex number in the unit disk**: `Γ = 0` is a perfect match (everything transfers), `|Γ| = 1` is total mismatch (everything reflects). That maps onto the SKOS grade structurally, including the two-axis part we kept insisting on:
+
+    Γ = 0                 ⇄  exactMatch        (perfect transfer, no penalty)
+    small |Γ|             ⇄  closeMatch        (mostly transfers, some loss)
+    |Γ| → 1               ⇄  no real match     (nothing transfers)
+    |Γ|  (magnitude)      ⇄  tightness         (HOW MUCH mismatch)
+    ∠Γ   (phase)          ⇄  position          (WHICH WAY — inductive/capacitive ≈ broad/narrow)
+
+A complex number carries magnitude *and* phase — "how much" and "which way" — which is exactly the tightness-vs-position split. I didn't design it to line up; it just does.
+
+The rest of the apparatus has analogs too:
+
+    VSWR / return loss          ⇄  the scalar magnitude / demotion cost (one number for "how bad")
+    S-parameters, Smith chart   ⇄  the per-dimension sub-scores, shown on demand (decomposed "why")
+    frequency band of operation ⇄  load-bearing  (a mismatch only costs you IN the band you use)
+    matching network/transformer⇄  OCSF / pySigma pipelines (literally "impedance matching")
+    common ground / reference   ⇄  OCSF as the shared schema you measure everyone against
+    VNA calibration (SOLT)      ⇄  the grade is a claim needing its own validation; definitional
+                                   pointers = the reference plane
+
+The **load-bearing** gate is the cleanest of these: impedance is frequency-dependent, `Z(ω)`, and a mismatch only degrades your signal where your spectrum actually has power. A bad match at a frequency you don't use is inert — exactly "a closeMatch on a field the rule never reads doesn't demote."
+
+**Where it breaks — and the break is the interesting part.** `Γ` is a *physical, measurable* quantity underwritten by Maxwell's equations. You measure it; it's true. A semantic mapping grade has **no underwriting physics** — there's no equation for "is `ServiceName` the same concept as `Service_Name`." So the EE analogy gives you the *shape* (graded, magnitude+phase, band-gated, calibrated, decomposable) but not the *ground truth*. And that gap is precisely **why canon needs the parts a transmission line never does**: justification, contestability, a peer-reviewed commons. A coax cable doesn't need its reflection coefficient peer-reviewed; a semantic edge does, because nothing physical pins it down. The one faint analog even there is **metrology** — measurements made trustworthy by traceability to community-maintained reference standards (NIST). Reviewer credibility ≈ calibration traceability.
+
+Worth noting: canon already lives in EE on the *detection* side — the battery is radar/sonar DSP lineage (CFAR, matched filtering, conformal). This puts the same physics-borrowed thinking on the *integration* side. The matched filter maximizes SNR against a known template; impedance mismatch in that template degrades the correlation. Same family of ideas, one layer over.
+
+Want me to fold the reflection-coefficient framing into the impedance page (it's a strong intuition pump — `Γ=0` = exactMatch, phase = broad/narrow, frequency-band = load-bearing), or leave it as discussion?</pre>
+
+  <h2>8 · The open problem</h2>
+  <p>When an edge flips to contested, every verdict that ever leaned on it <em>load-bearingly</em> is retroactively in
+  question — a <strong>provenance-invalidation / re-derivation</strong> problem. Tractable precisely because everything
+  is content-addressed and reconstructable, but it is the non-trivial part, and it is its own pass.</p>
+
+  <p class="stamp" style="margin-top:40px">Design direction, not built · <span class="muted">source of truth:
+  <code>design/skos_graded_mapping_seam.md</code></span></p>
+</div>
+</body>
+</html>

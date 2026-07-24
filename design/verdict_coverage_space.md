@@ -1,7 +1,7 @@
 # Verdicts as locations — the coverage-space model + the fidelity-wiring contract
 
 **Status: design frame + wiring contract, 2026-06-18.** The frame any fidelity→verdict / fidelity→chain
-build must sit inside. Matures "the W's as a coordinate system" (`web/w_coordinate_system.html`) into a
+build must sit inside. Matures "the W's as a coordinate system" (`web/detection/w_coordinate_system.html`) into a
 coverage-space model, and pins the guardrails so the wiring reinforces the right structure instead of
 gating unnaturally. Written *before* the build, deliberately (contracts-first).
 

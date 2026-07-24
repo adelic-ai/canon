@@ -18,7 +18,7 @@ Built on five design decisions (see the `forge-core-scoping` memory and
 ## Layout
 
 Flat module layout under `src/forge_core/` — 17 modules, 207 tests. Grouped here
-by role in the detection battery (`web/detection_battery.html`): a **measurement
+by role in the detection battery (`web/detection/detection_battery.html`): a **measurement
 axis** feeds a **decision axis** over a shared **foundation**, alongside a small
 set of **classical detectors** that bundle feature and test.
 

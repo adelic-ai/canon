@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canon — Holes, and what "abduction" means</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --ink:#e6e8ee; --muted:#9aa3b2;
+    --line:#2a2f3a; --accent:#7db4ff; --accent2:#c79bff;
+    --good:#6fcf97; --warn:#f2c94c; --gap:#eb6f6f;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1000px;margin:0 auto;padding:48px 28px 96px}
+  .backlink{font:13px/1.5 var(--mono);margin:0 0 22px}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  h1{font-size:28px;margin:0 0 6px;letter-spacing:-.01em}
+  .sub{color:var(--muted);margin:0 0 4px;font-size:17px}
+  .stamp{color:var(--muted);font:13px/1.5 var(--mono);margin:0 0 30px}
+  h2{font-size:21px;margin:46px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+  p{margin:11px 0}
+  code{font-family:var(--mono);font-size:.86em;background:#1e222b;padding:1px 5px;border-radius:4px}
+  strong{color:#fff}
+  .note{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:8px;padding:14px 18px;margin:20px 0}
+  .note.key{border-left-color:var(--accent2)}
+  ol{margin:12px 0;padding-left:22px}
+  li{margin:9px 0}
+  table{border-collapse:collapse;width:100%;margin:16px 0;font-size:13.5px;background:var(--panel);
+    border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#1c212b;color:var(--muted);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em}
+  tr:last-child td{border-bottom:none}
+  td.k{font-family:var(--mono);font-size:12.5px;color:var(--accent);white-space:nowrap}
+  footer{margin-top:60px;color:var(--muted);font-size:13px;border-top:1px solid var(--line);padding-top:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="backlink"><a href="../index.html">← Canon index</a></p>
+
+  <h1>Canon's holes — and what "abduction" means</h1>
+  <p class="sub">Where the substrate actually stands, and the concept naming its biggest gap.</p>
+  <p class="stamp">canon · state node · 2026-06-13</p>
+
+  <h2>Context: the Kaggle competition (parked)</h2>
+  <p>This node grew out of looking at the Kaggle <em>AI Agent Security — Multi-Step Tool Attacks</em>
+  competition (OpenAI/Google/IEEE): an algorithmic red-teaming task where you build a search that finds
+  multi-step poisoned-input chains making a tool-using agent cross a security boundary. After working through
+  it, the honest verdict: it is **largely exterior to canon.** The one genuinely transferable piece is
+  <strong>Go-Explore</strong> (a generic archive-based search algorithm) for canon's missing orchestration
+  layer; the rest — its labeled traces (agent-tool domain, not host telemetry), its eval harness, its
+  taint-shaped predicates — is either wrong-domain, generic, or something canon already has in richer form.
+  <strong>Likely not pursuing it</strong> — the focus is core canon. Parked here as the context this node
+  came from.</p>
+
+  <h2>Canon's holes, honestly</h2>
+  <ol>
+    <li><strong>No proposer.</strong> Canon is all <em>verifier</em> — deductive pattern-matching over the
+      provenance graph. The hypothesis-forming step (the abduction loop's STITCH) is unbuilt. Canon can
+      <em>check</em> a claim; it can't <em>form</em> one. <span class="muted">(the concept below names this)</span></li>
+    <li><strong>No orchestration.</strong> The six detection cells are isolated. Nothing decides <em>which to
+      fire when</em> — the firing-order / investigation-DAG search. This is the one place Go-Explore could help.</li>
+    <li><strong>No real evaluation.</strong> Everything runs on one OTRF corpus (+ synthetic). The "does a
+      finding mean anything real" question (operational value) is open — no ground truth, no multi-corpus test.</li>
+    <li><strong>The <code>(who, job)</code> root is undefined.</strong> The keystone's hard, out-of-band part —
+      pinning legitimate authority / the baseline — is unbuilt.</li>
+    <li><strong>It's experiments, not a product.</strong> The cells live in
+      <code>packages/detection/experiments/</code>, not an integrated system. (Plus: custody inert — no signed
+      feeds; no streaming; the agent-tool domain designed but unbuilt; the machine-checked proof tier a
+      deferred absence.)</li>
+  </ol>
+  <div class="note key">
+    The biggest is #1 + #2: canon has a solid <strong>verifier substrate</strong> and <strong>no engine that
+    drives it.</strong> It is the conscience without the imagination.
+  </div>
+
+  <h2>Why "abduction," and what we're "abducting"</h2>
+  <p>Nothing gets kidnapped — it's the logic term. Charles Peirce's three modes of inference:</p>
+  <table>
+    <thead><tr><th>mode</th><th>shape</th><th>nature</th></tr></thead>
+    <tbody>
+      <tr><td class="k">deduction</td><td>rule + cause → effect ("if A then B; A; so B")</td><td>certain</td></tr>
+      <tr><td class="k">induction</td><td>many cases → general rule ("lots of A were B, so A's are usually B")</td><td>generalization</td></tr>
+      <tr><td class="k" style="color:var(--accent2)">abduction</td><td>effect + rules → <strong>best cause</strong> ("B happened; A would explain B; so probably A")</td><td>a defeasible <em>guess</em></td></tr>
+    </tbody>
+  </table>
+  <p>Abduction is <strong>inference to the best explanation</strong> — reasoning <em>backward</em> from
+  observed evidence to the most likely cause. In the loop: given grounded atoms (the events — the evidence),
+  the LLM <strong>abduces the best explanation</strong> of what happened ("this is a credential dump that
+  moved laterally"). What we "abduct" is a <strong>hypothesis from the evidence</strong>, not an object.</p>
+  <div class="note">
+    The name is exact because <strong>detection is fundamentally abductive</strong>: from logs you infer the
+    best explanation of an attack, and that inference is a <em>guess</em>, not a proof — which is precisely
+    why it is the LLM's job (generative, uncertain) and why it must then be <em>verified</em>.
+    <strong>Abduction proposes; deduction checks.</strong> Canon today has only the second half — which is
+    hole #1, in one word.
+  </div>
+
+  <footer>Canon · web/canon_holes_and_abduction.html · 2026-06-13. Related:
+    <a href="abduction_loop.html">the abduction loop</a> ·
+    <a href="../substrate/atoms_combination_why.html">atoms, combination, and the why</a> ·
+    <a href="agent_as_analyst.html">verification vs abduction</a></footer>
+
+</div>
+</body>
+</html>

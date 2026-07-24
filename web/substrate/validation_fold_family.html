@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canon — The Substrate as an Open Family of Validation Folds</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --ink:#e6e8ee; --muted:#9aa3b2;
+    --line:#2a2f3a; --accent:#7db4ff; --accent2:#c79bff;
+    --good:#6fcf97; --warn:#f2c94c; --gap:#eb6f6f;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1080px;margin:0 auto;padding:48px 28px 96px}
+  h1{font-size:30px;margin:0 0 6px;letter-spacing:-.01em}
+  .sub{color:var(--muted);margin:0 0 4px;font-size:18px}
+  .stamp{color:var(--muted);font:13px/1.5 var(--mono);margin:0 0 32px}
+  h2{font-size:21px;margin:48px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+  p{margin:10px 0}
+  code{font-family:var(--mono);font-size:.88em;background:#1e222b;padding:1px 5px;border-radius:4px}
+  pre{background:#10131a;border:1px solid var(--line);border-radius:8px;padding:14px 16px;
+    overflow-x:auto;font-family:var(--mono);font-size:13px;line-height:1.55;color:#d4d9e4}
+  .note{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:8px;padding:14px 18px;margin:18px 0}
+  .note.gap{border-left-color:var(--gap)}
+  .note.key{border-left-color:var(--accent2)}
+  .note.good{border-left-color:var(--good)}
+  .muted{color:var(--muted)}
+  ul{margin:10px 0;padding-left:22px}
+  li{margin:7px 0}
+  strong{color:#fff}
+  table{border-collapse:collapse;width:100%;margin:18px 0;font-size:14px;background:var(--panel);
+    border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  th,td{text-align:left;padding:10px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#1c212b;color:var(--muted);font-weight:600;font-size:12px;
+    text-transform:uppercase;letter-spacing:.04em}
+  tr:last-child td{border-bottom:none}
+  td.k{font-weight:600;white-space:nowrap;color:var(--accent)}
+  .good{color:var(--good)} .gap{color:var(--gap)} .warn{color:var(--warn)}
+  .lede{font-size:17px}
+  .belnap{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}
+  .b{flex:1;min-width:200px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px}
+  .b code{font-size:1em}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p style="font:13px/1.5 var(--mono,monospace);margin:0 0 22px"><a href="../index.html" style="color:#7db4ff;text-decoration:none">← Canon index</a></p>
+  <h1>The substrate is an open family of validation folds</h1>
+  <p class="sub">Not one validator — however many independent lenses make sense, over one object.</p>
+  <p class="stamp">canon · architecture · 2026-06-05 · <span class="muted">packages/provenance · contracts/</span></p>
+
+  <p class="lede">A result is not just a number. The substrate takes a computation expressed as one
+  <strong>content-addressed graph</strong> and reads it through <em>many independent lenses</em> — each a fold that
+  answers a different question (what is the value? how was it made? can the inputs be trusted? what wasn't checked?).
+  The lenses compose because they share a shape, and the family is <strong>open</strong>: add as many concerns as make
+  sense, provided each one passes a single membership test.</p>
+
+  <h2>Three axes — easy to conflate, kept distinct</h2>
+  <table>
+    <thead><tr><th>Axis</th><th>Shape</th><th>Members</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Folds = concerns</td><td><strong>parallel</strong>, independent</td>
+        <td>value · provenance · custody · validity · guarantee · confidence · temporal <span class="muted">(+ cost, named-not-built)</span></td></tr>
+      <tr><td class="k">Tiers = rigor</td><td><strong>stacked</strong> (a partial order)</td>
+        <td>well-formed → bounded → machine-checked <span class="muted">(within the guarantee fold)</span></td></tr>
+      <tr><td class="k">Data-components = where</td><td><strong>disjoint</strong> vantages</td>
+        <td>host · network · cloud · auth <span class="muted">(which sensor saw it)</span></td></tr>
+    </tbody>
+  </table>
+  <p>"However many validation layers make sense" is the <em>first</em> axis — the open, extensible fold family. The other
+  two are not stacks of validators; they are the rigor ladder <em>inside</em> one fold, and the observation tier the data
+  arrived from.</p>
+
+  <h2>The membership test — what keeps "however many" honest</h2>
+  <p>A candidate concern is admitted <strong>iff it can be written as a <code>≤_k</code>-monotone fold</strong> over the
+  graph into the Belnap carrier — and that is <em>CI-checkable</em>. Feed it <code>NONE</code> / <code>BOTH</code> and
+  assert no knowledge-order violation. If a concern can't be written monotone, it is rejected and re-cut. So the family is
+  open but not arbitrary: monotonicity is the gate.</p>
+
+  <div class="note key">
+    <strong>The governing sentence.</strong> Every cross-cutting concern is a <code>≤_k</code>-monotone fold from one
+    content-addressed computation graph into a Belnap bilattice. That single idea is the joinery: the folds compose
+    because they share a shape, the acceptance test ("add concern N without touching concern M") <em>is</em>
+    monotonicity, and the justification of a result is the <em>same object</em> as the result.
+  </div>
+
+  <h2>The carrier — why a fold can say "I couldn't tell"</h2>
+  <p>Every fold computes in Belnap's four values, so each lens can be honest about absence and contradiction — the thing
+  ordinary validators can't express:</p>
+  <div class="belnap">
+    <div class="b"><code class="good">TRUE</code><br><span class="muted">we looked, it holds</span></div>
+    <div class="b"><code class="gap">FALSE</code><br><span class="muted">we looked, it's clean / fails</span></div>
+    <div class="b"><code class="warn">NONE</code><br><span class="muted">we couldn't see (≠ FALSE)</span></div>
+    <div class="b"><code class="accent2">BOTH</code><br><span class="muted">our checks disagree</span></div>
+  </div>
+  <p>The knowledge order <code>NONE ≤ {TRUE,FALSE} ≤ BOTH</code> is the formal statement of <em>absence of evidence ≠
+  evidence of absence</em>. Combining evidence can only move <em>up</em> — that is the monotonicity every fold must obey.
+  <code>BOTH</code> is not averaged away; it is wired to the self-falsification machinery as a soundness alarm.</p>
+
+  <h2>The current family</h2>
+  <table>
+    <thead><tr><th>Fold</th><th>Question it answers</th><th>State</th></tr></thead>
+    <tbody>
+      <tr><td class="k">value</td><td>what is the result?</td><td class="good">built</td></tr>
+      <tr><td class="k">provenance</td><td>how was it made? (full lineage, PROV-O)</td><td class="good">built</td></tr>
+      <tr><td class="k">validity</td><td>is the input well-formed? (carries the deviation)</td><td class="good">built</td></tr>
+      <tr><td class="k">custody</td><td>was it tampered between collection and use?</td><td class="warn">built · live only when signed</td></tr>
+      <tr><td class="k">guarantee</td><td>how rigorous is the claim? (tier, demotes when assumptions fail)</td><td class="good">built</td></tr>
+      <tr><td class="k">confidence</td><td>graded belief (LLR), orthogonal to knowledge value</td><td class="good">built</td></tr>
+      <tr><td class="k">temporal</td><td>ordering / causality (negation under partial data)</td><td class="good">built</td></tr>
+      <tr><td class="k">cost</td><td>resource fold — same shape</td><td class="muted">named, not built</td></tr>
+    </tbody>
+  </table>
+  <p>A <em>verdict</em> is a domain view that selects which folds matter: detection picks {technique, custody, cross-check,
+  calibration}; a data pipeline might pick {lineage, validity, freshness}; finance {value, confidence-interval,
+  custody-of-feed}. The folds are the agnostic core; the verdict is a thin per-domain selection over them.</p>
+
+  <div class="note gap">
+    <strong>Honest scope.</strong> The fold family is <span class="good">built</span> in <code>packages/provenance</code>
+    and is domain-agnostic by construction. But "open and extensible across domains" is demonstrated only <em>within
+    detection</em> so far — new concerns and new domain verdict-views are designed, not yet exercised. And several folds are
+    <em>out-of-band-dependent</em> — custody is live only with signing, confidence only with known operating points — so the
+    family lights up <em>differently</em> per domain rather than uniformly.
+  </div>
+
+  <p class="stamp" style="margin-top:40px">Companions: <code>canon_state_2026-06-05.html</code>,
+  <code>process_provenance_graph.html</code>, <code>canonmon_multisource_unifier.html</code>,
+  <code>justified_verdict_substrate.html</code>. Architecture readout, not a live document.</p>
+</div>
+</body>
+</html>

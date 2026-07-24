@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canon — Entailment: Two Ways Up the Mountain</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --ink:#e6e8ee; --muted:#9aa3b2;
+    --line:#2a2f3a; --accent:#7db4ff; --accent2:#c79bff;
+    --good:#6fcf97; --warn:#f2c94c; --gap:#eb6f6f;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1080px;margin:0 auto;padding:48px 28px 96px}
+  h1{font-size:30px;margin:0 0 6px;letter-spacing:-.01em}
+  .sub{color:var(--muted);margin:0 0 4px;font-size:18px}
+  .stamp{color:var(--muted);font:13px/1.5 var(--mono);margin:0 0 32px}
+  h2{font-size:21px;margin:48px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+  h3{font-size:16px;margin:24px 0 6px;color:var(--accent2)}
+  p{margin:10px 0}
+  code{font-family:var(--mono);font-size:.88em;background:#1e222b;padding:1px 5px;border-radius:4px}
+  pre{background:#10131a;border:1px solid var(--line);border-radius:8px;padding:14px 16px;
+    overflow-x:auto;font-family:var(--mono);font-size:13px;line-height:1.55;color:#d4d9e4}
+  .note{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:8px;padding:14px 18px;margin:18px 0}
+  .note.gap{border-left-color:var(--gap)}
+  .note.key{border-left-color:var(--accent2)}
+  .note.good{border-left-color:var(--good)}
+  .note.seed{border-left-color:var(--warn)}
+  .muted{color:var(--muted)}
+  ul{margin:10px 0;padding-left:22px}
+  ol{margin:10px 0;padding-left:22px}
+  li{margin:7px 0}
+  strong{color:#fff}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  blockquote{margin:14px 0;padding:2px 0 2px 16px;border-left:3px solid var(--accent2);
+    font-style:italic;color:#cdd3df}
+  table{border-collapse:collapse;width:100%;margin:18px 0;font-size:14px;background:var(--panel);
+    border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  th,td{text-align:left;padding:10px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#1c212b;color:var(--muted);font-weight:600;font-size:12px;
+    text-transform:uppercase;letter-spacing:.04em}
+  tr:last-child td{border-bottom:none}
+  td.k{font-weight:600;white-space:nowrap;color:var(--accent)}
+  .good{color:var(--good)} .gap{color:var(--gap)} .warn{color:var(--warn)}
+  .lede{font-size:17px}
+  .num{color:var(--accent2);font-family:var(--mono);font-weight:600}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p style="font:13px/1.5 var(--mono);margin:0 0 22px"><a href="../index.html" style="color:#7db4ff;text-decoration:none">← Canon index</a></p>
+  <h1>Entailment: two ways up the mountain</h1>
+  <p class="sub">The LLM proposes; canon verifies — but <em>proposes what?</em> Hypotheses (A) or rules (B).</p>
+  <p class="stamp">canon · thinking capture · 2026-07-24 · <span class="muted">the A→B story, the two LLM roles, the six structure options, and the audit that says they're already built</span></p>
+
+  <p class="lede">"The LLM proposes; canon verifies" was said before the entailment work firmed up, and it hides an
+  unresolved fork: <strong>what</strong> the LLM proposes. Mode&nbsp;<span class="num">A</span> — the LLM proposes an
+  instance-level <em>hypothesis</em> about what happened, trusted per-incident. Mode&nbsp;<span class="num">B</span> —
+  the LLM proposes reusable <em>rules</em>, validated once, and a finite entailment structure does the reasoning. They
+  are two different ascents of the same mountain. This page pins the distinction, the story order, the hypothesis
+  object, and the six structural choices for B.</p>
+
+  <div class="note seed">
+    <strong>The one line to leave with.</strong> In Mode&nbsp;A the LLM's creativity lands <em>in the verdict</em>.
+    In Mode&nbsp;B it is <em>quarantined at the rule-authoring boundary</em> — proposed offline, validated before it
+    is trusted — and the online reasoning that produces verdicts is deterministic entailment. <strong>The LLM never
+    touches a live conclusion.</strong>
+  </div>
+
+  <h2>The two modes</h2>
+
+  <h3>Mode A — LLM proposes hypotheses (the pre-entailment framing)</h3>
+  <p>The LLM is the <strong>hypothesis generator</strong>. Point it at a bag of detections and it outputs an
+  instance-level conclusion: <em>"this is Kerberoasting into lateral movement toward the DC."</em> Canon then checks
+  that story statistically (the battery) and provenance-wise (the justified verdict). The hypothesis space is
+  <strong>unbounded</strong>.</p>
+  <ul>
+    <li><span class="good">Strength:</span> catches novelty; open-ended; instantly legible (the "agentic SOC" pitch everyone already understands).</li>
+    <li><span class="gap">Weakness:</span> a hallucinated conclusion lands <em>in the verdict</em>; and the LLM can't tell you which hypotheses it <em>failed</em> to generate. No completeness. Canon can reject a bad proposal but can't know one was missed.</li>
+  </ul>
+
+  <h3>Mode B — LLM proposes rules (entailment)</h3>
+  <p>The LLM never says what happened in this incident. It proposes <strong>type-level structure</strong> for the
+  engine — reusable machinery a human or a validation step checks <em>once</em>, after which a deterministic entailment
+  engine applies it to every incident forever. Examples of a "rule":</p>
+  <ul>
+    <li>a new entailment edge — <em>"a comsvcs MiniDump spawn ⊢ a VM_READ to lsass"</em> (you cannot dump credentials without reading lsass memory);</li>
+    <li>an equivalence — <em>"these two Sigma rules are the same rule"</em> (see <a href="../rules/rule_equivalences.html">rule_equivalences</a>);</li>
+    <li>a transition — <em>"technique&nbsp;T emits under tactic&nbsp;T′"</em>, or a tactic→tactic edge in the kill-chain graph.</li>
+  </ul>
+  <p>The hypothesis space is then <strong>finite and structured</strong> — the entailment closure over the attack
+  graph — and each hypothesis is a scoreable object, not a sentence the model invented.</p>
+
+  <table>
+    <tr><th>&nbsp;</th><th>Mode A — hypotheses</th><th>Mode B — rules</th></tr>
+    <tr><td class="k">LLM output</td><td>an instance-level conclusion</td><td>a type-level rule / edge / equivalence</td></tr>
+    <tr><td class="k">Trusted</td><td>per-incident, live</td><td>once, offline, after validation</td></tr>
+    <tr><td class="k">Reasoning</td><td>the LLM is the reasoner</td><td>deterministic entailment is the reasoner</td></tr>
+    <tr><td class="k">Hallucination lands</td><td class="gap">in the verdict</td><td class="good">at most in a rejected candidate rule</td></tr>
+    <tr><td class="k">Completeness</td><td class="gap">none — can't know what it missed</td><td class="good">the implication basis is complete rel. to the ontology</td></tr>
+    <tr><td class="k">"Missing" evidence</td><td class="gap">silent</td><td class="good">an <em>entailed-but-absent</em> GAP (see below)</td></tr>
+  </table>
+
+  <h2>The story order — brief A, then B</h2>
+  <p>A leads because it is the handhold everyone already grips; B is where you actually stand. The transition <em>is</em>
+  the argument:</p>
+  <ol>
+    <li><strong>Open on A</strong> (briefly). "You point an LLM at your alerts and it tells you what happened." Everyone nods — it's the 2026 agentic-SOC pitch.</li>
+    <li><strong>Land the discomfort.</strong> You cannot put an LLM's guess <em>in a verdict</em>, and it can't tell you what it <em>missed</em>. A room full of skeptics feels this immediately.</li>
+    <li><strong>Turn to B (the relief).</strong> So demote the LLM from oracle to rule-proposer. A finite entailment structure generates and scores the hypotheses, reports <span class="good">CONFIRMED</span> / <span class="warn">ENTAILED-BUT-MISSING</span> / <span class="muted">UNOBSERVABLE</span>, and the LLM is nowhere near a live conclusion.</li>
+  </ol>
+  <div class="note key">
+    This is the same "abduction proposes, deduction verifies" split already stated in
+    <a href="../semantic/semantic_stack.html">semantic_stack</a> and <a href="../substrate/witness_and_check.html">witness_and_check</a>,
+    and the "conscience, not brain / accountability, not intelligence" point in
+    <a href="agent_as_analyst.html">agent_as_analyst</a> — here sharpened into a story order: A is the ramp, B is
+    the road.
+  </div>
+
+  <h2>The hypothesis object in B</h2>
+  <p>A Mode-B hypothesis is concrete and low-dimensional. The working parameterization:</p>
+  <ul>
+    <li><strong>closeness to a crown jewel</strong> — position on an entity-path toward a high-value asset (the <em>completeness</em> axis of <a href="kill_chains_as_entity_path_analysis.html">kill-chains as entity-path analysis</a>);</li>
+    <li><strong>probability of intrusion</strong> — the HMM/Markov likelihood of the hidden progression;</li>
+    <li><strong>the identities involved</strong> — which principals/accounts the path runs through.</li>
+  </ul>
+  <p>So a hypothesis reads: <em>"identity&nbsp;E is on a path toward crown-jewel&nbsp;C, at completeness&nbsp;K, with
+  intrusion-probability&nbsp;P."</em> Enumerable, groundable, and — the differentiated part — <strong>complete relative
+  to the ontology</strong>: entailment tells you not only what is present but what is <em>entailed-but-absent</em>.</p>
+  <div class="note">
+    <strong>The three epistemic outcomes</strong> (from <a href="abduction_loop.html">the abduction loop</a>'s TEST step,
+    made executable in <code>experiments/entailment_test.py</code>). An anchor motif entails a dependent one; replay the
+    anchor and the dependent's presence/absence classifies three ways:
+    <ul>
+      <li><span class="good">CONFIRMED</span> — the entailed motif is present; the claim grounds TRUE.</li>
+      <li><span class="warn">GAP</span> — absent, <em>but its channel is collected</em> → it happened (abduced from the anchor), the record is missing → telemetry gap / evasion. The entailment <strong>rules out "it didn't happen."</strong></li>
+      <li><span class="muted">NONE</span> — absent <em>and</em> the channel is uncollected → unobservable → <strong>no claim.</strong></li>
+    </ul>
+    The NONE branch is the point: the system refuses to manufacture a verdict when it cannot see. Absence becomes
+    evidence <em>without overclaiming.</em>
+  </div>
+
+  <h2>The six structure options for B</h2>
+  <p>How does B <em>represent and score</em> the finite hypothesis space? Six structural choices, all present in the
+  code or the design. Five are mechanisms; the sixth is the container the others nest inside. (Frames from
+  <a href="w_coordinate_system.html">the W-coordinate system</a> and <code>design/verdict_coverage_space.md</code>.)</p>
+
+  <table>
+    <tr><th>#</th><th>Structure</th><th>Hypothesis / score</th><th>Where it lives</th></tr>
+    <tr>
+      <td class="k">1</td>
+      <td><strong>State-space / probabilistic sequence</strong> (HMM-Viterbi + Markov)</td>
+      <td>hidden tactic path from technique emissions; score = likelihood. → the <em>intrusion-probability</em> axis.</td>
+      <td><code>detection/hmm.py</code>, <code>killchain.py</code> <span class="gap">(orphaned)</span></td>
+    </tr>
+    <tr>
+      <td class="k">2</td>
+      <td><strong>Entity-path / graph</strong></td>
+      <td>a path from an entity toward a crown jewel; score = <em>completeness × abnormality</em>. → the <em>proximity + identity</em> axes.</td>
+      <td><code>detection/chain.py</code>, kill-chains-as-entity-path</td>
+    </tr>
+    <tr>
+      <td class="k">3</td>
+      <td><strong>Concept lattice / FCA</strong></td>
+      <td>a closed concept; entailment = the Duquenne–Guigues implication basis (<em>complete</em>) → the GAP with a guarantee.</td>
+      <td><code>semantic-core/fca.py</code></td>
+    </tr>
+    <tr>
+      <td class="k">4</td>
+      <td><strong>Description logic</strong> (OWL / HermiT)</td>
+      <td>class membership; entailment = subsumption (Kerberoasting ⊑ CredentialAccess). ATT&amp;CK/D3FEND already in OWL.</td>
+      <td><code>semantic-core/reasoning.py</code></td>
+    </tr>
+    <tr>
+      <td class="k">5</td>
+      <td><strong>Propositional model-checking</strong> (M ⊨ φ)</td>
+      <td>a formula; entailment = model-satisfies-formula, a boolean fold over the atom artifact.</td>
+      <td><code>detection/entailment.py</code> <span class="gap">(orphaned)</span></td>
+    </tr>
+    <tr>
+      <td class="k">6</td>
+      <td><strong>Coverage-space coordinate model</strong> — <em>the container</em></td>
+      <td>observation space (entity×time×feature — anomalies are <em>points</em>) × state space (the kill-chain graph — campaigns are <em>trajectories</em>), bridged by the W-record. Verdict = truth-at-a-location; chain = trajectory; detectors = independent witnesses.</td>
+      <td><code>design/verdict_coverage_space.md</code>, W-coordinate system</td>
+    </tr>
+  </table>
+
+  <div class="note key">
+    <strong>How they nest.</strong> Options 1 and 2 live inside the state space of (6); options 3/4/5 do the entailment
+    <em>at each location</em>; the whole thing carries a <strong>Belnap four-valued × log-odds-confidence</strong> value
+    (the two orthogonal verdict axes — <a href="../substrate/belnap_carrier_and_monotonicity.html">don't collapse them</a>).
+    Mapped to the parameters: proximity + identity → (2); intrusion probability → (1); entailment / GAP / completeness →
+    (3/4/5); located and combined by (6). So the decision isn't "which structure" — it's <strong>which is primary and
+    which are layers</strong>, and <code>verdict_coverage_space.md</code> already argues for (6) as the container.
+  </div>
+
+  <h3>The two open forks</h3>
+  <ul>
+    <li><strong>Which entailment layer?</strong> FCA (complete, boolean), DL (rich, open-world), or model-checking (precise, but you author φ). They sit at different altitudes — propositional / description-logic / abductive — and are <em>not</em> redundant, but the shared word "entailment" invites confusion. Worth a one-paragraph glossary.</li>
+    <li><strong>Is a hypothesis the 3-tuple, or a path scored by it?</strong> The 3-tuple is elegant but possibly lossy; an attack-<em>path</em> scored by (proximity, probability, identity) is richer and matches (2)+(6). Lean path.</li>
+  </ul>
+
+  <h2>The convergence: B's spine is already built — and loose</h2>
+  <p>A looseness audit of canon (2026-07-24) found that its three loosest things are the <em>same</em> failure mode:
+  <strong>a module built, tested, and documented as shipped that the live path routes around.</strong> Those three
+  modules are exactly the entailment spine B needs:</p>
+  <ul>
+    <li><code>detection/entailment.py</code> (structure&nbsp;5) — tested, docs say "Built," but <code>round.py</code> reaches past it into <code>atoms.fire_factored</code>, bypassing the prune/short-circuit that is its whole reason to exist. <span class="gap">Dead on the live path.</span></li>
+    <li><code>detection/hmm.py</code> (structure&nbsp;1) — exported, but nothing live calls it; the orchestrator uses the first-order Markov <code>forward_nexts</code>, never the HMM. <span class="gap">Orphan.</span></li>
+    <li><code>semantic-core/validation.py</code> — a SHACL wrapper only tests call; the live path uses <code>provenance/shacl.py</code>. <span class="gap">Dead twin</span> (flagged a year ago, still true).</li>
+  </ul>
+  <div class="note good">
+    <strong>So "sharpen canon" and "build toward B" are the same move:</strong> wire the entailment/HMM code the live
+    path currently ignores. That is not adding features — it is connecting what is already built and tested. The
+    highest-leverage tightening (resolve <code>entailment.py</code>, wire or demote <code>hmm.py</code>, delete the
+    <code>validation.py</code> twin) <em>is</em> the first construction of the Mode-B engine.
+  </div>
+  <div class="note">
+    <strong>Banked as clean</strong> (stop tracking): the omega rule-projection soundness bugs are fixed and
+    regression-pinned; and <a href="agent_as_analyst.html">"provenance is accountability, not intelligence"</a> is
+    <em>enforced in code</em> (unsigned custody → NONE, reference inputs marked "NOT evidence") — not marketing.
+  </div>
+
+  <h2>One line</h2>
+  <div class="note key">
+    A is the trailhead everyone knows and has no summit guarantee; B is the harder, narrower route whose payoff is that
+    when you reach a verdict you can prove what it rests on and what it doesn't. Retire "the LLM proposes; canon
+    verifies" as the headline and replace it with: <strong>the LLM proposes rules; entailment does the reasoning; canon
+    certifies what the verdict rests on.</strong>
+  </div>
+
+  <p class="stamp" style="margin-top:40px">related · <a href="abduction_loop.html">abduction loop</a> ·
+    <a href="kill_chains_as_entity_path_analysis.html">kill-chains as entity-path</a> ·
+    <a href="online_partial_chain_detection.html">online partial-chain detection</a> ·
+    <a href="w_coordinate_system.html">W-coordinate system</a> ·
+    <a href="../semantic/semantic_stack.html">semantic stack</a> ·
+    <a href="../substrate/witness_and_check.html">witness &amp; check</a> ·
+    <a href="completeness_channel.html">completeness channel</a></p>
+</div>
+</body>
+</html>

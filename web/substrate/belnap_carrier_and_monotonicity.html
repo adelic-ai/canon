@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canon — Belnap carrier + the ≤ₖ-monotonicity invariant</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --ink:#e6e8ee; --muted:#9aa3b2;
+    --line:#2a2f3a; --accent:#7db4ff; --accent2:#c79bff;
+    --good:#6fcf97; --warn:#f2c94c; --gap:#eb6f6f;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1080px;margin:0 auto;padding:48px 28px 96px}
+  h1{font-size:30px;margin:0 0 6px;letter-spacing:-.01em}
+  .sub{color:var(--muted);margin:0 0 4px;font-size:18px}
+  .stamp{color:var(--muted);font:13px/1.5 var(--mono);margin:0 0 32px}
+  h2{font-size:21px;margin:48px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+  p{margin:10px 0}
+  code{font-family:var(--mono);font-size:.88em;background:#1e222b;padding:1px 5px;border-radius:4px}
+  pre{font-family:var(--mono);font-size:13px;line-height:1.5;background:#1a1e26;border:1px solid var(--line);
+    border-radius:8px;padding:14px 18px;margin:18px 0;overflow-x:auto;color:#d3d8e2}
+  pre code{background:none;padding:0;font-size:inherit}
+  .note{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:8px;padding:14px 18px;margin:18px 0}
+  .note.gap{border-left-color:var(--gap)}
+  .note.key{border-left-color:var(--accent2)}
+  .muted{color:var(--muted)}
+  ul{margin:10px 0;padding-left:22px}
+  li{margin:7px 0}
+  strong{color:#fff}
+  .good{color:var(--good)} .gap{color:var(--gap)} .warn{color:var(--warn)}
+  .lede{font-size:17px}
+  blockquote{margin:18px 0;padding:10px 18px;border-left:3px solid var(--accent2);
+    background:var(--panel);border-radius:0 8px 8px 0;color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p style="font:13px/1.5 var(--mono,monospace);margin:0 0 22px"><a href="../index.html" style="color:#7db4ff;text-decoration:none">← Canon index</a></p>
+  <h1>The Belnap carrier &amp; the ≤<sub>k</sub>-monotonicity invariant</h1>
+  <p class="sub">What is genuinely proven, and where the claim is stronger than what the code checks.</p>
+  <p class="stamp">canon · close reading · 2026-06-07 · <span class="muted">contracts/carrier.md · packages/provenance/src/provenance/{carrier,monotone}.py · tests/{test_carrier,test_monotone,test_confidence}.py</span></p>
+
+  <p class="lede">Read the contract (<code>contracts/carrier.md</code>), the impl
+  (<code>packages/provenance/src/provenance/carrier.py</code>), the gate (<code>monotone.py</code>), and the
+  tests. Here's the actual structure, what's genuinely proven, and where the "every fold is ≤<sub>k</sub>-monotone,
+  CI-checked" claim is stronger than what the code checks.</p>
+
+  <h2>The one move that makes it mechanical: two independent bits</h2>
+  <p>A Belnap value is a pair <code>(t, f)</code> — <code>t</code> = "some source told me true," <code>f</code> =
+  "some source told me false," <strong>independent</strong> (<code>carrier.py:40-54</code>). The four values are
+  just the four bit-combos:</p>
+  <pre><code>NONE = (0,0)   TRUE = (1,0)   FALSE = (0,1)   BOTH = (1,1)</code></pre>
+  <p>That independence is the whole trick. It means <em>both</em> orders and <em>all</em> operations are
+  componentwise bit ops — no truth tables to memorize, no special cases:</p>
+  <ul>
+    <li><code>leq_k</code> = componentwise <code>≤</code> on <code>(t,f)</code> (<code>carrier.py:83-85</code>) —
+      knowledge only grows as bits flip on.</li>
+    <li><code>kjoin</code> (⊕, accumulate evidence) = componentwise OR. <code>kmeet</code> (⊗, consensus) =
+      componentwise AND.</li>
+    <li><code>tjoin</code> (∨, ∃-detect) = <code>(t OR, f AND)</code>. <code>tmeet</code> (∧, ∀-validate) =
+      <code>(t AND, f OR)</code>.</li>
+    <li><code>neg</code> (¬) = swap the pair.</li>
+  </ul>
+  <p><code>TRUE ⊕ FALSE = (1,0)|(0,1) = (1,1) = BOTH</code>: two disagreeing sources produce a
+  <em>contradiction</em>, not an average. <code>TRUE ⊗ FALSE = (1,0)&amp;(0,1) = (0,0) = NONE</code>: no
+  consensus, no knowledge. Both fall straight out of the bit model — nothing is stipulated.</p>
+
+  <h2>Two orders on one carrier — and the discipline of not mixing them</h2>
+  <p>This is a <em>bilattice</em>: the same four values under two different partial orders.</p>
+  <ul>
+    <li><strong>knowledge</strong> <code>≤_k</code>: <code>NONE ≤ {TRUE,FALSE} ≤ BOTH</code> — "how much is
+      asserted."</li>
+    <li><strong>truth</strong> <code>≤_t</code>: <code>FALSE ≤ {NONE,BOTH} ≤ TRUE</code> — "how true," with
+      <code>t</code> up and <code>f</code> down (<code>carrier.py:88-90</code>).</li>
+  </ul>
+  <p>The code enforces the separation structurally: only <code>~</code> (negation) is an operator dunder;
+  <code>kjoin/kmeet/tjoin/tmeet</code> are <strong>named functions, never overloaded</strong>
+  (<code>carrier.py:59-60</code>), precisely because writing <code>a &amp; b</code> and silently getting the
+  wrong lattice's meet is the subtle bug the contract warns about (<code>carrier.md:22-23</code>). You cannot
+  accidentally combine evidence in the truth order.</p>
+
+  <h2>The deepest point: <code>neg</code> is ≤<sub>k</sub>-<em>monotone</em> (this is why Belnap, not Kleene)</h2>
+  <p>Negation normally reverses order. Here ¬ swaps both components, which <strong>preserves</strong>
+  componentwise ≤ — so ¬ is <code>≤_k</code>-monotone (<code>carrier.py:124-129</code>), while being
+  <code>≤_t</code>-antitone as a negation should be. <code>¬NONE = NONE</code>, <code>¬BOTH = BOTH</code>; only
+  TRUE/FALSE flip.</p>
+  <p>That property is load-bearing for the one hard seam in the whole system (architecture §6). Temporal
+  negation — "C never occurred" = <code>¬(∃ C)</code>. Because ¬NONE = NONE, <em>not knowing whether C happened
+  propagates to not knowing whether ¬C holds</em>, automatically. A 3-valued Kleene logic has only one order and
+  can't carry both "silent" (NONE) and "contradicted" (BOTH) — it collapses to the SQL-<code>NULL</code>→<code>FALSE</code>
+  bug the project exists to prevent. Belnap's two-order structure with monotone negation is the minimal algebra
+  that doesn't.</p>
+  <div class="note">
+    <strong>Caveat, stated precisely:</strong> the algebra propagates honestly <em>once the input is right</em>,
+    but it doesn't choose the input. "C-absent" must enter as <code>FALSE</code> when the feed is live and as
+    <code>NONE</code> when the feed is silent — and that distinction is feed-liveness/custody, out-of-band from
+    the algebra. The carrier makes the partiality discipline free; it does <strong>not</strong> make getting the
+    feed-liveness call free. That's the "seam that isn't free."
+  </div>
+
+  <h2>The invariant, and how it's actually proven (the genuinely strong part)</h2>
+  <blockquote>Every fold is <code>≤_k</code>-monotone: feeding a child more knowledge may only move the result
+  <em>up</em> <code>≤_k</code>, never down (<code>carrier.md:88-97</code>).</blockquote>
+  <p>Because the carrier is <strong>finite (four values)</strong>, this is not property-tested or sampled — it's
+  checked <strong>exhaustively</strong>, which is a complete proof. <code>monotone.py:21-47</code> enumerates:
+  unary over all 4 values, binary over the full 4×4×4 product in each coordinate. <code>test_carrier.py:163-170</code>
+  runs that gate over <em>all five</em> operations (parametrized binary ops + neg) — so "all five ops are
+  <code>≤_k</code>-monotone" is a verified complete enumeration, not an inherited claim.</p>
+  <p>Two things here are better discipline than usual:</p>
+  <ul>
+    <li>The gate is tested to <strong>catch a violation</strong>, not just pass the real ops:
+      <code>test_monotone.py:32-41</code> feeds it deliberately knowledge-losing maps (<code>BOTH → NONE</code>)
+      and asserts it fails. A checker that only ever returns True is worthless; this one is shown to bite.</li>
+    <li><code>assert_k_monotone(..., arity=)</code> (<code>monotone.py:50-66</code>) is the reusable CI form, so
+      the acceptance test <em>"add concern N without touching concern M"</em> really is reduced to a decidable,
+      complete check — for the carrier algebra.</li>
+  </ul>
+
+  <h2>Where the claim outruns the check (the honest boundary)</h2>
+  <p>"Complete proof, not a sample" is true <strong>for the carrier-internal ops</strong>. It is <em>not</em>
+  automatically true for the concrete folds, and the difference matters:</p>
+  <p>A real fold (<code>confidence</code>) outputs over <code>LogOdds | None</code> — an infinite domain. The
+  exhaustive gate only types <code>Four → Four</code>. The resolution in the code is the <strong>two-axes
+  factoring</strong> (<code>carrier.md:130-133</code>, <code>test_confidence.py:47,84</code>): a
+  <code>Confidence</code> carries a <code>belnap</code> field (a <code>Four</code>) <em>separately</em> from the
+  graded <code>probability</code>. The <code>≤_k</code> invariant binds only the <code>Four</code>
+  knowledge-projection; the LogOdds is the orthogonal graded axis and is deliberately <em>not</em> subject to
+  <code>≤_k</code>. So the system never tries to make ℝ a lattice — it splits every fold's output into (a
+  four-valued knowledge field that obeys the complete-proof invariant) + (whatever typed payload).</p>
+  <div class="note gap">
+    <strong>The consequence to keep honest:</strong> each concrete fold's monotonicity over its <em>actual</em>
+    infinite input domain is established by <strong>example tests</strong>, not exhaustion — e.g.
+    <code>test_confidence.py:115-122</code> checks one transition (<code>NONE → TRUE</code> moves the join up).
+    That's a spot-check, not the complete enumeration the carrier ops get. Precise statement: <strong>the algebra
+    is exhaustively proven monotone; the individual folds are example-gated.</strong> The marketing line "the
+    universal invariant is CI-checkable" conflates the two — the carrier half is a theorem, the per-fold half is
+    a sample.
+  </div>
+  <p>And the invariant is a <strong>safety</strong> property, not a correctness one. <code>≤_k</code>-monotonicity
+  guarantees a fold never silently loses knowledge (NONE never becomes FALSE behind your back). It says nothing
+  about whether the value computed is <em>right</em>. A fold can be perfectly monotone and compute garbage. The
+  carrier guarantees honest partiality; it does not guarantee a good detector — which is exactly the distinction
+  Gemini's review flattened.</p>
+
+  <h2 style="border-top-color:var(--accent2)">Appendix — the V4 / sign-group observation (added 2026-06-07)</h2>
+  <p class="muted">Not part of the original delve; appended because the algebraic coincidence is worth pinning down
+  precisely.</p>
+  <p>The carrier <em>set</em> <code>{NONE, TRUE, FALSE, BOTH}</code> under componentwise XOR is exactly the
+  <strong>Klein four-group V₄ ≅ ℤ₂ × ℤ₂</strong>, with <code>NONE = (0,0)</code> the identity and every other
+  element its own inverse (order 2). Equivalently, write each bit as a sign in <code>{+1, −1}</code> and the
+  carrier is <code>{±1}²</code> under componentwise multiplication — the "sign group," which <em>is</em> V₄. So
+  yes: as a set with that group law, Belnap's carrier is V₄ itself — not a proper subgroup. (V₄'s proper subgroups
+  are its three ℤ₂'s and the trivial group; the carrier is the whole group.)</p>
+  <div class="note key">
+    <strong>But the group law is not the algebra canon runs on.</strong> XOR appears in <em>none</em> of the four
+    Belnap operations. The ops canon actually computes with are the <em>bilattice</em> meet/joins (componentwise
+    OR and AND) plus the swap-negation — order-theoretic structure, not the group operation. V₄ is the carrier's
+    set-level symmetry; the bilattice is a different object layered on the same four points. The "square" you're
+    seeing is real but it's the Hasse diamond of <code>≤_k</code> (NONE at bottom, BOTH at top, TRUE/FALSE
+    incomparable in the middle = the Boolean lattice 2²), which happens to draw the same square as V₄'s Cayley
+    graph.
+  </div>
+  <p>One place the group view <em>does</em> touch the algebra: negation. <code>neg(t,f) = (f,t)</code> is a linear
+  map over ℤ₂ (the permutation matrix swapping the two factors), so it is the <strong>nontrivial automorphism of
+  V₄ that exchanges its two ℤ₂ generators</strong> — and as a permutation of the four points it's the transposition
+  fixing NONE/BOTH and swapping TRUE/FALSE, generating an order-2 subgroup of <code>Aut(V₄)</code>. That is the one
+  spot where "Belnap ≅ V₄" and "canon's actual operations" coincide rather than merely co-locate. Everywhere else,
+  the group structure is a true but inert isomorphism: nice to know the carrier is V₄, but the monotonicity story
+  lives entirely in the two lattice orders, which XOR has nothing to say about.</p>
+</div>
+</body>
+</html>

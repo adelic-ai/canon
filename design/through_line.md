@@ -4,7 +4,7 @@
 way it is, what was tried and dropped, and the single top-level framing everything now serves.
 Orientation, not spec. When the thread is lost, start here, then go to the specs —
 `self_validation_architecture.md` (the spine), `guarantees_ledger.md` (the epistemic register),
-`web/detection_battery.html` (the detection design), `forge_core_step0_audit.md` (the forge port).
+`web/detection/detection_battery.html` (the detection design), `forge_core_step0_audit.md` (the forge port).
 
 Written 2026-07-16. Deliberately blunt — a future reader needs the real assessment, not a
 flattering one.
@@ -49,7 +49,7 @@ did not.
 
 ## 3. The corrected form: the detection battery
 
-The realization above has a concrete shape (`web/detection_battery.html`):
+The realization above has a concrete shape (`web/detection/detection_battery.html`):
 
 - A **measurement axis** (Axis A) — IT features (entropy, KL, MI), descriptive statistics (count,
   variance, Gini, cardinality/novelty), and a DSP corner (periodicity) — *feeding* a

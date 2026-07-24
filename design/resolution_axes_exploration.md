@@ -1,7 +1,7 @@
 # Resolution axes — what we built to sharpen Sigma, and what's left
 
 **Status:** EXPLORATION, 2026-06-21. Not a committed spec — a reflection that names a frame
-already implicit across the detection package. Rendered companion: `web/resolution_axes.html`
+already implicit across the detection package. Rendered companion: `web/rules/resolution_axes.html`
 (the seed question verbatim beside its developed answer). Relates to:
 [[sigma_treatment_pipeline]] (the manifest that makes instance-ness explicit),
 [[warrant_is_relational]] (the principle this applies to our own work),

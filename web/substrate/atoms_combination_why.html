@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canon — Atoms, combination, and the why</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --ink:#e6e8ee; --muted:#9aa3b2;
+    --line:#2a2f3a; --accent:#7db4ff; --accent2:#c79bff;
+    --good:#6fcf97; --warn:#f2c94c; --gap:#eb6f6f;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1020px;margin:0 auto;padding:48px 28px 96px}
+  .backlink{font:13px/1.5 var(--mono);margin:0 0 22px}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  h1{font-size:30px;margin:0 0 6px;letter-spacing:-.01em}
+  .sub{color:var(--muted);margin:0 0 4px;font-size:18px}
+  .stamp{color:var(--muted);font:13px/1.5 var(--mono);margin:0 0 30px}
+  h2{font-size:21px;margin:46px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+  p{margin:11px 0}
+  code{font-family:var(--mono);font-size:.86em;background:#1e222b;padding:1px 5px;border-radius:4px}
+  strong{color:#fff}
+  .lede{font-size:18px;line-height:1.55}
+  .note{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:8px;padding:14px 18px;margin:20px 0}
+  .note.key{border-left-color:var(--accent2)}
+  .note.gap{border-left-color:var(--gap)}
+  ul,ol{margin:12px 0;padding-left:22px}
+  li{margin:7px 0}
+  pre{background:#10131a;border:1px solid var(--line);border-radius:8px;padding:16px 18px;
+    overflow-x:auto;font-family:var(--mono);font-size:13.5px;line-height:1.65;color:#d4d9e4}
+  .twocol{display:flex;gap:20px;flex-wrap:wrap;margin:14px 0}
+  .twocol>div{flex:1;min-width:290px;background:var(--panel);border:1px solid var(--line);
+    border-radius:8px;padding:14px 18px}
+  .role{font:12px/1.4 var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  table{border-collapse:collapse;width:100%;margin:16px 0;font-size:13.5px;background:var(--panel);
+    border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#1c212b;color:var(--muted);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em}
+  tr:last-child td{border-bottom:none}
+  td.k{font-family:var(--mono);font-size:12.5px;color:var(--accent);white-space:nowrap}
+  footer{margin-top:60px;color:var(--muted);font-size:13px;border-top:1px solid var(--line);padding-top:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="backlink"><a href="../index.html">← Canon index</a></p>
+
+  <h1>Atoms, combination, and the why</h1>
+  <p class="sub">The frame under all of canon: typed, sourced atoms; combinations checked local and global; against a (who, job) root.</p>
+  <p class="stamp">canon · the keystone · 2026-06-12 · what every cell and readout is an instance of</p>
+
+  <p class="lede">Strip canon to its smallest shape and it is this: <strong>atoms combine, every combination
+  has a why, and detection is recognizing the combinations whose why doesn't trace to a legitimate root.</strong>
+  Co-occurrence, derivation, taint, orphans, drift, routing — all of it is this one question at different
+  scales. This is the entry point; the rest are instances.</p>
+
+  <h2>1 · Atoms — tagged by source × type</h2>
+  <p>An atom is the irreducible unit — an event, a fact, an instruction, a piece of content. Two tags carry
+  almost all the weight, and the basics are the basics:</p>
+  <ul>
+    <li><strong>source</strong> — where it came from: a host process, a user prompt, an email, a downloaded
+      PDF, a web result. This is the <em>derivation root at the boundary</em> — what decides trusted vs untrusted.</li>
+    <li><strong>type</strong> — what kind it is, and the load-bearing distinction is <strong>instruction vs
+      data.</strong> An instruction-typed atom from an untrusted source is the whole danger in one tag-pair.</li>
+  </ul>
+  <p>Dublin Core gives <code>source</code> and <code>type</code> natively; the rest of the description
+  (<code>subject</code>, <code>coverage</code>, <code>creator</code>) tags the context cheaply and in RDF, so
+  it composes with PROV-O and CID for free.</p>
+
+  <h2>2 · Combination — checked two ways, local and global</h2>
+  <p>Atoms combine: a content atom derives from a source, an instruction triggers an action, events join into
+  a motif. Every combination has a <strong>why</strong> — and the why is read at two scales that turn out to
+  be the two halves of canon:</p>
+  <div class="twocol">
+    <div><p class="role" style="color:var(--accent)">local why — authority (derivation)</p>
+      Does <em>this</em> combination trace to a legitimate authorizing root? An instruction authorizing an
+      action is legitimate iff it derives from the legitimate who. Mechanisms: <strong>derivation, orphan
+      (missing required ancestor), taint (untrusted source → sink).</strong> The verifier.</div>
+    <div><p class="role" style="color:var(--accent2)">global why — drift (attention)</p>
+      Is the <em>running pattern</em> of combinations still on-job? Has the agent's subject / activity drifted
+      from its baseline? Mechanism: <strong>subject &amp; activity drift over a moving baseline</strong>
+      (memoria). The surfacer.</div>
+  </div>
+  <div class="note key">
+    <strong>The two are interdependent, not just compatible.</strong> The goal is improvement-from-your-own-
+    past (the global, drift side). But <em>improving from un-vetted past conclusions is self-poisoning</em> —
+    so the local authority check (provenance/derivation) is the <strong>safety rail</strong> that keeps the
+    improvement loop from feeding on forged or drifted atoms. You cannot safely do the global without the
+    local. A real injection fails <em>both</em>: one combination authorized by the wrong who (local) and a
+    pattern bent off-job (global).
+  </div>
+
+  <h2>3 · The why bottoms out in a (who, job) root</h2>
+  <p>What <em>authorizes</em> a combination? It traces to the legitimate <strong>who</strong> (not the process
+  account — <em>who is directing</em>) and the <strong>job</strong> (the basic directive). In PROV-O this is
+  native: a <code>prov:Agent</code> acting on a <code>prov:Plan</code> via <code>qualifiedAssociation</code>.
+  An injection is an activity <em>not</em> associated with the legitimate plan — it follows the attacker's,
+  and its authority traces to the email / the PDF / the web result instead. Every predicate collapses to one
+  question: <strong>is the agent acting for the right who, on the right job?</strong></p>
+  <div class="note gap">
+    <strong>This is the one genuinely hard, out-of-band part.</strong> The atoms (source × type) and the
+    combination checks (derivation, orphan, taint, drift) are buildable and partly built. Pinning the
+    legitimate <code>(who, job)</code> is not — it must be <em>declared</em> by the operator or <em>learned</em>
+    over time (the moving baseline). The frame doesn't hide this; it points right at it. Everything else is
+    "does this combination, local and global, trace to that root."
+  </div>
+
+  <h2>The instances</h2>
+  <p>Each thing built or written this program is this frame at a particular angle:</p>
+  <table>
+    <thead><tr><th>instance</th><th>= which part of atoms / combination / why</th></tr></thead>
+    <tbody>
+      <tr><td class="k">motif / subgraph match</td><td>a legitimate combination <em>pattern</em></td></tr>
+      <tr><td class="k">derivation, not co-occurrence</td><td>combinations are derivations; everything roots in a root</td></tr>
+      <tr><td class="k">orphan (Golden Ticket)</td><td>a combination missing its required ancestor (local why fails)</td></tr>
+      <tr><td class="k">taint-flow</td><td>an untrusted atom combining, via a path, with a sink (local why fails)</td></tr>
+      <tr><td class="k">entailment / completeness</td><td>an expected combination missing → GAP vs NONE</td></tr>
+      <tr><td class="k">W→technique routing</td><td>which combinations of atom-types name a known technique</td></tr>
+      <tr><td class="k">memoria</td><td>drift of the combination-pattern (global why) + the safety rail (provenance)</td></tr>
+      <tr><td class="k">the justified verdict</td><td>the answer, carrying its receipts back to the root</td></tr>
+    </tbody>
+  </table>
+
+  <p>And it applies to <strong>itself</strong>: the system's own conclusion-atoms combine into better future
+  analysis — improvement-from-past — and the same local check keeps that self-improvement honest. Generalize
+  the frame, then apply it onto anything, including the analyzer.</p>
+
+  <div class="note key">
+    <strong>The one line.</strong> Atoms tagged <code>source × type</code>; combinations checked two ways —
+    local authority (derivation) and global pattern (drift) — against a <code>(who, job)</code> root that is
+    the single hard thing to pin down. Improvement-from-past is the goal, provenance is the rail, and a real
+    injection fails both scales of the why.
+  </div>
+
+  <footer>Canon · web/atoms_combination_why.html · 2026-06-12 · the keystone. Instances:
+    <a href="../semantic/derivation_not_cooccurrence.html">Derivation, not co-occurrence</a> ·
+    <a href="../cross-domain/memoria_accountable_derivation.html">Memoria × canon</a> ·
+    <a href="../detection/completeness_channel.html">the completeness channel</a> ·
+    <a href="../detection/abduction_loop.html">the abduction loop</a> ·
+    <a href="justified_verdict_substrate.html">the Justified-Verdict Substrate</a></footer>
+
+</div>
+</body>
+</html>

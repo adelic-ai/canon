@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canon — Entry, Attention, Fan-out: scaling the loop</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --ink:#e6e8ee; --muted:#9aa3b2;
+    --line:#2a2f3a; --accent:#7db4ff; --accent2:#c79bff;
+    --good:#6fcf97; --warn:#f2c94c; --gap:#eb6f6f;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1000px;margin:0 auto;padding:48px 28px 96px}
+  .nav{font:13px/1.5 var(--mono);margin:0 0 22px;display:flex;gap:16px;flex-wrap:wrap}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  h1{font-size:29px;margin:0 0 6px;letter-spacing:-.01em}
+  .sub{color:var(--muted);margin:0 0 4px;font-size:17px}
+  .stamp{color:var(--muted);font:13px/1.5 var(--mono);margin:0 0 30px}
+  h2{font-size:21px;margin:46px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+  h3{font-size:16px;margin:24px 0 6px;color:var(--accent)}
+  p{margin:11px 0}
+  code{font-family:var(--mono);font-size:.88em;background:#1e222b;padding:1px 5px;border-radius:4px}
+  strong{color:#fff}
+  .lede{font-size:18px;line-height:1.55}
+  .recap{background:#0c0e13;border:1px solid var(--line);border-left:3px solid var(--accent2);
+    border-radius:8px;padding:14px 18px;margin:18px 0;font-size:15px;color:var(--muted)}
+  .recap b{color:var(--ink)}
+  .note{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:8px;padding:14px 18px;margin:20px 0}
+  .note.key{border-left-color:var(--accent2)}
+  .note.gap{border-left-color:var(--gap)}
+  .note.next{border-left-color:var(--good)}
+  ul,ol{margin:12px 0;padding-left:22px}
+  li{margin:7px 0}
+  .eq{font:15px/1.6 var(--mono);background:var(--panel);border:1px solid var(--line);border-radius:8px;
+    padding:14px 18px;margin:16px 0;text-align:center;color:var(--ink)}
+  .eq .dim{color:var(--muted)}
+  .flow{font:13px/1.65 var(--mono);background:var(--panel);border:1px solid var(--line);
+    border-radius:8px;padding:16px 18px;margin:16px 0;white-space:pre-wrap;color:var(--muted);overflow-x:auto}
+  .flow b{color:var(--ink)} .flow .v{color:var(--accent)} .flow .a{color:var(--accent2)} .flow .n{color:var(--warn)}
+  .twocol{display:flex;gap:20px;flex-wrap:wrap;margin:14px 0}
+  .twocol>div{flex:1;min-width:270px;background:var(--panel);border:1px solid var(--line);
+    border-radius:8px;padding:14px 18px}
+  .role{font:12px/1.4 var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  .ord{counter-reset:step;list-style:none;padding-left:0}
+  .ord li{position:relative;padding:10px 0 10px 42px;border-bottom:1px solid var(--line)}
+  .ord li:last-child{border-bottom:none}
+  .ord li::before{counter-increment:step;content:counter(step);position:absolute;left:0;top:9px;
+    width:26px;height:26px;border:1px solid var(--line);border-radius:50%;text-align:center;
+    line-height:26px;font:13px/1 var(--mono);color:var(--accent2)}
+  footer{margin-top:60px;color:var(--muted);font-size:13px;border-top:1px solid var(--line);padding-top:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="nav"><a href="../index.html">← Canon index</a><a href="abduction_loop.html">↶ continues from: the abduction loop</a></p>
+
+  <h1>Entry, Attention, Fan-out: scaling the loop</h1>
+  <p class="sub">The loop is the cell. Everything bigger — where canon enters an environment, what it checks first, many agents at once — is that same cell, fanned out and prioritized.</p>
+  <p class="stamp">canon · design conversation · 2026-06-10 · continuation of abduction_loop.html · forward-looking, not built</p>
+
+  <p class="lede">The reassuring result: the three ways this gets bigger do not add a new primitive.
+  They are the <a href="abduction_loop.html">ground ⇄ stitch ⇄ test loop</a> multiplied by two knobs.</p>
+
+  <div class="eq"><b>scaled investigation</b>  =  the&nbsp;loop  <span class="dim">×</span>  fan-out <span class="dim">(scope)</span>  <span class="dim">×</span>  priority <span class="dim">(attention)</span></div>
+
+  <p>That factoring is the discipline as much as the design: <strong>build the cell before the
+  fabric.</strong> A single loop producing one grounded narrative on one real Notable has to exist
+  before entry-routing, learned attention, or multi-agent orchestration is worth a line of code.</p>
+
+  <h2>1 · Entry points — which <em>act</em> of the loop dominates</h2>
+  <p>Canon doesn't need a fixed integration; it attaches anywhere there's a claim to verify or a surface
+  to ground against. But the entry point is not just "an integration" — <strong>it decides where in the
+  loop you start, and therefore which act carries the weight.</strong></p>
+  <div class="twocol">
+    <div><p class="role" style="color:var(--accent)">SIEM-rich entry</p>
+      The environment hands you TTP-tagged Notables, stock + built detections — <em>given hypotheses</em>.
+      You enter near <code>TEST</code>: grade what's already proposed (the SIEM's own tag is just another
+      untrusted claim). <strong>Verification-heavy; the LLM barely needed.</strong></div>
+    <div><p class="role" style="color:var(--accent2)">Raw-log entry</p>
+      Nothing pre-interpreted. You enter at <code>GROUND</code> / <code>STITCH</code>: the battery
+      surfaces shape anomalies and abduction builds the story from scratch.
+      <strong>Generation-heavy; the abductive leap carries it.</strong></div>
+  </div>
+  <p>So the environment's existing detection maturity <em>shifts the balance between verification and
+  abduction</em>. Same loop, different starting node.</p>
+  <div class="note key">
+    "Check everything that makes sense, given the environment + the log surface + the surfaced TTP" is
+    <strong>computable, not a vibe.</strong> What is checkable =
+    <br>&nbsp;&nbsp;(telemetry layers present → the observability / <code>NONE</code> gate)
+    <br>&nbsp;&nbsp;∩ (what the log surface affords → data-component coverage)
+    <br>&nbsp;&nbsp;∩ (what the surfaced TTP routes to → W→technique).
+    <br>That intersection <em>is</em> the frontier the loop enumerates over.
+  </div>
+
+  <h2>2 · Dynamic attention — what to check first, what's worth the cost</h2>
+  <p>Over time, "what to check first" and "what's more valuable here" should surface on their own. That's
+  a priority over the frontier:</p>
+  <div class="eq">priority  =  risk <span class="dim">×</span> information  <span class="dim">÷</span>  cost   <span class="dim">— conditioned on the environment</span></div>
+  <p>This is the cost-aware firing-order search the design notes already name (the regime-ledger learns
+  it). One discipline, held firm:</p>
+  <div class="note gap">
+    <strong>Hand-coded cost-ordered greedy is the strong baseline.</strong> Greedy cheapest-test-per-bit
+    is near-optimal for sequential testing. A <em>learned</em> attention mechanism earns its place
+    <strong>only where non-greedy lookahead actually exists</strong> — where an expensive test A unlocks
+    a cheap-but-decisive test B. Build the greedy version first, or you'll never know whether the learned
+    one helped.
+  </div>
+
+  <h2>3 · Many agents — fan-out, but mind what "agent" means</h2>
+  <p>The fan-out is real: independent devices / nodes investigate in parallel — the loop instantiated
+  over the reachable frontier, two graph layers under it:</p>
+  <div class="flow"><b>environment graph</b>   reachability / assets   <span class="dim">— "what can be reached from a compromised node"</span>
+<b>log graphs</b>          per-device provenance   <span class="dim">— the PROV graph for each node's own telemetry</span></div>
+  <p>Agents traverse both, per budget / intelligence. Parallel where independent, sequential only on the
+  surface→verify→escalate spine.</p>
+  <div class="note gap">
+    <strong>"Many agents" should mean many parallel loop / verifier instances — not a swarm of LLMs.</strong>
+    The whole through-line is to <em>minimize</em> the fluent-untrusted surface. A node's traversal is
+    mostly graph + verifier (deterministic, cheap); the <strong>LLM is the scarce central resource,
+    consulted only at the abductive junctions</strong> the verifier and the kill-chain graph can't make.
+    One LLM call per frontier-region that needs a story — not one per device. An LLM-per-node swarm
+    multiplies exactly the surface the architecture exists to shrink.
+  </div>
+
+  <h2>The honest ordering</h2>
+  <ol class="ord">
+    <li><strong>Entry points</strong> — most immediate. It's how the loop gets <em>real data</em> to run
+      on, and both starting modes already have test shapes (OTRF/Mordor for raw-log, a SIEM Notable for
+      TEST-entry).</li>
+    <li><strong>Dynamic attention</strong> — next layer up, with greedy-first as the rule. Don't build
+      the learned version until the greedy one is the thing it must beat.</li>
+    <li><strong>Multi-agent orchestration</strong> — furthest out. The natural scale-out, and the easiest
+      place to over-build before a single loop has produced one grounded narrative on one real Notable.</li>
+  </ol>
+
+  <div class="note next">
+    <strong>Sharpest next concrete step.</strong> Take one labeled OTRF/Mordor Notable, run the loop in
+    <code>TEST</code>-entry mode (grade the given TTP), and watch what <strong>grounds</strong> vs what
+    comes back <strong><code>NONE</code></strong>. That single run tells you whether the verification leg
+    is real <em>before</em> investing in abduction, attention, or fan-out — and it reuses the OTRF first
+    cell and the <code>detection_verdict</code> contract that already exist.
+  </div>
+
+  <footer>Canon · web/scaling_the_loop.html · 2026-06-10. ↶ <a href="abduction_loop.html">the abduction loop</a> · related:
+    <a href="agent_as_analyst.html">Does RDF/OWL help an AI act as an analyst?</a> ·
+    <a href="w_coordinate_system.html">the W's as a coordinate system</a> ·
+    <a href="../substrate/justified_verdict_substrate.html">the Justified-Verdict Substrate</a></footer>
+
+</div>
+</body>
+</html>
