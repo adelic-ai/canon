@@ -91,3 +91,18 @@ def test_entailment_faithful_and_prunes_hard_on_otrf():
     assert res["prune_ratio"] > 0.5                        # the majority of pairs pruned
     att = attest_entailment_agreement(compiled, events[:300])
     assert att["faithful"]
+
+
+@pytest.mark.skipif(not (OTRF.exists() and SIGMA.exists()),
+                    reason="OTRF corpus / SigmaHQ rules not present")
+def test_round_entailment_engine_agrees_with_python_on_otrf():
+    """The round's use_entailment engine (Mode B wired live) gives identical verdicts to the Python
+    path — the pruned Phase-B reasoner is now a real, faithful firing engine in evaluate_round."""
+    from detection.round import evaluate_round
+    from detection.subgraph import load_sysmon_events
+    events = load_sysmon_events(str(OTRF))[:2500]
+    py = evaluate_round(events, ["T1003.001"], use_rust=False)
+    ent = evaluate_round(events, ["T1003.001"], use_rust=False, use_entailment=True)
+    assert ent["engine"] == "entailment"
+    key = lambda r: [(v["rule"], v["n_hits"]) for v in r["verdicts"]]
+    assert key(py) == key(ent)                             # identical verdicts, faithful

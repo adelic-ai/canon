@@ -75,7 +75,8 @@ from detection.cross_check import (
 )
 from detection.registry import REGISTRY, Detector, corpus_fields, run_applicable
 from detection.killchain import build_model, forward_nexts
-from detection.hmm import decode, emission_model, viterbi
+from detection.hmm import decode, decode_gated, emission_model, viterbi
+from detection.entailment import check_entailment
 from detection.orchestrator import TECH_TACTIC, orchestrate
 from detection.cross_model import (
     cross_model_kerberoast,
@@ -269,6 +270,9 @@ __all__ = [
     "emission_model",
     "viterbi",
     "decode",
+    "decode_gated",
+    # entailment — pruned Phase-B model-checking (M ⊨ φ), the round's use_entailment firing engine
+    "check_entailment",
     # registry — enumerate proper's detectors + observability-gated dispatch (the orchestrator's seam)
     "Detector",
     "REGISTRY",

@@ -79,12 +79,20 @@ def select_detections(profile: dict, techniques, *, sigma_root: Path = SIGMA) ->
     return [{"technique": t, "rule": r, "name": name} for (t, r, name, _s) in chosen.values()]
 
 
-def _fire_hits(compiled, events: list[dict], *, use_rust: bool, use_atoms: bool = False) -> tuple[list[int], str]:
-    """Per-rule hit count over the events, and which engine fired. ``use_atoms`` uses the atom-factored
-    engine (read the data once into the atom-truth artifact, then fold each rule over it — identical hits,
-    fewer evaluations when rules share atoms; see ``detection.atoms``). Otherwise the fast path is the native
-    Rust emitter (one batched call for all rules × events), with a Python ``eval_ir`` fallback for clauses Rust
-    can't yet handle — proven-equal, so the result is identical either way. Returns ``(hits, engine)``."""
+def _fire_hits(compiled, events: list[dict], *, use_rust: bool, use_atoms: bool = False,
+               use_entailment: bool = False) -> tuple[list[int], str]:
+    """Per-rule hit count over the events, and which engine fired. ``use_entailment`` uses the pruned
+    Phase-B engine (``detection.entailment.check_entailment``): the same atom-truth artifact as
+    ``use_atoms``, plus the positive-atom prune (a no-true-atom event is provably False for a
+    non-negated rule) and the rarest-first AND short-circuit — identical hits, less work; the Mode-B
+    reasoner made live. ``use_atoms`` uses the atom-factored engine (read the data once into the
+    atom-truth artifact, then fold each rule over it — identical hits, fewer evaluations when rules share
+    atoms; see ``detection.atoms``). Otherwise the fast path is the native Rust emitter (one batched call
+    for all rules × events), with a Python ``eval_ir`` fallback for clauses Rust can't yet handle —
+    proven-equal, so the result is identical either way. Returns ``(hits, engine)``."""
+    if use_entailment:
+        from detection.entailment import check_entailment
+        return check_entailment(compiled, events)["hits"], "entailment"
     if use_atoms:
         from detection.atoms import fire_factored
         return fire_factored(compiled, events)["hits"], "atoms"
@@ -99,7 +107,8 @@ def _fire_hits(compiled, events: list[dict], *, use_rust: bool, use_atoms: bool 
 
 
 def evaluate_round(events: list[dict], techniques, *, sigma_root: Path = SIGMA, use_rust: bool = True,
-                   use_atoms: bool = False, events_vocab=NATIVE, rules_vocab=NATIVE, adapter=None) -> dict:
+                   use_atoms: bool = False, use_entailment: bool = False,
+                   events_vocab=NATIVE, rules_vocab=NATIVE, adapter=None) -> dict:
     """Fire a whittled round at a log: profile → select (applicable, best-peer) → fire over the events →
     locate (tactic) → rank by severity. Fires through the native Rust emitter when built (``use_rust``), with
     a Python ``eval_ir`` fallback for rust-unsupported clauses — same verdicts, faster path. Returns the
@@ -143,7 +152,8 @@ def evaluate_round(events: list[dict], techniques, *, sigma_root: Path = SIGMA, 
         fire_events = adapter.normalize_all(events)
     else:
         fire_events = events
-    hits, engine = _fire_hits(compiled, fire_events, use_rust=use_rust, use_atoms=use_atoms)
+    hits, engine = _fire_hits(compiled, fire_events, use_rust=use_rust, use_atoms=use_atoms,
+                              use_entailment=use_entailment)
 
     verdicts = []
     for i, (sel, n) in enumerate(zip(selected, hits)):

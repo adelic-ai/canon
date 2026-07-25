@@ -23,10 +23,11 @@ for the observed technique:
   * Limitation (out-of-corpus): cloud techniques like T1580 are ABSENT from the host-biased Attack-Flow
     corpus ⇒ no emission ⇒ Viterbi falls back to the transition prior and guesses (T1580 → execution,
     wrong — worse than the 1:1 map there).
-So: use Viterbi where the corpus covers the technique; fall back to the 1:1 map otherwise. It is
-therefore deliberately NOT wired into the orchestrator as a blanket replacement (that would regress
-cloud) — a standalone capability pending a corpus-coverage gate (and, for cloud, a cloud-incident
-corpus — the same gap as the cloud transition model).
+So: use Viterbi where the corpus covers the technique; fall back to the 1:1 map otherwise. That gate is
+:func:`decode_gated`, and the orchestrator wires it in **opt-in** (pass ``emissions``/``starts``). A
+blanket replacement would regress cloud, but the gate falls back to the 1:1 map for out-of-corpus
+techniques, so it can only *add* in-corpus disambiguation — never regress. (Accurate cloud decoding still
+needs a cloud-incident corpus — the same gap as the cloud transition model.)
 """
 
 from __future__ import annotations
@@ -117,3 +118,35 @@ def decode(observations: list[str], corpus: str | Path) -> list[str]:
     most-likely hidden tactic path for ``observations`` (a time-ordered technique sequence)."""
     transitions, starts, *_ = build_model(corpus)
     return viterbi(observations, transitions, emission_model(corpus), starts)
+
+
+def decode_gated(
+    observations: list[str],
+    corpus: str | Path | None = None,
+    fallback: dict[str, str] | None = None,
+    *,
+    transitions: Counter | None = None,
+    starts: Counter | None = None,
+    emissions: dict[str, dict[str, float]] | None = None,
+) -> list[str]:
+    """Corpus-coverage-gated decode — the safe way to wire the HMM into the live path.
+
+    Viterbi-decode the hidden tactic path, but only *trust* the decode where the corpus actually emits
+    the observed technique. For a technique with no emission (out-of-corpus — e.g. cloud ``T1580`` in the
+    host Attack-Flow corpus), override the decoded tactic with ``fallback`` (the 1:1 ``technique→tactic``
+    map): Viterbi has no evidence there and would guess, the exact regression the blanket HMM warned
+    about. So the gate can only *add* in-corpus disambiguation on top of the 1:1 map, never regress.
+
+    Pass ``corpus`` to build A/π/B, or pass ``transitions``/``starts``/``emissions`` directly (the
+    orchestrator already holds them, so it skips the rebuild)."""
+    if not observations:
+        return []
+    if transitions is None or starts is None:
+        transitions, starts, *_ = build_model(corpus)
+    if emissions is None:
+        emissions = emission_model(corpus)
+    fallback = fallback or {}
+    covered = {tech for em in emissions.values() for tech in em}   # techniques the corpus can emit
+    decoded = viterbi(observations, transitions, emissions, starts)
+    return [d if obs in covered else fallback.get(obs, d)
+            for obs, d in zip(observations, decoded)]

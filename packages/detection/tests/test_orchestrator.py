@@ -30,6 +30,17 @@ def test_confirms_milestones_and_chains_to_lateral_movement():
     assert cred_lat and cred_lat[0][3] == COVERED   # the 43% edge is verifiable here
 
 
+def test_orchestrate_with_hmm_still_confirms_milestones():
+    # opt-in HMM path: gated decode refines the observed tactics but, because faker's fan-out techniques
+    # are single-tactic (kerberoast → credential-access, pass-the-ticket → lateral-movement), the gate is
+    # additive here — the milestones still confirm (no regression from turning the HMM on).
+    from detection.hmm import emission_model
+    transitions, starts, *_ = build_model(CORPUS)
+    r = orchestrate(FAKER, transitions, emissions=emission_model(CORPUS), starts=starts)
+    assert "credential-access" in r["observed"]
+    assert "lateral-movement" in r["observed"]
+
+
 def test_frontier_statuses_are_well_formed():
     transitions, *_ = build_model(CORPUS)
     r = orchestrate(FAKER, transitions)

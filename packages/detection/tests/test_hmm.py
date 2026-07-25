@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from detection.hmm import decode, emission_model, viterbi
+from detection.hmm import decode, decode_gated, emission_model, viterbi
 from detection.killchain import build_model
 
 CORPUS = Path.home() / "data/attack-flow-corpus"
@@ -42,3 +42,17 @@ def test_out_of_corpus_technique_has_no_emission(model):
     # honest limitation: cloud T1580 is absent from the host corpus → no emission → Viterbi can't help
     *_, B = model
     assert not any("T1580" in em for em in B.values())
+
+
+def test_decode_gated_trusts_viterbi_in_corpus_and_falls_back_out_of_corpus(model):
+    # the gate that makes the HMM safe to wire in: Viterbi where the corpus emits the technique,
+    # the 1:1 map where it doesn't. fallback[T1098] is deliberately wrong to prove it's ignored in-corpus.
+    transitions, starts, B = model
+    fallback = {"T1098": "WRONG-should-be-ignored", "T1580": "discovery"}
+    g = decode_gated(["T1003", "T1098", "T1021"], fallback=fallback,
+                     transitions=transitions, starts=starts, emissions=B)
+    assert g[1] == "priv-esc"                   # in-corpus → Viterbi disambiguation, fallback NOT used
+    g_cloud = decode_gated(["T1580"], fallback=fallback,
+                           transitions=transitions, starts=starts, emissions=B)
+    assert g_cloud == ["discovery"]             # out-of-corpus → overridden by the 1:1 fallback map
+    assert decode_gated([], fallback=fallback, transitions=transitions, starts=starts, emissions=B) == []

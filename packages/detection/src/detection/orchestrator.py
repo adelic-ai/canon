@@ -23,6 +23,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 
+from detection.hmm import decode_gated
 from detection.killchain import forward_nexts
 from detection.registry import REGISTRY, corpus_fields, run_applicable
 
@@ -52,16 +53,27 @@ def _detectors_by_tactic() -> dict:
     return out
 
 
-def orchestrate(corpus_path: str, transitions, *, top_k: int = 4) -> dict:
+def orchestrate(corpus_path: str, transitions, *, top_k: int = 4, emissions=None, starts=None) -> dict:
     """Fire applicable detectors over ``corpus_path``, map findings to tactics, then project the
     forward frontier using the learned ``transitions`` model. Returns ``{observed, verdicts, frontier,
-    skipped}`` where each frontier row is ``(from_tactic, next_tactic, prob, status, detail)``."""
+    skipped}`` where each frontier row is ``(from_tactic, next_tactic, prob, status, detail)``.
+
+    By default a finding's tactic is the 1:1 ``TECH_TACTIC`` map. Pass ``emissions`` (from
+    :func:`detection.emission_model`) **and** ``starts`` to opt into HMM-refined tactics: the hidden
+    tactic per finding is Viterbi-decoded, **gated** by corpus coverage (:func:`detection.decode_gated`)
+    so an ambiguous in-corpus technique (e.g. ``T1098`` = persistence vs priv-esc) is disambiguated by
+    chain context while out-of-corpus techniques fall back to the 1:1 map — additive, never a cloud
+    regression."""
     fields = corpus_fields(corpus_path)
     verdicts, skipped = run_applicable(corpus_path, fields=fields)
 
+    if emissions is not None and starts is not None:
+        decoded = decode_gated([v.technique for v in verdicts], fallback=TECH_TACTIC,
+                               transitions=transitions, starts=starts, emissions=emissions)
+    else:
+        decoded = [TECH_TACTIC.get(v.technique) for v in verdicts]
     observed: list[str] = []
-    for v in verdicts:
-        t = TECH_TACTIC.get(v.technique)
+    for t in decoded:
         if t and t not in observed:
             observed.append(t)
 
