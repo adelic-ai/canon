@@ -98,9 +98,11 @@
 
   <h2>Open edges (none started)</h2>
   <ol>
-    <li><strong>Completeness score</strong> — the graded "fraction of chain assembled × abnormality." Blocked on one
-      decision: is a hypothesis the 3-tuple (crown-jewel proximity × intrusion-probability × identities) or an
-      attack-<em>path</em> scored by those three? (Lean: path.)</li>
+    <li><strong>Completeness score</strong> — <span class="good">built</span> (path chosen):
+      <code>detection/completeness.py</code> scores an attack-<em>path</em> toward a crown jewel — completeness
+      (fraction observed), reach (proximity), frontier (next milestone), and <em>internal gaps</em>
+      (entailed-but-missing stages = GAP candidates, disjoint from not-yet-reached trailing stages). Abnormality —
+      the other factor of threat ≈ completeness × abnormality — stays data-gated on a per-actor baseline.</li>
     <li><strong>Minimal-KDC POC</strong> — Kerberos rebuilt with the state table native (MIT krb5 as ground-truth
       oracle): a labeled data generator whose invariants <em>are</em> the entailment rules. The bigger build.</li>
     <li><strong>Per-anchor partial-chain posterior</strong> — extend <code>shadow.py</code> from per-actor prefixes to
