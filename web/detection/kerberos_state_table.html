@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canon — Kerberos as the Entailment Demo: the State-Table KDC, and where canon stays general</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --ink:#e6e8ee; --muted:#9aa3b2;
+    --line:#2a2f3a; --accent:#7db4ff; --accent2:#c79bff;
+    --good:#6fcf97; --warn:#f2c94c; --gap:#eb6f6f;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1080px;margin:0 auto;padding:48px 28px 96px}
+  h1{font-size:29px;margin:0 0 6px;letter-spacing:-.01em}
+  .sub{color:var(--muted);margin:0 0 4px;font-size:18px}
+  .stamp{color:var(--muted);font:13px/1.5 var(--mono);margin:0 0 32px}
+  h2{font-size:21px;margin:48px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+  h3{font-size:16px;margin:24px 0 6px;color:var(--accent2)}
+  p{margin:10px 0}
+  code{font-family:var(--mono);font-size:.88em;background:#1e222b;padding:1px 5px;border-radius:4px}
+  pre{background:#10131a;border:1px solid var(--line);border-radius:8px;padding:14px 16px;
+    overflow-x:auto;font-family:var(--mono);font-size:13px;line-height:1.55;color:#d4d9e4}
+  .note{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:8px;padding:14px 18px;margin:18px 0}
+  .note.gap{border-left-color:var(--gap)}
+  .note.key{border-left-color:var(--accent2)}
+  .note.good{border-left-color:var(--good)}
+  .note.seed{border-left-color:var(--warn)}
+  .muted{color:var(--muted)}
+  ul{margin:10px 0;padding-left:22px}
+  ol{margin:10px 0;padding-left:22px}
+  li{margin:7px 0}
+  strong{color:#fff}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  blockquote{margin:14px 0;padding:2px 0 2px 16px;border-left:3px solid var(--accent2);
+    font-style:italic;color:#cdd3df}
+  table{border-collapse:collapse;width:100%;margin:18px 0;font-size:14px;background:var(--panel);
+    border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  th,td{text-align:left;padding:10px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#1c212b;color:var(--muted);font-weight:600;font-size:12px;
+    text-transform:uppercase;letter-spacing:.04em}
+  tr:last-child td{border-bottom:none}
+  td.k{font-weight:600;white-space:nowrap;color:var(--accent)}
+  .good{color:var(--good)} .gap{color:var(--gap)} .warn{color:var(--warn)}
+  .lede{font-size:17px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p style="font:13px/1.5 var(--mono);margin:0 0 22px"><a href="../index.html" style="color:#7db4ff;text-decoration:none">← Canon index</a></p>
+  <h1>Kerberos as the entailment demo</h1>
+  <p class="sub">The state-table KDC, SPIFFE by contrast, and where canon stays general.</p>
+  <p class="stamp">canon · thinking capture · 2026-07-25 · <span class="muted">identity is latent · anchor on crown jewels · Kerberos is a state machine · forgeries are GAPs · KDC+ vs canon</span></p>
+
+  <p class="lede">Kerberos is where the <a href="entailment_thoughts.html">entailment thesis</a> stops being a stretch and
+  becomes obviously correct: the protocol is a state machine with <em>hard necessity relations</em>, so the "absence
+  of a necessary step becomes evidence" mechanism (the GAP) shows at its cleanest — a forged ticket is a used-without-
+  issued gap in the state machine. This page captures the arc: why identity is latent, why we anchor on crown jewels,
+  why Kerberos is the ideal domain, the state-table KDC POC, and why <strong>KDC+ is the answer where you own the
+  protocol while canon is the answer where you don't.</strong></p>
+
+  <h2>Setup: identity is latent, so anchor on the crown jewels</h2>
+  <p>Generic attacker-identity resolution is close to hopeless against a competent adversary. The surface "who" (the
+  <a href="w_coordinate_system.html">W-record</a>'s account/principal) is observed; the <em>actor</em> is a latent
+  variable wearing many identities. Shared-observable joins (same client IP, etc.) catch the lazy roaster and evaporate
+  against anyone who rotates infra — IP is a floor, not an answer.</p>
+  <p>The tractable reframe: don't resolve identity from scratch — <strong>anchor on the standing-suspect,
+  crown-jewel-adjacent principals</strong> (service / admin accounts, always the target) and watch for
+  <a href="kill_chains_as_entity_path_analysis.html">partial chains</a> assembling around them
+  (<a href="online_partial_chain_detection.html">online, on the prefix, before the pivot</a>). Identity becomes a
+  <em>weak label on a hypothesized chain</em>, not a resolved fact. And the chain canon reconstructs is a hypothesis
+  <em>consistent with</em> the observations — never the path the attacker actually took. The watch-set is the org's own
+  privileged surface (the <a href="../adoption/enterprise_allowlist_entrypoint.html">allowlist read as the watch-set</a>).</p>
+
+  <h2>Can SPIFFE help? — prevention, not detection</h2>
+  <p>Yes, but by removing the attack surface, not by improving detection, and only for one slice. A
+  <a href="../../../ai/claude/agent_identity_enterprise.html">SPIFFE</a> service has no password-derived long-term key,
+  so there is <strong>nothing to kerberoast</strong> and no keytab to steal — its identities are short-lived, attested,
+  per-workload. Two gains:</p>
+  <ul>
+    <li><strong>Removes the standing-secret class</strong> for workload-to-workload auth (most of what gets kerberoasted).</li>
+    <li><strong>Cleans up the "who"</strong> — every action ties to an <em>attested</em> SVID instead of a shared service
+      account, so the identity-linkage problem gets easier in a SPIFFE estate. (See the full stack:
+      <a href="../../../ai/claude/agent_identity_enterprise.html">agent identity in the enterprise</a>.)</li>
+  </ul>
+  <p>But this is the world you'd build fresh, not the one you're defending. It doesn't help you detect on the deployed AD estate.</p>
+
+  <h2>Could Kerberos be replaced by SPIFFE? — partially, and not where it matters to you</h2>
+  <table>
+    <tr><th>Domain</th><th>SPIFFE replaces Kerberos?</th></tr>
+    <tr><td class="k">Cloud-native service-to-service</td><td class="good">Yes — arguably better (no standing secrets, attestation-based); orgs are already moving this off Kerberos to mTLS/SVIDs.</td></tr>
+    <tr><td class="k">AD / Windows estate</td><td class="gap">No — interactive human SSO, SMB, RDP, LDAP binds, the realm backbone. Decades of integration in LSASS/SSPI/GSSAPI. SPIFFE isn't even designed for interactive human logon.</td></tr>
+  </table>
+  <p>So they coexist for the foreseeable future — <strong>and that is exactly why Kerberos detection stays canon's job:
+  the vulnerable protocol is the deployed one.</strong> SPIFFE's real use here is as the <em>contrast that explains the
+  attack class</em>: kerberoasting, silver and golden tickets all trace to two design facts — <em>standing
+  password-derived keys</em> and <em>forgeable long-lived tickets under a single krbtgt key</em>. SPIFFE has neither.</p>
+
+  <h2>Kerberos is the ideal domain for entailment — the necessity is a protocol invariant</h2>
+  <p>The protocol is a state machine, and its necessity relations are <em>Mendelian</em> (hard rules), not statistical:</p>
+  <pre>AS-REQ  → AS-REP   (TGT, encrypted under the krbtgt key)          [EID 4768]
+TGS-REQ → TGS-REP  (service ticket, under the SERVICE account key) [EID 4769]
+AP-REQ             (present the service ticket to the service)     [EID 4624 network logon]
+
+necessity:  a valid AP-REQ to service S  ⊢  a prior TGS-REP for S  ⊢  a prior AS-REP (TGT)</pre>
+  <p>And the forgery attacks manifest as <strong>GAPs</strong> in that state machine — the exact
+  <a href="abduction_loop.html">CONFIRMED / GAP / NONE</a> mechanism (<a href="completeness_channel.html">absence made
+  legible</a>), now protocol-grounded:</p>
+  <table>
+    <tr><th>Attack</th><th>State-machine signature</th><th>canon reading</th></tr>
+    <tr><td class="k">Golden ticket</td><td>forged TGT (krbtgt key) — used normally, so it <em>does</em> emit 4769s; the tell is the <strong>v2 ticket-hash correspondence</strong>: a presented TGT hash (<code>4769.RequestTicketHash</code>) that <em>no</em> issuance (<code>4768.ResponseTicket</code>) ever produced</td><td class="gap">presented-without-issued → <strong>GAP</strong> → krbtgt compromise. DC-observable via v2 events (Win2016+, 2025-01-14 CU). Worked implementation: <a href="../adoption/kerberos_ticket_integrity_splunk.html">SPL</a> / <a href="../adoption/kerberos_ticket_integrity_sentinel.html">Sentinel</a>.</td></tr>
+    <tr><td class="k">Pass-the-ticket</td><td>a legitimately issued TGT presented from a <em>different client context</em> than its issuance</td><td class="warn">issued-but-relocated → <em>context divergence</em>, not a pure GAP (the issuance origin is present; the mismatch is the signal)</td></tr>
+    <tr><td class="k">Silver ticket</td><td>forged <em>service</em> ticket (service-account key) presented straight to the service (AP-REQ; the service host logs 4624) — <strong>never contacts the KDC, so there is no DC event at all</strong></td><td class="gap">the hard case: no DC telemetry → needs <strong>member-side fusion</strong> (service-host logon vs. issuance), and even then there is often no authoritative "should-have-been-issued" record. A frontier, not a solved GAP.</td></tr>
+    <tr><td class="k">Kerberoasting</td><td>TGS-REQ fan-out to many SPNs, RC4 (0x17), crack offline</td><td class="warn">the statistical corner — "look for the gene" (canon detects on 4769 fan-out today)</td></tr>
+  </table>
+  <div class="note key">
+    Kerberos splits <em>cleanly</em> along the thesis line: roasting/fan-out is <strong>statistical</strong> (the
+    battery), and the <strong>TGT forgeries are entailment GAPs</strong> (a presented ticket with no issuance). The
+    forged ticket is the strongest possible demonstration of "a necessary-but-missing step is evidence" — the necessity
+    is a <em>protocol invariant</em>, not a domain heuristic. canon already has the <strong>worked SIEM detector</strong> —
+    <a href="../adoption/kerberos_ticket_integrity_splunk.html">ticket-integrity (Splunk, KV-Store ledger)</a> /
+    <a href="../adoption/kerberos_ticket_integrity_sentinel.html">(Sentinel, KQL)</a> — reconstructing the issued-ticket
+    registry from the <strong>v2 hash correspondence</strong> (<code>4768.ResponseTicket ⇄ 4769.RequestTicketHash</code>)
+    and firing on presented-without-issued. <strong>Scope:</strong> that is <em>TGT</em>-integrity (golden, pass-the-ticket),
+    all DC-side; <em>silver</em> tickets skip the KDC and need member-side fusion — the frontier in the table above. Plus
+    validated roasting detections (<a href="../../design/cross_check_validation_kerberos.md">fan-out cross-check</a>,
+    <a href="../../design/cross_check_validation_t1558003_real.md">the honest T1558.003 real-data bound</a>,
+    <a href="../../design/attack_tangents/T1558.003_kerberoasting.md">the kerberoasting tangent</a>). What <em>today's</em>
+    page adds is the <strong>state-model framing and the GAP vocabulary</strong> over that existing detector.
+  </div>
+
+  <h2>The POC: rebuild Kerberos with the state table built in</h2>
+  <p>MIT krb5 is permissively open source, so forking or instrumenting it is fair game. "Attach a state table to the
+  kernel" — meaning the <strong>KDC core</strong>, not the OS kernel — has two paths:</p>
+  <ul>
+    <li><strong>Instrument MIT krb5</strong> — hook the KDC issuance path via its <em>audit-plugin interface</em> (an
+      existing extension point) to emit the state transitions. Real-protocol fidelity, but you're in heavy C.</li>
+    <li><strong>Write a minimal KDC</strong> with the state table native (AS / TGS / AP + ticket lifecycle + key
+      derivation only). Faster, fully controllable, and you use real MIT krb5 as the <em>ground-truth oracle</em> to
+      check your minimal one behaves.</li>
+  </ul>
+  <div class="note good">
+    <strong>v0 = the minimal KDC.</strong> It solves three problems this whole thread raised, at once:
+    <ol>
+      <li><strong>The testing problem</strong> — a Kerberos you control is a ground-truth generator: emit labeled benign
+        + attack telemetry, inject a silver/golden/PtT ticket, and you know exactly which invariant it violates. Better
+        than hand-authored fixtures because the labels come from the implementation.</li>
+      <li><strong>The entailment rules stop being guessed</strong> — with the state table explicit, the necessity
+        relations (AP-REQ ⊢ TGS-REP ⊢ AS-REP) are <em>derived from the protocol</em>. "Understand it like we made it"
+        becomes literal.</li>
+      <li><strong>The GAP thesis gets its cleanest demo</strong> — a forged ticket lighting up because its entailed
+        issuance event is missing, on a domain the Black Hat room respects (Kerberos downgrade/DoS/takeover is on the
+        2026 program).</li>
+    </ol>
+  </div>
+  <p><strong>Scope it hard.</strong> The value is the state machine + ticket lifecycle + key derivation + two or three
+  injectable attacks — <em>not</em> RFC 4120 compliance. Don't build production Kerberos.</p>
+  <div class="note seed">
+    <strong>Keep two things staged, don't conflate them.</strong> The <em>minimal-KDC POC</em> above is a test-stand and
+    rule-source (near-term, buildable). Separately, <strong>"KDC+" — a Kerberos redesigned so tickets carry their own
+    issuance provenance</strong> (a self-validating auth protocol, canon's "carry your proof" applied to the protocol
+    itself) — is a much bigger swing, and it hits the same adoption wall as SPIFFE. Same codebase to start; very
+    different timelines to land.
+  </div>
+
+  <h2>KDC+ vs canon — prevention plane vs detection plane</h2>
+  <p>The relationship is not on-ramp → answer. It is the <em>same symmetry</em> as SPIFFE-vs-Kerberos:</p>
+  <table>
+    <tr><th>&nbsp;</th><th>KDC+ (state table built in)</th><th>canon</th></tr>
+    <tr><td class="k">Plane</td><td>prevention / proof at the source</td><td>detection from the outside</td></tr>
+    <tr><td class="k">Analogy</td><td>the Kerberos version of <a href="../../../ai/claude/agent_identity_enterprise.html">SPIFFE</a> — "build it right"</td><td>detect on what's actually deployed</td></tr>
+    <tr><td class="k">Works where</td><td>you can <em>deploy</em> it — greenfield / long migration</td><td>the un-modifiable AD estate that's everywhere</td></tr>
+    <tr><td class="k">Exposes forgery by</td><td>construction (state is intrinsic)</td><td>inference (the entailed issuance event is missing → GAP)</td></tr>
+  </table>
+  <div class="note key">
+    One line: <strong>KDC+ proves forgery can't hide when you own the protocol; canon proves you can still catch it when
+    you don't.</strong> Both are needed because migration never finishes.
+  </div>
+
+  <h3>Why canon stays general (don't let KDC+ demote it)</h3>
+  <p><strong>KDC+ fixes one protocol; canon is the general entailment-over-telemetry substrate.</strong> Kerberos isn't
+  canon's <em>scope</em> — it's canon's <em>sharpest demo</em>, because the necessity relation is a hard protocol
+  invariant so the GAP shows at its cleanest. Prove the thesis on Kerberos, then point out the same machinery eats
+  CloudTrail, process trees, and the comsvcs ⊢ lsass-read case (<a href="entailment_thoughts.html">the entailment
+  engine</a>, over the <a href="../semantic/semantic_stack.html">knowledge stack</a>) — domains where no "KDC+" exists
+  and external detection is the <em>only</em> option. This mirrors the two halves of the broader agent-security picture:
+  detection/warrant (canon) feeding the policy/enforcement plane (<a href="../../../ai/claude/agent_detection_enterprise.html">agent
+  detection</a> / <a href="../../../ai/claude/agent_identity_enterprise.html">agent identity</a>) — the same
+  monotone-fold-over-a-DAG on both ends.</p>
+
+  <h2>One line</h2>
+  <div class="note key">
+    Kerberos is the domain where entailment is obviously right (the necessity is a protocol invariant; forgeries are
+    GAPs). Build the <strong>minimal state-table KDC</strong> as the ground-truth generator and rule-source; let
+    <strong>KDC+</strong> be the greenfield "build it right" bet it seeds; and keep <strong>canon</strong> as the general
+    detector for the deployed reality no protocol fix will reach.
+  </div>
+
+  <p class="stamp" style="margin-top:40px">related · <a href="entailment_thoughts.html">entailment: two ways up the mountain</a> ·
+    <a href="kill_chains_as_entity_path_analysis.html">kill-chains as entity-path</a> ·
+    <a href="online_partial_chain_detection.html">online partial-chain</a> ·
+    <a href="../adoption/kerberos_ticket_integrity_sentinel.html">kerberos ticket integrity (Sentinel</a> /
+    <a href="../adoption/kerberos_ticket_integrity_splunk.html">Splunk)</a> ·
+    <a href="../adoption/enterprise_allowlist_entrypoint.html">allowlist as watch-set</a> ·
+    <a href="../../design/cross_check_validation_kerberos.md">kerberos cross-check</a> ·
+    <a href="../../../ai/claude/agent_identity_enterprise.html">agent identity (SPIFFE)</a> ·
+    <a href="../../../ai/claude/agent_detection_enterprise.html">agent detection</a></p>
+</div>
+</body>
+</html>

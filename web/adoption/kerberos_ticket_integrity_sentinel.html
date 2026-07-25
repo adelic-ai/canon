@@ -77,6 +77,16 @@
   external store driven by a Function. (The <a href="kerberos_ticket_integrity_splunk.html">Splunk
   version</a> gets the mutable table natively via KV Store.)</div>
 
+  <div class="note">In canon's vocabulary (see <a href="../detection/kerberos_state_table.html">Kerberos as the
+  entailment demo</a>): a presented TGT is <span class="good">CONFIRMED</span> when it matches an issuance, a
+  <span class="gap">GAP</span> when it is presented-but-never-issued while 4768 logging is healthy (the forged-TGT /
+  Golden verdict — an entailed-but-missing issuance), and <span class="muted">NONE</span> when 4768 coverage is
+  incomplete so no claim can be made — the <em>coverage-gap</em>, distinct from a real GAP. Pass-the-Ticket is not a
+  GAP: the issuance is present; the <em>context divergence</em> is the signal.
+  <strong>Scope:</strong> this is <em>TGT</em>-integrity (golden, PtT), all DC-side (4768/4769). A <em>silver</em>
+  ticket forges a service ticket and never reaches the KDC, so no DC event exists — out of scope here; catching it
+  needs member-side fusion (service-host logon vs. issuance).</div>
+
   <h2>1. Why it works — and the one hard assumption</h2>
   <p>Kerberos validates a presented ticket <strong>cryptographically</strong> (it decrypts under the
   <code>krbtgt</code> key and its signatures hold), <em>not</em> by looking it up in a registry of issued
