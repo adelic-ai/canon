@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canon — State, 2026-07-25</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --ink:#e6e8ee; --muted:#9aa3b2;
+    --line:#2a2f3a; --accent:#7db4ff; --accent2:#c79bff;
+    --good:#6fcf97; --warn:#f2c94c; --gap:#eb6f6f;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1000px;margin:0 auto;padding:48px 28px 96px}
+  h1{font-size:29px;margin:0 0 6px;letter-spacing:-.01em}
+  .sub{color:var(--muted);margin:0 0 4px;font-size:18px}
+  .stamp{color:var(--muted);font:13px/1.5 var(--mono);margin:0 0 32px}
+  h2{font-size:20px;margin:44px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+  h3{font-size:15px;margin:22px 0 6px;color:var(--accent2)}
+  p{margin:10px 0}
+  code{font-family:var(--mono);font-size:.86em;background:#1e222b;padding:1px 5px;border-radius:4px}
+  .note{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:8px;padding:14px 18px;margin:18px 0}
+  .note.gap{border-left-color:var(--gap)}
+  .note.key{border-left-color:var(--accent2)}
+  .note.good{border-left-color:var(--good)}
+  .muted{color:var(--muted)}
+  ul,ol{margin:10px 0;padding-left:22px}
+  li{margin:7px 0}
+  strong{color:#fff}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  table{border-collapse:collapse;width:100%;margin:18px 0;font-size:14px;background:var(--panel);
+    border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  th,td{text-align:left;padding:9px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#1c212b;color:var(--muted);font-weight:600;font-size:12px;
+    text-transform:uppercase;letter-spacing:.04em}
+  tr:last-child td{border-bottom:none}
+  td.k{font-weight:600;white-space:nowrap;color:var(--accent);font-family:var(--mono);font-size:13px}
+  .good{color:var(--good)} .gap{color:var(--gap)} .warn{color:var(--warn)}
+  .lede{font-size:17px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p style="font:13px/1.5 var(--mono);margin:0 0 22px"><a href="../index.html" style="color:#7db4ff;text-decoration:none">← Canon index</a></p>
+  <h1>Canon — state, 2026-07-25</h1>
+  <p class="sub">A working snapshot: the thesis as it stands, what landed, and the honest open edges.</p>
+  <p class="stamp">state snapshot · supersedes the 2026-06-05 snapshot · governing doc: <a href="../../design/through_line.md">design/through_line.md</a></p>
+
+  <p class="lede">The headline has firmed up. Retired: "alerts that carry their own proof" (provenance was
+  always plumbing, never the product — the docs already say <em>"accountability, not intelligence"</em>). Current:
+  <strong>the LLM proposes <em>rules</em>; entailment does the reasoning; canon certifies what the verdict rests
+  on.</strong> Entailment is a <em>thin necessity-and-GAP scalpel</em> over a mostly-statistical engine — not the
+  whole engine.</p>
+
+  <h2>The thesis, in one screen</h2>
+  <ul>
+    <li><strong>Two ways up the mountain</strong> (<a href="../detection/entailment_thoughts.html">entailment_thoughts</a>):
+      <em>A</em> — the LLM proposes an instance-level hypothesis (legible, but hallucination lands in the verdict, no
+      completeness). <em>B</em> — the LLM proposes reusable rules, a finite entailment structure reasons, and the LLM
+      never touches a live conclusion. Story order: brief A, then B.</li>
+    <li><strong>Entailment is small on purpose.</strong> Like genetics: mostly "look for the gene" (Sigma = look for
+      the TTP; statistics for the noisy parts), and logic reserved for hard necessity (Mendelian). The novel edge is
+      the <strong>GAP</strong> — a necessary-but-missing step becomes evidence.</li>
+    <li><strong>Identity is latent</strong>; general resolution is near-hopeless against a careful attacker (IP is a
+      lazy-attacker floor). Reframe: <em>anchor on crown-jewel-adjacent principals</em> and watch
+      <a href="../detection/kill_chains_as_entity_path_analysis.html">partial chains</a> assemble
+      (<a href="../detection/online_partial_chain_detection.html">online, on the prefix</a>). The reconstructed chain
+      is a hypothesis with gaps, never the path the attacker took.</li>
+  </ul>
+
+  <h2>What landed this session (all pushed to <code>main</code>)</h2>
+  <table>
+    <tr><th>Commit</th><th>What</th></tr>
+    <tr><td class="k">6c484e7</td><td><a href="../detection/entailment_thoughts.html">entailment_thoughts</a> page; <code>web/</code> reorganized into 8 themed folders, index rebuilt, 6 orphan pages recovered.</td></tr>
+    <tr><td class="k">bfbc036</td><td>Wired the orphaned <code>entailment.py</code> + <code>hmm.py</code> into the live path: <code>evaluate_round(use_entailment=True)</code> fires the pruned Phase-B engine (faithful on OTRF); <code>orchestrate</code> gains gated <code>decode_gated</code> (opt-in, no cloud regression). 371 tests pass.</td></tr>
+    <tr><td class="k">7209402</td><td><code>semantic-core/validation.py</code> annotated — <em>not</em> a dead twin (it's the richer SHACL wrapper with violation parsing); kept, not deleted.</td></tr>
+    <tr><td class="k">5c9d16e</td><td><a href="../detection/kerberos_state_table.html">Kerberos state-table / entailment</a> page; GAP-vocabulary + TGT-integrity-scope notes back-ported into the <a href="../adoption/kerberos_ticket_integrity_splunk.html">Splunk</a> / <a href="../adoption/kerberos_ticket_integrity_sentinel.html">Sentinel</a> ticket-integrity pages. (Self-correction: the draft was less precise than the pages it summarized.)</td></tr>
+    <tr><td class="k">this one</td><td>Mechanical GAP test: the CONFIRMED / GAP / NONE classifier lifted from the <code>experiments/</code> print-script into tested <code>src</code> (<code>detection/entailment_gap.py</code> + a synthetic-ground-truth test). Resolves the audit's "unasserted script" finding.</td></tr>
+  </table>
+
+  <h2>Kerberos — the sharpest demo</h2>
+  <p>Kerberos is where entailment is obviously right: the protocol is a state machine with hard necessity relations
+  (<code>AP-REQ ⊢ TGS-REP ⊢ AS-REP</code>), so <strong>forgeries are GAPs</strong> — a golden ticket is a presented TGT
+  with no issuance (v2 hash correspondence <code>4768.ResponseTicket ⇄ 4769.RequestTicketHash</code>). See
+  <a href="../detection/kerberos_state_table.html">kerberos_state_table</a>.</p>
+  <div class="note key">Key finding: the <strong>SIEM detector already exists and is good</strong> — the
+    <a href="../adoption/kerberos_ticket_integrity_splunk.html">Splunk (KV-Store ledger)</a> and
+    <a href="../adoption/kerberos_ticket_integrity_sentinel.html">Sentinel (KQL)</a> ticket-integrity pages (mid-July)
+    reconstruct the issued-ticket registry and fire on presented-without-issued. Today's value was the entailment
+    <em>framing</em> on top, not new detection. <strong>KDC+ vs canon:</strong> KDC+ (a state-table-native, self-validating
+    KDC — the Kerberos SPIFFE) proves forgery can't hide when you own the protocol; canon proves you can still catch it
+    when you don't. Both needed because migration never finishes.</div>
+
+  <h2>Open edges (none started)</h2>
+  <ol>
+    <li><strong>Completeness score</strong> — the graded "fraction of chain assembled × abnormality." Blocked on one
+      decision: is a hypothesis the 3-tuple (crown-jewel proximity × intrusion-probability × identities) or an
+      attack-<em>path</em> scored by those three? (Lean: path.)</li>
+    <li><strong>Minimal-KDC POC</strong> — Kerberos rebuilt with the state table native (MIT krb5 as ground-truth
+      oracle): a labeled data generator whose invariants <em>are</em> the entailment rules. The bigger build.</li>
+    <li><strong>Per-anchor partial-chain posterior</strong> — extend <code>shadow.py</code> from per-actor prefixes to
+      per-crown-jewel incoming pressure; feed a warranted, gap-aware risk signal to a separate response plane (not
+      canon's job to actuate).</li>
+    <li><strong>Unify the three "entailments"</strong> — model-checking (<code>entailment.py</code>), OWL subsumption
+      (<code>reasoning.py</code>), and the abductive GAP (<code>entailment_gap.py</code>, new) share a word, not an
+      interface.</li>
+  </ol>
+
+  <h2>Honest limits</h2>
+  <div class="note gap">
+    <ul>
+      <li>The validated-on-real-data mass is the <strong>statistical battery</strong> (fan-out, off-hours, coordination),
+        not the kill-chain machinery. Promoting kill-chains/HMM/entailment to "the core" is narrative slightly ahead of
+        the code — the defensible framing is the hybrid.</li>
+      <li>The HMM is <strong>opt-in</strong> in <code>orchestrate</code>; blanket-on can mis-decode ambiguous techniques
+        in contexts the host corpus doesn't cover. Default-safe needs a cloud corpus or a Viterbi confidence gate.</li>
+      <li>Attack-flow corpus is <strong>40 incidents, host-biased, no cloud</strong>. Silver-ticket detection is a
+        member-side <em>frontier</em>, not solved.</li>
+      <li>Identity resolution is weak by design (NONE where coupling isn't witnessed) — a conservative choice with real
+        false-fuse (NAT) and false-split (multi-IP) modes.</li>
+    </ul>
+  </div>
+
+  <p class="stamp" style="margin-top:40px">related · <a href="../detection/entailment_thoughts.html">entailment thesis</a> ·
+    <a href="../detection/kerberos_state_table.html">kerberos state-table</a> ·
+    <a href="../detection/kill_chains_as_entity_path_analysis.html">kill-chains as entity-path</a> ·
+    <a href="../detection/online_partial_chain_detection.html">online partial-chain</a> ·
+    <a href="../../design/through_line.md">through_line</a> ·
+    <a href="../../design/self_validation_architecture.md">self-validation architecture</a></p>
+</div>
+</body>
+</html>
