@@ -3,6 +3,17 @@
 A SHACL shapes graph is the executable form of "this data is well-formed."
 Every domain bridge ships shapes; every loaded ontology gets checked against
 them. That is the substrate-self-falsifying commitment at the graph layer.
+
+Scope note (2026-07-24): this is a **general** SHACL wrapper over arbitrary
+``(data, shapes)`` graphs, and the richer of canon's two — it parses results
+into structured :class:`Violation` objects (focus node / path / message /
+severity). It is a **library utility, not on the live detection emit path**:
+verdict/guarantee validation runs through ``provenance.shacl`` (which
+materializes a derivation as PROV-O and ships the package's own well-formed
+shapes, but returns no parsed violations). Kept here as the semantic-layer
+SHACL tool — reach for it when you need parsed violations over an arbitrary
+graph. The two are complementary, not redundant; don't "consolidate" this away
+onto ``provenance.shacl`` without first porting the violation parsing.
 """
 
 from __future__ import annotations
