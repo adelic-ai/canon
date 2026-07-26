@@ -80,6 +80,13 @@ from detection.entailment import check_entailment
 from detection.entailment_gap import Entailment, EntailedMotif, classify_entailment
 from detection.completeness import Completeness, chain_completeness
 from detection.partial_chain import PartialChain, compose_partial_chain
+from detection.entailment_verdict import (
+    VERDICTS,
+    entailment_to_belnap,
+    from_gap,
+    from_model_check,
+    from_subsumption,
+)
 from detection.orchestrator import TECH_TACTIC, orchestrate
 from detection.cross_model import (
     cross_model_kerberoast,
@@ -286,6 +293,12 @@ __all__ = [
     # partial-kill-chain composition — observed techniques → one hypothesis (decode+completeness+frontier+gap)
     "compose_partial_chain",
     "PartialChain",
+    # unified entailment verdict — the shared carrier + adapters (DL / model-check / GAP → one vocabulary)
+    "from_gap",
+    "from_model_check",
+    "from_subsumption",
+    "entailment_to_belnap",
+    "VERDICTS",
     # registry — enumerate proper's detectors + observability-gated dispatch (the orchestrator's seam)
     "Detector",
     "REGISTRY",
