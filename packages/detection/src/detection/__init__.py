@@ -79,6 +79,7 @@ from detection.hmm import decode, decode_gated, emission_model, viterbi
 from detection.entailment import check_entailment
 from detection.entailment_gap import Entailment, EntailedMotif, classify_entailment
 from detection.completeness import Completeness, chain_completeness
+from detection.partial_chain import PartialChain, compose_partial_chain
 from detection.orchestrator import TECH_TACTIC, orchestrate
 from detection.cross_model import (
     cross_model_kerberoast,
@@ -282,6 +283,9 @@ __all__ = [
     # partial-kill-chain completeness — score an attack PATH toward a crown jewel
     "chain_completeness",
     "Completeness",
+    # partial-kill-chain composition — observed techniques → one hypothesis (decode+completeness+frontier+gap)
+    "compose_partial_chain",
+    "PartialChain",
     # registry — enumerate proper's detectors + observability-gated dispatch (the orchestrator's seam)
     "Detector",
     "REGISTRY",
