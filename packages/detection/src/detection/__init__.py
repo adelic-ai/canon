@@ -87,6 +87,7 @@ from detection.entailment_verdict import (
     from_model_check,
     from_subsumption,
 )
+from detection.anchor_posterior import AnchorBelief, AnchorPosterior, chain_evidence
 from detection.orchestrator import TECH_TACTIC, orchestrate
 from detection.cross_model import (
     cross_model_kerberoast,
@@ -299,6 +300,10 @@ __all__ = [
     "from_subsumption",
     "entailment_to_belnap",
     "VERDICTS",
+    # per-anchor partial-chain posterior — decaying log-odds risk signal per crown jewel
+    "AnchorPosterior",
+    "AnchorBelief",
+    "chain_evidence",
     # registry — enumerate proper's detectors + observability-gated dispatch (the orchestrator's seam)
     "Detector",
     "REGISTRY",
