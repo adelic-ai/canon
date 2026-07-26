@@ -108,9 +108,12 @@
       <code>detection/partial_chain.py::compose_partial_chain</code> — no new algorithm, pure glue over tested code.</li>
     <li><strong>Minimal-KDC POC</strong> — Kerberos rebuilt with the state table native (MIT krb5 as ground-truth
       oracle): a labeled data generator whose invariants <em>are</em> the entailment rules. The bigger build.</li>
-    <li><strong>Per-anchor partial-chain posterior</strong> — extend <code>shadow.py</code> from per-actor prefixes to
-      per-crown-jewel incoming pressure; feed a warranted, gap-aware risk signal to a separate response plane (not
-      canon's job to actuate).</li>
+    <li><strong>Per-anchor partial-chain posterior</strong> — <span class="good">built</span>:
+      <code>detection/anchor_posterior.py</code>, the per-crown-jewel complement to <code>shadow.py</code>'s per-actor
+      accumulator — a decaying log-odds posterior over partial-chain pressure converging on each anchor (naive-Bayes
+      accumulation + exponential forgetting; <code>chain_evidence</code> maps a PartialChain to an LLR). The warranted,
+      gap-aware risk SIGNAL a response plane consumes (canon doesn't actuate). Honest caveat: an UPPER BOUND until
+      independence is measured (correlated evidence inflates).</li>
     <li><strong>Unify the three "entailments"</strong> — <span class="good">built</span>: not a merge (they're
       genuinely different logics — open-world DL subsumption / closed-world model-checking / abductive GAP) but a shared
       carrier (CONFIRMED / REFUTED / GAP / NONE → Belnap) with honest adapters that encode the open-vs-closed-world
