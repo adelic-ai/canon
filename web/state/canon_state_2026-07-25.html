@@ -111,9 +111,11 @@
     <li><strong>Per-anchor partial-chain posterior</strong> — extend <code>shadow.py</code> from per-actor prefixes to
       per-crown-jewel incoming pressure; feed a warranted, gap-aware risk signal to a separate response plane (not
       canon's job to actuate).</li>
-    <li><strong>Unify the three "entailments"</strong> — model-checking (<code>entailment.py</code>), OWL subsumption
-      (<code>reasoning.py</code>), and the abductive GAP (<code>entailment_gap.py</code>, new) share a word, not an
-      interface.</li>
+    <li><strong>Unify the three "entailments"</strong> — <span class="good">built</span>: not a merge (they're
+      genuinely different logics — open-world DL subsumption / closed-world model-checking / abductive GAP) but a shared
+      carrier (CONFIRMED / REFUTED / GAP / NONE → Belnap) with honest adapters that encode the open-vs-closed-world
+      distinction, <code>detection/entailment_verdict.py</code>. They compose as a stack (subsumption → rules →
+      model-check → gap). See <a href="../detection/three_entailments.html">three_entailments</a>.</li>
   </ol>
 
   <h2>Honest limits</h2>

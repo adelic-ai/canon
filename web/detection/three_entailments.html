@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canon — Three Entailments: a Stack, Not Three Copies</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --ink:#e6e8ee; --muted:#9aa3b2;
+    --line:#2a2f3a; --accent:#7db4ff; --accent2:#c79bff;
+    --good:#6fcf97; --warn:#f2c94c; --gap:#eb6f6f;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1040px;margin:0 auto;padding:48px 28px 96px}
+  h1{font-size:29px;margin:0 0 6px;letter-spacing:-.01em}
+  .sub{color:var(--muted);margin:0 0 4px;font-size:18px}
+  .stamp{color:var(--muted);font:13px/1.5 var(--mono);margin:0 0 32px}
+  h2{font-size:20px;margin:46px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+  h3{font-size:15px;margin:22px 0 6px;color:var(--accent2)}
+  p{margin:10px 0}
+  code{font-family:var(--mono);font-size:.86em;background:#1e222b;padding:1px 5px;border-radius:4px}
+  pre{background:#10131a;border:1px solid var(--line);border-radius:8px;padding:14px 16px;
+    overflow-x:auto;font-family:var(--mono);font-size:13px;line-height:1.55;color:#d4d9e4}
+  .note{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:8px;padding:14px 18px;margin:18px 0}
+  .note.gap{border-left-color:var(--gap)}
+  .note.key{border-left-color:var(--accent2)}
+  .note.good{border-left-color:var(--good)}
+  .muted{color:var(--muted)}
+  ul,ol{margin:10px 0;padding-left:22px}
+  li{margin:7px 0}
+  strong{color:#fff}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  table{border-collapse:collapse;width:100%;margin:18px 0;font-size:14px;background:var(--panel);
+    border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  th,td{text-align:left;padding:9px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#1c212b;color:var(--muted);font-weight:600;font-size:12px;
+    text-transform:uppercase;letter-spacing:.04em}
+  tr:last-child td{border-bottom:none}
+  td.k{font-weight:600;white-space:nowrap;color:var(--accent);font-family:var(--mono);font-size:13px}
+  .good{color:var(--good)} .gap{color:var(--gap)} .warn{color:var(--warn)}
+  .lede{font-size:17px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p style="font:13px/1.5 var(--mono);margin:0 0 22px"><a href="../index.html" style="color:#7db4ff;text-decoration:none">← Canon index</a></p>
+  <h1>Three entailments: a stack, not three copies</h1>
+  <p class="sub">Unifying by output vocabulary — because the three are different logics at different altitudes.</p>
+  <p class="stamp">canon · 2026-07-25 · <span class="muted">DL subsumption · model-checking · abductive GAP · the shared carrier</span></p>
+
+  <p class="lede">canon has three things called "entailment," and the shared word invites the wrong fix — merging
+  them. That would be a forced abstraction: they are <strong>three different logics at three altitudes</strong>, not
+  duplicates. The honest unification is to see them as a <strong>stack</strong> and give them <strong>one output
+  vocabulary</strong> so they compose. This page is the glossary + the carrier.</p>
+
+  <h2>The three, by altitude</h2>
+  <table>
+    <tr><th>Mechanism</th><th>Logic</th><th>World</th><th>Answers</th><th>Module</th></tr>
+    <tr><td class="k">Subsumption</td><td>Description Logic (OWL / HermiT)</td><td><span class="warn">open</span></td>
+      <td>what entails what at the <em>type</em> level — <code>Kerberoasting ⊑ CredentialAccess</code>. Produces the necessity edges / rules.</td>
+      <td><code>semantic-core/reasoning.py</code></td></tr>
+    <tr><td class="k">Model-checking</td><td>propositional <code>M ⊨ φ</code></td><td><span class="good">closed</span></td>
+      <td>does the <em>data</em> satisfy the rule — a pruned boolean fold over the atom-truth artifact.</td>
+      <td><code>detection/entailment.py</code></td></tr>
+    <tr><td class="k">Abductive GAP</td><td>necessity + observability</td><td>—</td>
+      <td>given <code>anchor ⊢ expected</code>, classify the expected's <em>absence</em> against what's collected.</td>
+      <td><code>detection/entailment_gap.py</code></td></tr>
+  </table>
+
+  <h2>They compose as a stack</h2>
+  <p>Not competitors — a pipeline. Each layer feeds the next:</p>
+  <pre>  DL subsumption   →   the necessity RULES        ("Kerberoasting is a CredentialAccess";
+  (reasoning.py)       (type-level entailments)     "a MiniDump spawn ⊢ an lsass read")
+        │
+        ▼
+  model-checking   →   evaluate a rule on data     (M ⊨ φ over the atom-truth artifact)
+  (entailment.py)      (does it hold here?)
+        │
+        ▼
+  abductive GAP    →   classify the MISSING         (entailed but absent-while-observable
+  (entailment_gap)     against observability          → GAP; absent-and-unobservable → NONE)</pre>
+  <p>The <a href="kerberos_state_table.html">Kerberos page</a> shows all three in one domain: subsumption gives
+  <code>golden-ticket ⊑ forged-TGT</code>, model-checking evaluates the issued-vs-presented rule, and the GAP layer
+  reads a presented-without-issued ticket as an entailed-but-missing issuance.</p>
+
+  <h2>The shared carrier — one vocabulary</h2>
+  <p>What unifies them is the <em>output</em>. Each answers "does the evidence support the consequent, and with what
+  epistemic status?" and maps into one carrier (<code>detection/entailment_verdict.py</code>):</p>
+  <table>
+    <tr><th>Verdict</th><th>Meaning</th><th>Belnap</th></tr>
+    <tr><td class="k good">CONFIRMED</td><td>entailed and holds / observed</td><td>TRUE</td></tr>
+    <tr><td class="k">REFUTED</td><td>contradicted</td><td>FALSE</td></tr>
+    <tr><td class="k gap">GAP</td><td>entailed, but its evidence is <em>absent while observable</em> — the entailment/observation divergence (abductive-only)</td><td>TRUE + a telemetry-gap warrant</td></tr>
+    <tr><td class="k muted">NONE</td><td>no claim — unobservable, or (open-world) not entailed either way</td><td>NONE</td></tr>
+  </table>
+
+  <div class="note key">
+    <strong>The load-bearing distinction — open vs closed world.</strong> <em>Closed-world</em> model-checking can
+    REFUTE from absence: a rule that does not hold is false. <em>Open-world</em> DL subsumption <strong>cannot</strong>
+    — a subsumption that is not entailed is UNKNOWN (NONE), never refuted, absent an explicit disjointness axiom. So the
+    <em>same</em> "not present" fact maps two different ways:
+    <pre>from_model_check(False)  → REFUTED     # closed world: absence refutes
+from_subsumption(False)  → NONE        # open world: absence is unknown</pre>
+    That asymmetry is the entire reason the carrier needs <em>both</em> REFUTED and NONE — and it's why a single merged
+    "entails()" would be a lie. The adapters keep each mechanism's epistemics honest.
+  </div>
+
+  <h2>The gap-vocabulary, reconciled</h2>
+  <p>"gap" appears three ways in canon; they are related points on a "reachable-but-unwitnessed" spectrum, now named
+  consistently:</p>
+  <ul>
+    <li><span class="gap">GAP</span> (this carrier) — <em>entailed</em> but its evidence is missing while the channel is
+      collected. A real forgery/evasion signal. Projects to Belnap TRUE + a warrant.</li>
+    <li><code>coverage-gap</code> / <code>observability-gap</code> (the orchestrator) — a statement about <em>detector
+      coverage</em>, not about a fact: no detector is registered, or its data isn't collected. A different axis; maps to
+      <strong>NONE</strong> in this carrier (no claim).</li>
+    <li>Belnap <code>NONE</code> (the <a href="../substrate/belnap_carrier_and_monotonicity.html">provenance carrier</a>) —
+      the substrate value the above resolve into: "we can't say."</li>
+  </ul>
+  <p>So: <strong>GAP is the only one that carries positive evidence</strong> (the step happened); the coverage/observability
+  gaps are honest NONEs. Keeping them distinct is what stops "we didn't see it" from masquerading as "it didn't happen."</p>
+
+  <h2>What was built</h2>
+  <div class="note good">Not a merge — a unifying layer that leaves the three mechanisms untouched:
+    <code>detection/entailment_verdict.py</code> defines the carrier (CONFIRMED / REFUTED / GAP / NONE) and three
+    adapters (<code>from_subsumption</code>, <code>from_model_check</code>, <code>from_gap</code>) that map each
+    mechanism's native output into it — encoding the open/closed-world epistemics — plus <code>entailment_to_belnap</code>
+    to project onto the substrate fold. The three modules keep their own tested interfaces; this is the thin waist that
+    lets them compose.</div>
+
+  <p class="stamp" style="margin-top:40px">related · <a href="entailment_thoughts.html">entailment: two ways up the mountain</a> ·
+    <a href="kerberos_state_table.html">kerberos state-table</a> ·
+    <a href="abduction_loop.html">abduction loop</a> ·
+    <a href="completeness_channel.html">completeness channel</a> ·
+    <a href="../semantic/semantic_stack.html">semantic stack (RDF/OWL)</a> ·
+    <a href="../substrate/belnap_carrier_and_monotonicity.html">Belnap carrier</a></p>
+</div>
+</body>
+</html>
