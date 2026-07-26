@@ -102,7 +102,10 @@
       <code>detection/completeness.py</code> scores an attack-<em>path</em> toward a crown jewel — completeness
       (fraction observed), reach (proximity), frontier (next milestone), and <em>internal gaps</em>
       (entailed-but-missing stages = GAP candidates, disjoint from not-yet-reached trailing stages). Abnormality —
-      the other factor of threat ≈ completeness × abnormality — stays data-gated on a per-actor baseline.</li>
+      the other factor of threat ≈ completeness × abnormality — stays data-gated on a per-actor baseline. The
+      <strong>composition</strong> that chains all four tested modules into one hypothesis (decode → completeness →
+      frontier → optional motif-GAP) is <span class="good">also built</span>:
+      <code>detection/partial_chain.py::compose_partial_chain</code> — no new algorithm, pure glue over tested code.</li>
     <li><strong>Minimal-KDC POC</strong> — Kerberos rebuilt with the state table native (MIT krb5 as ground-truth
       oracle): a labeled data generator whose invariants <em>are</em> the entailment rules. The bigger build.</li>
     <li><strong>Per-anchor partial-chain posterior</strong> — extend <code>shadow.py</code> from per-actor prefixes to
