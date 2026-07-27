@@ -106,8 +106,12 @@
       <strong>composition</strong> that chains all four tested modules into one hypothesis (decode → completeness →
       frontier → optional motif-GAP) is <span class="good">also built</span>:
       <code>detection/partial_chain.py::compose_partial_chain</code> — no new algorithm, pure glue over tested code.</li>
-    <li><strong>Minimal-KDC POC</strong> — Kerberos rebuilt with the state table native (MIT krb5 as ground-truth
-      oracle): a labeled data generator whose invariants <em>are</em> the entailment rules. The bigger build.</li>
+    <li><strong>Minimal-KDC POC</strong> — <span class="good">v0 built</span>: the <code>kdc</code> package rebuilds
+      the AS/TGS/AP exchanges with the issued-ticket ledger kept, so <em>presented ⊢ issued</em> is checkable.
+      Golden/silver forgeries validate cryptographically yet reconstruct as used-without-issued GAPs from telemetry
+      alone (CONFIRMED / GAP / NONE / CONTEXT-DIVERGENCE); a labeled ground-truth generator whose invariants <em>are</em>
+      the entailment rules. 9 tests. <em>Next:</em> MIT krb5 as the ground-truth oracle; derive canon's Kerberos rules
+      from the state table.</li>
     <li><strong>Per-anchor partial-chain posterior</strong> — <span class="good">built</span>:
       <code>detection/anchor_posterior.py</code>, the per-crown-jewel complement to <code>shadow.py</code>'s per-actor
       accumulator — a decaying log-odds posterior over partial-chain pressure converging on each anchor (naive-Bayes
