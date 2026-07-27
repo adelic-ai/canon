@@ -55,12 +55,13 @@
   <p style="font:13px/1.5 var(--mono);margin:0 0 22px"><a href="../index.html" style="color:#7db4ff;text-decoration:none">← Canon index</a></p>
   <h1>Kerberos as the entailment demo</h1>
   <p class="sub">The state-table KDC, SPIFFE by contrast, and where canon stays general.</p>
-  <p class="stamp">canon · thinking capture · 2026-07-25 · <span class="muted">identity is latent · anchor on crown jewels · Kerberos is a state machine · forgeries are GAPs · KDC+ vs canon</span></p>
+  <p class="stamp">canon · thinking capture · 2026-07-25 · updated 2026-07-27 (POC built; oracle/KDC+ distinction; framing deflated) · <span class="muted">identity is latent · anchor on crown jewels · Kerberos is a state machine · forgeries are GAPs · KDC+ vs canon</span></p>
 
-  <p class="lede">Kerberos is where the <a href="entailment_thoughts.html">entailment thesis</a> stops being a stretch and
-  becomes obviously correct: the protocol is a state machine with <em>hard necessity relations</em>, so the "absence
-  of a necessary step becomes evidence" mechanism (the GAP) shows at its cleanest — a forged ticket is a used-without-
-  issued gap in the state machine. This page captures the arc: why identity is latent, why we anchor on crown jewels,
+  <p class="lede">Kerberos is a state machine, so "a presented ticket was actually issued" is a <em>hard necessity</em> —
+  and a forged ticket is a used-without-issued gap in that state machine. The honest core is <strong>a state table plus a
+  necessity check</strong>. The <a href="entailment_thoughts.html">entailment</a> reading is real but thin — one necessity
+  edge, checked by a lookup — so what earns the name is the <em>reframe</em> (a forgery as a state gap, not a signature to
+  match), not a grand thesis. This page captures the arc: why identity is latent, why we anchor on crown jewels,
   why Kerberos is the ideal domain, the state-table KDC POC, and why <strong>KDC+ is the answer where you own the
   protocol while canon is the answer where you don't.</strong></p>
 
@@ -134,18 +135,29 @@ necessity:  a valid AP-REQ to service S  ⊢  a prior TGS-REP for S  ⊢  a prio
     page adds is the <strong>state-model framing and the GAP vocabulary</strong> over that existing detector.
   </div>
 
-  <h2>The POC: rebuild Kerberos with the state table built in</h2>
-  <p>MIT krb5 is permissively open source, so forking or instrumenting it is fair game. "Attach a state table to the
-  kernel" — meaning the <strong>KDC core</strong>, not the OS kernel — has two paths:</p>
-  <ul>
-    <li><strong>Instrument MIT krb5</strong> — hook the KDC issuance path via its <em>audit-plugin interface</em> (an
-      existing extension point) to emit the state transitions. Real-protocol fidelity, but you're in heavy C.</li>
-    <li><strong>Write a minimal KDC</strong> with the state table native (AS / TGS / AP + ticket lifecycle + key
-      derivation only). Faster, fully controllable, and you use real MIT krb5 as the <em>ground-truth oracle</em> to
-      check your minimal one behaves.</li>
-  </ul>
+  <h2>The POC — built (v0)</h2>
+  <p><span class="good">Built:</span> the <code>packages/kdc</code> package — a minimal toy KDC that rebuilds the AS/TGS/AP
+  exchanges with the issued-ticket ledger kept, plus a SIEM-side detector that reconstructs the ledger from telemetry and
+  checks the one necessity edge. Honestly: <strong>a state table bolted onto a toy KDC</strong>, not a theorem prover. The
+  demo run: benign alice → CONFIRMED, a golden ticket → <span class="gap">GAP</span> (TGT layer), a silver ticket →
+  <span class="gap">GAP</span> (service layer), pass-the-ticket → context-divergence — and every forgery <em>validates
+  cryptographically</em> (the stateless KDC accepts it) yet reconstructs as a gap from telemetry alone. 9 tests. Surrogate
+  crypto, logical clock, no RFC 4120 — faithful enough for the state machine and the forgery invariant, which is all v0 needs.</p>
+
+  <p><strong>Three things that keep getting conflated — they are distinct:</strong></p>
+  <table>
+    <tr><th>#</th><th>Thing</th><th>Touches Kerberos code?</th></tr>
+    <tr><td class="k">1</td><td><strong>The POC</strong> (done) — your own minimal toy KDC</td><td class="good">No — krb5 not involved at all</td></tr>
+    <tr><td class="k">2</td><td><strong>krb5 as oracle</strong> — run stock krb5, observe it, diff your toy against it</td><td class="good">No — unmodified; an oracle is a reference you <em>query</em>, not something you change</td></tr>
+    <tr><td class="k">3</td><td><strong>KDC+</strong> — hook krb5's audit-plugin, or redesign the protocol to carry issuance provenance</td><td class="gap">Yes — the only path that edits Kerberos; the far-horizon swing</td></tr>
+  </table>
+  <div class="note key"><strong>Two oracles, for two fidelities.</strong> <em>MIT krb5</em> is the oracle for the
+  <strong>protocol</strong> (are the exchanges / ticket lifecycle faithful) — and it stays unmodified. The <em>telemetry</em>
+  the detector consumes (the v2 <code>4768/4769</code> ticket-hash events) is <strong>Windows AD-specific</strong> — krb5
+  doesn't emit it — so the ground truth for the <em>detection</em> side is a real AD capture, not krb5. That second one is
+  the check that actually decides whether canon's Kerberos rules fire on real data.</div>
   <div class="note good">
-    <strong>v0 = the minimal KDC.</strong> It solves three problems this whole thread raised, at once:
+    <strong>What v0 delivered</strong> — three problems this thread raised, closed at once:
     <ol>
       <li><strong>The testing problem</strong> — a Kerberos you control is a ground-truth generator: emit labeled benign
         + attack telemetry, inject a silver/golden/PtT ticket, and you know exactly which invariant it violates. Better
@@ -161,11 +173,10 @@ necessity:  a valid AP-REQ to service S  ⊢  a prior TGS-REP for S  ⊢  a prio
   <p><strong>Scope it hard.</strong> The value is the state machine + ticket lifecycle + key derivation + two or three
   injectable attacks — <em>not</em> RFC 4120 compliance. Don't build production Kerberos.</p>
   <div class="note seed">
-    <strong>Keep two things staged, don't conflate them.</strong> The <em>minimal-KDC POC</em> above is a test-stand and
-    rule-source (near-term, buildable). Separately, <strong>"KDC+" — a Kerberos redesigned so tickets carry their own
-    issuance provenance</strong> (a self-validating auth protocol, canon's "carry your proof" applied to the protocol
-    itself) — is a much bigger swing, and it hits the same adoption wall as SPIFFE. Same codebase to start; very
-    different timelines to land.
+    <strong>On #3 (KDC+).</strong> Least-invasive form is the <em>audit-plugin hook</em> — not a fork of krb5 core — or a
+    new KDC that makes tickets carry their own issuance provenance (a self-validating auth protocol, canon's "carry your
+    proof" applied to the protocol itself). Either way it hits the same adoption wall as SPIFFE: it only helps where you
+    can deploy it. A deliberate research bet, not the next commit.
   </div>
 
   <h2>KDC+ vs canon — prevention plane vs detection plane</h2>
