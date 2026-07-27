@@ -1,0 +1,13 @@
+[project]
+name = "kdc"
+version = "0.1.0"
+description = "Minimal Kerberos KDC with the state table built in — a ground-truth generator whose invariants are the entailment rules."
+requires-python = ">=3.11"
+dependencies = []
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/kdc"]
