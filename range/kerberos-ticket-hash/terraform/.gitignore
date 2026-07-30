@@ -6,3 +6,5 @@
 .terraform/
 .terraform.lock.hcl
 crash.log
+tf.plan
+*.tfplan

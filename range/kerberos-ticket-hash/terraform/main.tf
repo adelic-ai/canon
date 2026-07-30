@@ -17,11 +17,14 @@ terraform {
 
 provider "azurerm" {
   features {}
+  # Fresh subscriptions: don't let the provider silently block on auto-registering
+  # resource providers during plan. We register the two we need by hand (see README).
+  resource_provider_registrations = "none"
 }
 
 locals {
   prefix   = "krbhash"
-  dc_ip    = "10.42.1.4" # static so the member can point DNS at it pre-promotion
+  dc_ip    = "10.42.1.10" # static, out of the low range Azure hands to dynamic NICs (.4+) — avoids a create-order IP collision with the dynamic member NIC
   tags     = { project = "canon", range = "kerberos-ticket-hash", disposable = "true" }
 }
 

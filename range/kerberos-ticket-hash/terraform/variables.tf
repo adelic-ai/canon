@@ -23,8 +23,8 @@ variable "admin_password" {
 
 variable "vm_size" {
   type        = string
-  default     = "Standard_B2s"
-  description = "2 vCPU / 4 GB — enough for a lab DC and a member. Bump to Standard_B2ms (8 GB) if promotion feels tight."
+  default     = "Standard_D2as_v5"
+  description = "2 vCPU / 8 GB, AMD (separate capacity pool from Intel B2s/D2s_v5, both of which hit SkuNotAvailable/Capacity-Restrictions in eastus). If this also 409s, eastus is broadly out of capacity for this trial sub → change var.location to westus2/centralus."
 }
 
 variable "image_sku" {
