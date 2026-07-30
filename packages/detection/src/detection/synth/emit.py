@@ -57,7 +57,7 @@ def project_activity(a: Activity, inv: Inventory, *, ticket_hashes: bool = False
     ``ticket_hashes`` models a 2024-patched DC: when True, 4768/4769 carry the Ticket Information hash fields
     (:data:`detection.kerberos_tickets.REQUEST_TICKET_HASH` / ``RESPONSE_TICKET_HASH``); when False (default,
     an unpatched DC) those fields are absent — exactly the tier the ticket detector must fall back through."""
-    from detection.kerberos_tickets import REQUEST_TICKET_HASH, RESPONSE_TICKET_HASH
+    from detection.kerberos_tickets import REQUEST_TICKET_HASH, RESPONSE_TICKET_HASH, SERVICE_TICKET_HASH
 
     src_ip = inv.host_by_name(a.src_host).ip if a.src_host and inv.host_by_name(a.src_host) else None
     dc = next(h.name for h in inv.hosts if h.kind == "dc")
@@ -74,8 +74,8 @@ def project_activity(a: Activity, inv: Inventory, *, ticket_hashes: bool = False
         data = {"TargetUserName": a.actor, "ServiceName": a.target,
                 "TicketEncryptionType": a.attr("enc"), "TicketOptions": _TICKET_OPTIONS, "IpAddress": src_ip}
         if ticket_hashes:
-            data[REQUEST_TICKET_HASH] = a.attr("tgt_hash")      # the TGT presented
-            data[RESPONSE_TICKET_HASH] = a.attr("tgs_hash")     # the service ticket issued
+            data[REQUEST_TICKET_HASH] = a.attr("tgt_hash")      # the TGT presented (real 4769 name: RequestTicketHash)
+            data[SERVICE_TICKET_HASH] = a.attr("tgs_hash")      # the issued service ticket (real 4769 name: ResponseTicketHash)
         return dc, _SECURITY, _event_xml(
             event_id=4769, computer=dc, channel=_SECURITY, time=a.time,
             provider="Microsoft-Windows-Security-Auditing", data=data)

@@ -19,15 +19,23 @@ So losing the hash fields is not a binary on/off: Golden degrades to a noisy heu
 undetectable** — the detector says which, rather than silently pretending coverage. Cross-DC is handled by
 construction: pass events from all DCs; the hash (or account) is the join key, not the DC.
 
-Field names below are **PROVISIONAL** — the encyclopedia documents the display labels ("Request ticket
-hash"); the raw ``<Data Name=…>`` element names need confirming against a patched-DC capture. They live in
-one place so a correction is a one-line change shared by the synth emitter and this detector.
+Field names below are **CONFIRMED** against a real patched Windows Server 2025 DC capture (2026-07-30). They
+are ASYMMETRIC across the two events: 4768 (issuance) carries the issued-TGT hash as ``ResponseTicket`` (no
+"Hash" suffix); 4769 (service-ticket request) carries the presented-TGT hash as ``RequestTicketHash`` and the
+issued service-ticket hash as ``ResponseTicketHash``. The golden/PtT join is therefore 4769
+``RequestTicketHash`` ⇄ 4768 ``ResponseTicket`` — two differently named fields. (The earlier guess
+``ResponseTicketHash`` for 4768 was wrong; using it would orphan every legitimate 4769 and flag all tickets
+golden.) They live in one place so the correction is shared by the synth emitter and this detector. See
+``range/kerberos-ticket-hash/FINDINGS.md``.
 """
 
 from __future__ import annotations
 
-REQUEST_TICKET_HASH = "RequestTicketHash"     # PROVISIONAL raw EventData name — display label "Request ticket hash"
-RESPONSE_TICKET_HASH = "ResponseTicketHash"   # PROVISIONAL — confirm against a patched-DC capture before prod
+# CONFIRMED against a real patched Windows Server 2025 DC capture (2026-07-30, DomainMode Windows2025Domain).
+# The names are ASYMMETRIC across events (see module docstring). Golden/PtT join: 4769.RequestTicketHash ⇄ 4768.ResponseTicket.
+REQUEST_TICKET_HASH = "RequestTicketHash"     # on 4769 — the presented TGT's hash (the join key the detector matches)
+RESPONSE_TICKET_HASH = "ResponseTicket"       # on 4768 — the issued TGT's hash (NOTE: no "Hash" suffix, unlike the 4769 fields)
+SERVICE_TICKET_HASH = "ResponseTicketHash"    # on 4769 — the issued *service* ticket's hash (member-side/silver work; unused by the golden/PtT join)
 
 
 def _eid(e: dict) -> str:
