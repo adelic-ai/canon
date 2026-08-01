@@ -1,0 +1,10 @@
+# Never commit state (contains the admin password) or local vars.
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+.terraform/
+.terraform.lock.hcl
+crash.log
+tf.plan
+*.tfplan
