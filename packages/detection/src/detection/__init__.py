@@ -73,6 +73,7 @@ from detection.cross_check import (
     sigma_corroborator,
     spray_signature,
 )
+from detection._verdict import build_detection_root, emit_detection_verdict
 from detection.registry import REGISTRY, Detector, corpus_fields, run_applicable
 from detection.killchain import build_model, forward_nexts
 from detection.hmm import decode, decode_gated, emission_model, viterbi
@@ -304,6 +305,10 @@ __all__ = [
     "AnchorPosterior",
     "AnchorBelief",
     "chain_evidence",
+    # verdict emitter — the single entrypoint an unattested-telemetry detection uses to become a
+    # canon DetectionVerdict (re-exported from _verdict for consumers; see _verdict.emit_detection_verdict)
+    "emit_detection_verdict",
+    "build_detection_root",
     # registry — enumerate proper's detectors + observability-gated dispatch (the orchestrator's seam)
     "Detector",
     "REGISTRY",

@@ -21,6 +21,7 @@ from pathlib import Path
 
 from forge_core import Calibration, DetectionVerdict, assemble_verdict
 from provenance import (
+    NO_EVIDENCE,
     NONE,
     TRUE,
     Confidence,
@@ -111,6 +112,7 @@ def emit_detection_verdict(
     pvalue: float,
     params: dict,
     tier: Tier | None = None,
+    fired: bool = True,
     who: Four = TRUE,
     when: Four = NONE,
     what: Four | None = None,
@@ -184,10 +186,17 @@ def emit_detection_verdict(
                        if e.producer is not None and e.producer.op_name == "detection"), root.id)
         claims[det_id] = Tier.BOUNDED
         monitors = {det_id: exchangeability}
+    # ``fired`` is the ∃-detect leaf. ``True`` (default) → a fired detector leaf (evidence FOR ⇒
+    # detect TRUE ⇒ decision TRUE), the historical behavior. ``False`` → NO_EVIDENCE (belnap NONE,
+    # no log-odds) ⇒ detect NONE ⇒ decision NONE and score 0.0: an HONEST "the detector ran but the
+    # observation channel structurally established no claim" — distinct from a fired FALSE (evidence
+    # AGAINST). It is NOT ``from_detector(False)`` (which is REFUTED-shaped); a plane that cannot see is
+    # NONE, not a negative. Additive + backward-compatible: default True reproduces the prior leaf exactly.
+    detect_leaf = Confidence.from_detector(True, pd=_PD, pfa=pvalue) if fired else NO_EVIDENCE
     return assemble_verdict(
         root,
         technique=technique,
-        confidence_evidence={root.id: Confidence.from_detector(True, pd=_PD, pfa=pvalue)},
+        confidence_evidence={root.id: detect_leaf},
         claims=claims,
         monitors=monitors,  # exchangeability monitor gating the BOUNDED claim (None → no bounded claim)
         attestations=attestations,  # earned custody: the signed ingest record for the evidence source
