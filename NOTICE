@@ -1,0 +1,17 @@
+canon
+Copyright 2026 Shun Honda
+
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+This product reads (but does not redistribute) external corpora and knowledge
+bases, each under its own license or terms of use — e.g. Sigma (Detection Rule
+License), MITRE CAR (Apache License 2.0), MITRE ATT&CK and MITRE D3FEND
+(subject to MITRE's terms of use), and OTRF Security-Datasets. None of those
+corpora are included in this distribution; see each package's README for how to
+fetch them locally.
+
+This product borrows, and names in its design documents, prior art it does not
+claim as its own — including IPLD/IPFS content addressing (CID), W3C PROV,
+in-toto/DSSE attestation, SHACL, SKOS, and the Belnap four-valued bilattice.
+The `design/` directory carries an explicit borrow ledger distinguishing what is
+taken from where from what is canon's own.
