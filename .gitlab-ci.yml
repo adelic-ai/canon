@@ -1,11 +1,15 @@
 # canon CI — run the uv-workspace test suite on every push / merge request.
 #
 # pytest config (importlib mode, experiments/ excluded) lives in pyproject.toml
-# under [tool.pytest.ini_options]. Tests that need vendored corpora (Sigma, OTRF,
-# D3FEND, faker-kerberos) or optional extras (rdflib[rdf]) skip gracefully via
-# @pytest.mark.skipif when absent, so a bare runner stays green.
+# under [tool.pytest.ini_options]. Tests that need corpora (Sigma, OTRF, D3FEND,
+# faker-kerberos, flaws.cloud CloudTrail, splunk-attack-data) or optional extras
+# (rdflib[rdf]) skip gracefully via @pytest.mark.skipif when absent, so a bare
+# runner stays green.
 #
-# Verified 2026-07-16 in a bare env (no data/): 920 passed, 3 skipped, 0 failed.
+# Verified 2026-08-07 on a genuinely bare clone (no data/): 913 passed, 90 skipped,
+# 0 failed, ~1m. With the corpora fetched locally: 999 passed, 4 skipped, ~3m20s.
+# Same 1,003 tests either way. The earlier "920 passed, 3 skipped" note was wrong:
+# only 3 skips means that runner was NOT bare.
 # Python pinned to 3.12 (the .venv interpreter; every package wants >=3.11).
 
 stages: [test]

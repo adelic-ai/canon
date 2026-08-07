@@ -63,19 +63,26 @@ capture ranges), `rust/` (a motif emitter spike), `web/` (visualization surfaces
 
 ## Status
 
-Honest accounting, as of 2026-08-06:
+Honest accounting, as of 2026-08-07:
 
-- **978 tests pass, 3 skip, 0 fail** (`uv run pytest -q`, ~3m20s). The three skips are corpora-absent
-  guards — vendored Sigma / OTRF / D3FEND / faker-kerberos and the `rdflib[rdf]` extra degrade gracefully
-  so a bare runner stays green.
+- **1,003 tests, 0 fail** (`uv run pytest -q`) — but the pass/skip split depends entirely on whether the
+  corpora are present:
+  - *With corpora fetched:* **999 pass, 4 skip** (~3m20s).
+  - *Clean clone, no `data/`:* **913 pass, 90 skip** (~1m). `uv sync` resolves from the lockfile with no
+    intervention.
+  - The 90 skips are corpora-absent guards — Sigma, OTRF, flaws.cloud CloudTrail, faker-kerberos,
+    splunk-attack-data, D3FEND, and the `rdflib[rdf]` extra all degrade gracefully so a bare runner stays
+    green. **This is the honest cost of "fetched, never vendored": a third party gets 913 tests, not 999.**
+    The 86-test difference is exactly the real-data evidence, and reproducing it means fetching the corpora.
 - **The contracts are PINNED and mechanically ENFORCED — for the Python binding.** The *polyglot* claim is
   not validated: there is exactly one binding, so these are "Python's interface, enforced," not yet proven
   language-independent. That is the honest state, not a roadmap promise.
 - **The repo is currently shaped by its first serious use case.** `detection` is over half the code. The
   fold substrate and the contracts are meant to be domain-agnostic and `forge-core` is written that way,
   but the load-bearing exercise so far has been detection engineering, and it shows.
-- `semantic-core`'s `Lattice` output is still a local Protocol rather than bound to `mathabc.order.Lattice`
-  — that binding waits on `mathabc-core` being extracted into the workspace.
+- `semantic-core`'s `Lattice` output is a local `Protocol`, and that is the intended surface — not a stub
+  awaiting an external typed-math dependency. FCA extraction needs a partial-order contract its consumers
+  can satisfy structurally; it does not need an algebra library.
 
 ## Run it
 

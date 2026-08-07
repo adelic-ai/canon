@@ -1,5 +1,16 @@
 # Three-layer architecture (unhedged — adopt off-the-shelf, build only what's novel)
 
+> **SUPERSEDED (2026-08-07) — kept as the tried-and-dropped record, not as current architecture.**
+> The `mathabc-core` layer proposed below was never built and is not planned. mathabc is a concept
+> artifact: an experiment in Python's `ABCMeta` / `Protocol` / `Generic[T]` machinery applied to the
+> math containment hierarchy. Every structure in it is abstract — there is no shipped `Integers()`,
+> no `F_p`, no polynomial ring; the caller supplies the concrete math. So binding canon's
+> `semantic_core.protocols.Lattice` to `mathabc.order.Lattice` would trade one abstract surface for
+> another and add a dependency for it. The structural Protocol is the surface, by decision.
+> The rest of this document's adopt-off-the-shelf argument (D3FEND as OWL, rdflib / owlready2 /
+> pySHACL, TASC dissolved into an adapter) did hold and is realized in `packages/semantic-core` and
+> `packages/semantic-cyber`. The current spine is `design/self_validation_architecture.md`.
+
 ## Thesis
 
 Don't rebuild what the W3C semantic stack already provides. Adopt D3FEND as the cyber knowledge graph. Dissolve TASC into a small adapter package. Build only what's genuinely novel: typed math (mathabc-core), feature-engineering substrate with lineage (forge-core), and the few small glue layers between them.

@@ -24,11 +24,28 @@
   strong { color: #111; }
   .thesis { background: #fffbe6; border-left: 4px solid #d4a017; padding: 0.8em 1em;
             margin: 1em 0; }
+  .superseded { background: #fdecea; border-left: 4px solid #b3261e; padding: 0.8em 1em;
+                margin: 1em 0; color: #442; }
 </style>
 </head>
 <body>
 
 <h1>Three-layer architecture (unhedged — adopt off-the-shelf, build only what's novel)</h1>
+
+<div class="superseded">
+<strong>SUPERSEDED (2026-08-07) — kept as the tried-and-dropped record, not as current
+architecture.</strong> The <code>mathabc-core</code> layer proposed below was never built and is not
+planned. mathabc is a concept artifact: an experiment in Python's <code>ABCMeta</code> /
+<code>Protocol</code> / <code>Generic[T]</code> machinery applied to the math containment hierarchy.
+Every structure in it is abstract — there is no shipped <code>Integers()</code>, no <code>F_p</code>,
+no polynomial ring; the caller supplies the concrete math. So binding canon's
+<code>semantic_core.protocols.Lattice</code> to <code>mathabc.order.Lattice</code> would trade one
+abstract surface for another and add a dependency for it. The structural Protocol is the surface, by
+decision. The rest of this document's adopt-off-the-shelf argument (D3FEND as OWL, rdflib /
+owlready2 / pySHACL, TASC dissolved into an adapter) did hold and is realized in
+<code>packages/semantic-core</code> and <code>packages/semantic-cyber</code>. The current spine is
+<code>design/self_validation_architecture.md</code>.
+</div>
 
 <div class="thesis">
 <strong>Thesis.</strong> Don't rebuild what the W3C semantic stack already provides. Adopt D3FEND as the cyber knowledge graph. Dissolve TASC into a small adapter package. Build only what's genuinely novel: typed math (mathabc-core), feature-engineering substrate with lineage (forge-core), and the few small glue layers between them.

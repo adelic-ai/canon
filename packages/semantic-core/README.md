@@ -4,10 +4,10 @@ Typed wrappers over the W3C semantic stack plus FCA implication-basis extraction
 
 ## Scope
 
-semantic-core is the second layer of the canon stack (mathabc-core → semantic-core → forge-core). It does two things:
+semantic-core is the semantic layer of the canon stack, upstream of `forge-core`. It does two things:
 
 1. **Wraps off-the-shelf semantic infrastructure** — rdflib (graph + SPARQL), owlready2 (OWL DL reasoning), pySHACL (validation). Exposes Protocols at the boundaries so downstream packages don't bind to vendor APIs.
-2. **FCA implication-basis extraction** — derives a minimum-primitive lattice from a concept graph. Output type is a `Lattice` instance (currently a local Protocol stub; will bind to `mathabc.order.Lattice` once mathabc-core is extracted).
+2. **FCA implication-basis extraction** — derives a minimum-primitive lattice from a concept graph. Output type is a `Lattice`: a structural Protocol, satisfied by implementing four methods.
 
 Domain packages (`semantic-cyber`, future `semantic-geo`) sit downstream and supply their own ontologies + bridges.
 
@@ -24,4 +24,4 @@ Domain packages (`semantic-cyber`, future `semantic-geo`) sit downstream and sup
 
 Implemented and tested — 716 LOC across the six modules above, 44 passing tests (`pytest packages/semantic-core`), no stubs. `graph`, `reasoning`, and `validation` wrap rdflib / owlready2 / pySHACL; `fca` derives the implication basis and concept lattice; `bridges` and `protocols` expose the typed boundaries.
 
-Known limitation: the `Lattice` output is still a local Protocol (`protocols.Lattice`), not yet bound to `mathabc.order.Lattice` — that binding waits on mathabc-core being extracted into the workspace.
+On `Lattice` being a Protocol: that is the design, not a gap. FCA extraction needs a partial-order contract a consumer can satisfy structurally — `elements` / `leq` / `join` / `meet`. Binding it to an external typed-math package would add a dependency without adding behavior, since such packages supply abstract surfaces too and leave the concrete elements to the caller.

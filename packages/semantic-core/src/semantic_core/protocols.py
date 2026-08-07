@@ -1,8 +1,9 @@
 """Typed surfaces semantic-core exposes to downstream packages.
 
-Local `Lattice` Protocol stands in for `mathabc.order.Lattice` until
-mathabc-core is extracted into the canon workspace. Shape is intentionally
-narrow so the eventual bind is a structural match, not a rewrite.
+`Lattice` is a structural Protocol by design, not a placeholder for an external
+algebra library. FCA extraction needs a partial-order contract its consumers can
+satisfy structurally; it does not need concrete algebra, and any typed-math
+package that supplied one would still leave the elements to the caller.
 """
 
 from __future__ import annotations
@@ -15,7 +16,7 @@ ConceptId = str
 
 @runtime_checkable
 class Lattice(Protocol):
-    """Partial-order lattice surface. Stub for mathabc.order.Lattice."""
+    """Partial-order lattice surface. Structural — implement it, don't inherit it."""
 
     def elements(self) -> Iterable[Hashable]: ...
     def leq(self, a: Hashable, b: Hashable) -> bool: ...
