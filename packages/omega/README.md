@@ -80,6 +80,36 @@ omega cross-corpus bridge — axis 'attack' over ['car', 'sigma']
 ATT&CK bridges the two corpora for free (shared vocabulary); their *field* vocabularies do not (`exe` vs
 `Image`) — that alignment is a graded mapping problem, deliberately left open.
 
+### ATLAS coverage cartography
+
+**MITRE ATLAS** is ATT&CK's analog for AI-threats — a *spine*, not a rule corpus, like ATT&CK itself. omega
+maps existing Sigma/CAR coverage onto it transitively, through the ATT&CK tags a rule already carries:
+
+```bash
+python -m omega atlas --sigma path/to/sigma/rules --car path/to/car --atlas path/to/atlas-data --out ./out
+```
+
+```
+ingest: sigma 3137 rules, car 102 analytics, atlas 170 techniques (car deferred={'unparsed-implementations': 99})
+atlas coverage — 170 techniques: covered(direct)=0 / covered(bridged)=26 / uncertain(CAR-coarse)=0 / silent(no-bridge)=136 / silent(uncovered)=8
+```
+
+writing `out/atlas_coverage.json` (the table) and `out/atlas_coverage.ttl` (the SKOS graph). (Run against the
+live SigmaHQ/sigma and mitre-attack/car checkouts and the compiled ATLAS.yaml — reproducible, not asserted;
+your own run's exact counts will drift as those corpora grow.)
+
+**Read the silences, not just the coverage.** 136 of 170 ATLAS techniques (80%) come back silent — that's
+the finding, not a gap in the build: existing rule libraries barely target AI-threats, and most ATLAS
+techniques have no ATT&CK analog at all (prompt injection, model evasion, training-data poisoning, …), so no
+ATT&CK-speaking corpus could reach them regardless of how complete it is. omega keeps that distinction
+honest with **two different silences**: `silent(no-bridge)` (no ATT&CK reference exists — structural,
+nothing to fill) vs `silent(uncovered)` (a reference exists, nothing reaches it — an actual gap; 8 of them
+here). A third status, `uncertain(CAR-coarse)`, marks a technique whose only path to coverage runs through a
+CAR analytic's unparsed query logic — a blind spot in what omega can verify, kept out of both `covered` and
+`silent` rather than guessed either way (0 here — every CAR-reachable technique above is also Sigma-reached,
+in this particular pair of corpora). A run that reports high coverage is suspect for exactly this reason —
+here `covered` is 26 of 170 (15%), well under the CLI's half-the-total warning threshold.
+
 ## How it works
 
 ```
@@ -87,16 +117,19 @@ rulesets → ingest adapters → [ IR ] → axes → FCA concepts → SKOS relat
            (per ruleset)      waist    (the projection knob)
 ```
 
-- **ingest/** — one adapter per rule language (Sigma via pySigma, CAR via its YAML). Ingest is inherently
-  ruleset-specific; it is the *only* layer that is. Each adapter lowers to the IR and nothing above it knows
-  a rule was ever Sigma.
+- **ingest/** — one adapter per rule language (Sigma via pySigma, CAR via its YAML), plus one *spine*
+  adapter (ATLAS — a taxonomy, not a ruleset). Ingest is inherently source-specific; it is the *only* layer
+  that is. Each adapter lowers to the IR and nothing above it knows a rule was ever Sigma.
 - **ir.py** — the agnostic waist: polarity-tagged atoms `(field, mods, values)`, logsource as open
   `(dimension, value)` tags, ATT&CK tags, and a `Source` recording provenance (a rule always traces back to
-  its origin id, whatever omega does internally).
+  its origin id, whatever omega does internally). `AtlasTechnique` sits alongside `CompiledRule` for spine
+  nodes — a taxonomy entry isn't a rule, and isn't forced to look like one.
 - **axes.py** — the projection: `field` (value-blind) · `clause` (value-aware) · `polarity` (sign
-  selection/filter) · `fieldref` (relational) · `logsource` · `attack`. Any subset is a valid notion of
-  "same."
+  selection/filter) · `fieldref` (relational) · `logsource` · `attack` · `atlas` (direct ATLAS tagging).
+  Any subset is a valid notion of "same."
 - **fca.py / skos.py** — concepts under a projection, then their graded relations + Turtle.
+- **coverage.py** — the ATLAS transitive bridge and its five-way honest-silence classifier (rule → its
+  ATT&CK tags → the ATLAS techniques that reference them).
 
 ## Scope and limits
 
@@ -107,7 +140,12 @@ rulesets → ingest adapters → [ IR ] → axes → FCA concepts → SKOS relat
   rules it could not *execute* (base64, field-references, correlation) — they still yield attributes.
 - **CAR is coarse (v1).** CAR analytics carry their logic as implementations in *other* query languages
   (SPL/EQL/pseudocode); omega ingests their structured axes (ATT&CK coverage, platforms, data-model
-  references) and counts the unparsed query logic rather than dropping it.
+  references) and counts the unparsed query logic rather than dropping it. The ATLAS coverage cartography
+  inherits this: a technique whose only path to coverage is CAR's unparsed logic reads `uncertain`, never
+  silently upgraded to `covered` or downgraded to `silent`.
+- **ATLAS coverage is bridge-only.** omega reaches an ATLAS technique through the ATT&CK tags a rule already
+  carries — it does not (and, without runtime evaluation, cannot) verify that a rule detects the specifically
+  *AI* manifestation of a shared ATT&CK technique. Bridged coverage is reported as a lead, not a guarantee.
 
 ## License
 

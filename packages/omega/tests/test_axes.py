@@ -60,6 +60,18 @@ def test_logsource_and_attack_are_tags(tmp_path):
     assert ls == {"product:windows", "category:process_creation"}
 
 
+def test_atlas_axis_reads_direct_tag_only():
+    """ATLAS-SPEC.md §3.2: the axis handles DIRECT rule->ATLAS tagging only (rare today); the transitive
+    bridge through attack tokens is a corpus-level concern, not a per-rule projection (omega.coverage)."""
+    direct = CompiledRule(id="x", title="x", logsource=(), tags=("atlas.aml.t0043", "attack.t1059"),
+                          blocks=(), condition="")
+    assert attributes(direct, axes={"atlas"}) == {"atlas:AML.T0043"}
+    # a plain attack tag, with no atlas.-prefixed tag, contributes nothing to the atlas axis
+    bridge_only = CompiledRule(id="y", title="y", logsource=(), tags=("attack.t1059",),
+                               blocks=(), condition="")
+    assert attributes(bridge_only, axes={"atlas"}) == set()
+
+
 def test_value_aware_separates_what_value_blind_collapses(tmp_path):
     irs = _irs(tmp_path)
     a, b = irs["A"], irs["B"]

@@ -51,6 +51,25 @@ class Block:
 
 
 @dataclass(frozen=True)
+class AtlasTechnique:
+    """One MITRE ATLAS technique or subtechnique — a **spine node**, not a rule. ATLAS (like ATT&CK) is a
+    taxonomy corpora get mapped *onto*; it carries no detection logic, so it does not fit ``CompiledRule``
+    (no blocks, no polarity, no condition — forcing it into that shape would assert a rule-likeness it
+    doesn't have). ``tactics`` is the open id-tuple of ``AML.TAxxxx`` tactics this technique belongs to
+    (empty for most subtechniques, which inherit tactic from their parent rather than restating it).
+    ``parent`` is the base technique id when this is a subtechnique (ATLAS's ``specializes``), else
+    ``None``. ``attack_refs`` are the ATT&CK technique ids this node references, in Sigma's tag format
+    (``attack.t1596``) so they compare directly against a rule's ``attack`` axis tokens — the bridge."""
+
+    id: str
+    name: str
+    tactics: tuple[str, ...]
+    parent: str | None
+    attack_refs: tuple[str, ...]
+    source: Source | None = None
+
+
+@dataclass(frozen=True)
 class CompiledRule:
     """omega's agnostic IR for one detection rule — produced by an adapter, consumed by the axes. Everything
     the analysis needs and nothing ruleset-specific left. ``logsource`` is an OPEN, sorted set of

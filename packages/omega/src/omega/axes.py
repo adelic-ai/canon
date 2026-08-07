@@ -12,6 +12,10 @@ Axes:
   ``fieldref``   relational — ``fieldref:<field>~<referenced-field>`` (the field-to-field predicate)
   ``logsource``  orientation tags — ``<dimension>:<value>`` (product:windows, category:process_creation, …)
   ``attack``     the ATT&CK tags verbatim — ``tag:<t>``
+  ``atlas``      DIRECT ATLAS coverage only — ``atlas:<AML.Txxxx>``, from a rule tag prefixed ``atlas.``
+                 (rare today — ATLAS-SPEC.md §3.2). The TRANSITIVE bridge (rule -> its attack tokens ->
+                 ATLAS techniques referencing them) is not a per-rule projection — it needs the ingested
+                 ATLAS spine as context, so it lives in :mod:`omega.coverage`, not here.
 
 The tokens are just strings, deliberately: two rules share an attribute iff their tokens are equal, so the
 whole FCA formal context is ``rules × frozenset[token]`` — a bag of tags, exactly as the logsource discussion
@@ -68,5 +72,9 @@ def attributes(ir: CompiledRule, *, axes: frozenset[str] | set[str]) -> frozense
     if "attack" in axes:
         for tag in ir.tags:
             out.add(f"tag:{tag}")
+    if "atlas" in axes:
+        for tag in ir.tags:
+            if tag.lower().startswith("atlas."):
+                out.add(f"atlas:{tag[len('atlas.'):].upper()}")
 
     return frozenset(out)
