@@ -7,6 +7,10 @@ canon is a research and learning artifact, not an adoption play. It must stand a
 its own *and* actually work; working is necessary, not sufficient. It is the deliberate inversion of how
 AI systems present themselves today — fluent, confident, and unjustified.
 
+> **[START-HERE.md](START-HERE.md)** routes you to the shortest path for whatever brought you here — the
+> core idea, the enforcement contracts, the ontology work, or the cross-corpus mapping — and says what to
+> skip. Most of this repo won't be what you came for.
+
 ## The one structural idea
 
 > Every cross-cutting concern is a **`≤_k`-monotone fold** from one content-addressed computation DAG into
