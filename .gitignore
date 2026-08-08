@@ -17,3 +17,6 @@ design/probes/d3fend/d3fend.owl
 design/probes/attack/enterprise-attack.json
 packages/semantic-cyber/data/
 
+
+# Kept locally, not published
+web/substrate/computational_engineering.html
