@@ -1,8 +1,8 @@
 """flaws.cloud — does the entropy feature / conformal calibration earn its keep on a large REAL corpus?
 
-A reproducible experiment, NOT a pytest test (it loads ~2M records from ~/dev/csat/data/flaws, which is
-not canon's data home). It answers two questions kept deliberately separate (so conformal is not credited
-for what entropy does):
+A reproducible experiment, NOT a pytest test (it loads ~2M records from the flaws.cloud CloudTrail corpus
+in the workspace data home, outside the repo). It answers two questions kept deliberately separate (so
+conformal is not credited for what entropy does):
 
   Q1 (feature):     does region-ENTROPY beat distinct-region-COUNT at separating the compromised
                     identities (backup/Level6) from the legitimate ones (piper/flaws/SecurityMonkey/Root)?
@@ -25,7 +25,6 @@ import datetime as dt
 import glob
 import gzip
 import json
-import os
 from pathlib import Path
 
 import numpy as np
@@ -33,7 +32,7 @@ import numpy as np
 from forge_core import conformal_pvalues, shannon_entropy
 
 _EPOCH = dt.datetime(1970, 1, 1)
-_DIR = str(Path(os.environ.get("CANON_DATA_ROOT", Path.home() / "data")) / "flaws-cloudtrail/v1")
+_DIR = str(Path.home() / "data" / "flaws-cloudtrail" / "v1")
 _POS = {"backup", "Level6"}
 _LEGIT = {"piper", "flaws", "SecurityMokey", "Root"}
 

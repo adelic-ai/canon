@@ -26,7 +26,7 @@ the energy detector when the noise variance is known/stationary, hand its
 
 Deferred: the band-limited radiometer (integrate a Welch PSD over a frequency
 band) needs a ``WelchOp`` in forge-core, which is not yet ported from
-``~/dev/forge``. This module is the time-domain form.
+the pre-canon forge prototype. This module is the time-domain form.
 
 Wraps ``scipy.stats.chi2`` / ``ncx2`` for the threshold and power math; the
 windowing is pure numpy.

@@ -64,7 +64,7 @@ def _field(record: dict, field: str) -> str:
     return _identity(record) if field == "userIdentity" else str(record.get(field, "-"))
 
 
-# CloudTrail API families (curated from CSAT's hand-built cloud detectors, ~/dev/CSAT/detections.py).
+# CloudTrail API families (curated from the hand-built cloud detectors in a pre-canon prototype).
 # DISCOVERY = read-only recon APIs whose *diversity* per principal is the enumeration signal (T1580
 # Cloud Infrastructure Discovery + T1087.004 Cloud Account Discovery). CREDENTIAL = credential
 # acquisition + IAM privilege manipulation (T1078.004 / T1550 / T1098). A principal fanning across many

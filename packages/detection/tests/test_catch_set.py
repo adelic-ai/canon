@@ -7,7 +7,6 @@ structural edge); and a skip-if-absent integration test pinning the real n=1 OTR
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 import pytest
@@ -101,7 +100,7 @@ def test_ground_lattice_surfaces_over_group_filter_blind():
 
 
 # ── real n=1 grounding: skip-if-absent (engine/workspace boundary — data is path-ref'd, never committed) ──
-_DATA = Path(os.environ.get("CANON_DATA_ROOT", Path.home() / "data"))
+_DATA = Path.home() / "data"
 _OTRF = _DATA / "otrf-security-datasets/LSASS_campaign_03/lsass_campaign_03.json"
 _SIGMA = Path(__file__).resolve().parents[2] / "semantic-cyber/data/sigma-rules"
 

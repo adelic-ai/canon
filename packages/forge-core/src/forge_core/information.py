@@ -13,7 +13,7 @@ cell — coordination: lateral movement, synchronized C2 — paired with its per
 :func:`mi_shuffle_null`).
 
 The cores :func:`shannon_entropy`, :func:`kl_divergence`, :func:`mutual_information` are faithful
-ports of ``signalforge.signal._information`` (prior art, ``~/dev/pickering``): ``H = -Σ p·log2(p)``,
+ports of ``signalforge.signal._information`` (prior art from a pre-canon prototype): ``H = -Σ p·log2(p)``,
 ``D_KL(P||Q) = Σ p·log2(p/q)``, ``I(X;Y) = H(X)+H(Y)-H(X,Y)``, in bits.
 
 A note on grain. Entropy needs no fixed alphabet (each window histograms itself), so it dodged
