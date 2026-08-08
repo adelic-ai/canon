@@ -3,11 +3,13 @@
 **Status:** strategy note, 2026-06-19. Not a build plan — the *why* behind the frontends, the OFF-able
 waist, and the attestation gates, framed as an adoption architecture. Captures a vision; the pieces it
 names are partly built (see each), the go-to-market arc is aspirational.
-**Relates to:** [[ir_canonical_ruleset]] (Sigma/KQL as lowered frontends — the rule-layer entry),
-[[ocsf_ingest_normalization]] (the OFF-able data waist — the data-layer entry),
-[[project_substrate_as_domain_agnostic_validator]] ("wrap any detector → receipts" — the verdict-layer
-entry), [[project_enterprise_scale_ingest_vision]] (the scale picture), [[engine_workspace_boundary]]
-(multi-tenant by construction), [[project_canon_as_agent_substrate]] (the north star).
+**Relates to:** [ir_canonical_ruleset](ir_canonical_ruleset.md) (Sigma/KQL as lowered frontends — the rule-layer entry),
+[ocsf_ingest_normalization](ocsf_ingest_normalization.md) (the OFF-able data waist — the data-layer entry),
+[justified_verdict_substrate](justified_verdict_substrate.md) ("wrap any detector → receipts" — the verdict-layer
+entry), [retention_and_aging](retention_and_aging.md) and [live_stream_ingest](live_stream_ingest.md)
+(the scale picture), [engine_workspace_boundary](engine_workspace_boundary.md)
+(multi-tenant by construction), and the standing north star: canon as the verifier half of an
+LLM-proposes / canon-verifies loop.
 
 ## The problem — you don't know how they're set up
 

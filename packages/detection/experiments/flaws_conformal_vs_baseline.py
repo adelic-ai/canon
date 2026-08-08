@@ -25,13 +25,15 @@ import datetime as dt
 import glob
 import gzip
 import json
+import os
+from pathlib import Path
 
 import numpy as np
 
 from forge_core import conformal_pvalues, shannon_entropy
 
 _EPOCH = dt.datetime(1970, 1, 1)
-_DIR = "/Users/shunhonda/dev/csat/data/flaws/cloudtrail_logs"
+_DIR = str(Path(os.environ.get("CANON_DATA_ROOT", Path.home() / "data")) / "flaws-cloudtrail/v1")
 _POS = {"backup", "Level6"}
 _LEGIT = {"piper", "flaws", "SecurityMokey", "Root"}
 

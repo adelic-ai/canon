@@ -50,7 +50,8 @@ PROV+SHACL-over-cyber **modeling patterns**, not conformance.
   detection/composition provenance. Overlap real but partial.
 - CASE itself re-implemented rather than adopted PROV-O ⇒ "adopt CASE" was never the clean
   interop win; it's one opinionated forensics dialect, not a universal substrate. Reinforces
-  the [[project-provenance-substrate-and-uco-gate]] downgrade.
+  the decision to treat CASE/UCO as vocabulary only rather than as canon's provenance substrate
+  (see [provenance_substrate_design](../../provenance_substrate_design.md)).
 
 **BORROW two methodology patterns** (both directly fix audit gaps):
 - **OWL + SHACL dual-typing** — define canon's PROV/provenance classes (and semantic-core

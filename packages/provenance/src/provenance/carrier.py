@@ -1,7 +1,7 @@
 """The carrier — Belnap's four-valued bilattice, ``FOUR``.
 
 The value domain every fold computes in. Pinned contract:
-``~/canon/contracts/carrier.md`` (read it first); architecture spine §5.
+``contracts/carrier.md`` (read it first); architecture spine §5.
 
 A value is a pair ``(t, f)`` of independent bits — ``t`` = "told true" (some source
 asserts it), ``f`` = "told false". The four values and the two partial orders fall out

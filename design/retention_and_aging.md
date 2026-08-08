@@ -1,18 +1,18 @@
 # Retention and aging — what survives when the raw telemetry is gone
 
 **Status:** design, not built. Captured 2026-06-19 from the live-macOS thread.
-**Relates to:** [[engine_workspace_boundary]] (retention is workspace state, not engine code —
-this fills the lifecycle gap that doc left open), [[verdict_coverage_space]] (past the horizon
-is a NONE, not a FALSE), [[self_validation_architecture]] (justification-is-the-object;
-feed-liveness = custody; the §9 distribution-shift risk), [[justified_verdict_substrate]] (the
-verdict is what survives), [[skos_graded_mapping_seam]] / [[ocsf_ingest_normalization]] (the
+**Relates to:** [engine_workspace_boundary](engine_workspace_boundary.md) (retention is workspace state, not engine code —
+this fills the lifecycle gap that doc left open), [verdict_coverage_space](verdict_coverage_space.md) (past the horizon
+is a NONE, not a FALSE), [self_validation_architecture](self_validation_architecture.md) (justification-is-the-object;
+feed-liveness = custody; the §9 distribution-shift risk), [justified_verdict_substrate](justified_verdict_substrate.md) (the
+verdict is what survives), [skos_graded_mapping_seam](skos_graded_mapping_seam.md) / [ocsf_ingest_normalization](ocsf_ingest_normalization.md) (the
 ingest that feeds this).
 
 ## The problem
 
 A continuous monitor over a forgetful source (macOS Endpoint Security / `eslogger` retains
 **nothing** — it streams live and drops each event the instant it's emitted; see
-[[ocsf_ingest_normalization]]) accumulates raw events without bound. You cannot keep the
+[ocsf_ingest_normalization](ocsf_ingest_normalization.md)) accumulates raw events without bound. You cannot keep the
 firehose. So the real question is **not "how long do we keep raw events" but "what do raw
 events get folded into before we drop them, and how do we stay honest about what we can no
 longer reconstruct."**
@@ -36,7 +36,7 @@ Three things survive aging, in increasing compression:
 ### 1. Verdicts — but only if justification is *materialized*, not *pointed-at*
 
 The load-bearing architectural commitment: "justification is not metadata — it is the same
-object as the result" ([[self_validation_architecture]] §1). Operationally that becomes a
+object as the result" ([self_validation_architecture](self_validation_architecture.md) §1). Operationally that becomes a
 retention rule:
 
 - A verdict that **embeds** its receipts (the matched fields, the W-record, the cell
@@ -66,13 +66,13 @@ still enough to compute rarity against. Baselines + cells get medium retention.
 Once raw (and then cells) are gone you cannot re-derive or re-query over that window. A
 question asked today about last month is a **coverage NONE** (telemetry aged out), never a
 clean FALSE — the same discipline as a live-feed gap, which is *also* a NONE
-([[verdict_coverage_space]]). So:
+([verdict_coverage_space](verdict_coverage_space.md)). So:
 
 - The retention horizon is a **first-class, recorded coverage boundary**: "answerable back to
   date X; before X is NONE." Not a silent wall.
 - A feed gap *within* the retention window (monitor was down) is likewise a NONE for that
   window — and a live, unbroken feed is intact chain-of-custody, so feed-liveness =
-  custody supplies exactly this signal ([[self_validation_architecture]] §6).
+  custody supplies exactly this signal ([self_validation_architecture](self_validation_architecture.md) §6).
 
 ## Aging is also *desirable* — and it is the flagged risk
 
@@ -82,7 +82,7 @@ ago and is now ubiquitous should stop alarming. The sliding reference window is 
 the calibration current.
 
 But this is precisely the architecture's flagged soft spot — *conformal / baseline under
-distribution-shift and contaminated reference is unsolved* ([[self_validation_architecture]]
+distribution-shift and contaminated reference is unsolved* ([self_validation_architecture](self_validation_architecture.md)
 §9). Two concrete hazards:
 
 - **Self-poisoning.** A slow-burn attacker who ramps gradually gets folded into "normal" as
@@ -100,19 +100,19 @@ papered over.
 The rare, contradictory (`Both`), or flagged cells are the **highest-value things to retain
 longer and label**, precisely because they are what the baseline would otherwise forget. They
 go to the active-learning / acquisition queue before aging out — the BOTH-acquisition idea
-([[justified_verdict_substrate]], the restart note's Phase-2 self-improvement loop). Aging a
+([justified_verdict_substrate](justified_verdict_substrate.md), the restart note's Phase-2 self-improvement loop). Aging a
 flagged cell into "normal" silently is the worst case; promoting it is the best.
 
 ## Scope / open
 
 - **Built:** nothing here. The streaming reader, the workspace store, and the GC/fold policy
   do not exist yet; this records the design before the build (the same discipline as
-  [[verdict_coverage_space]]).
+  [verdict_coverage_space](verdict_coverage_space.md)).
 - **The fold-then-drop step** (raw → cells) needs the `FanoutBinding`-style source binding for
   the live stream to exist first.
 - **Materialization-on-pin** (promoting a load-bearing raw event's fields into a verdict
   before GC) is the one genuinely new mechanism; the rest is pin-and-sweep + windowed
   recompute, both named wheels.
 - **Retention horizons are workspace config**, recorded in the manifest
-  ([[engine_workspace_boundary]]): `{hot_window, warm_horizon, cold_keeps_verdicts}` per
+  ([engine_workspace_boundary](engine_workspace_boundary.md)): `{hot_window, warm_horizon, cold_keeps_verdicts}` per
   source. Multi-tenant by construction — different engagements keep different amounts.

@@ -4,10 +4,10 @@
 content-addressed, provenance-recorded **pipeline**, so any end-result knows the state that produced it and
 can be improved by ablation. Stages 1–3 are built; stage 4 (the lattice) is the next build; stage 5
 (catch-set) is gated on labeled data (path below).
-**Relates to:** [[rule_classification_skos]] (stage 4 = the SKOS-graded lattice), [[ir_canonical_ruleset]]
-(the IR + frontends), [[sigma_consumption_audit]] (stage 3 scorecard), [[per_ttp_coverage_layers]] (stage 6),
-[[fidelity_scorecard]] / [[dataset_generator_product]] (stage 5), [[engine_workspace_boundary]] (the manifest),
-[[self_validation_architecture]] (provenance — this is canon dogfooding its own substrate on its own process).
+**Relates to:** [skos_graded_mapping_seam](skos_graded_mapping_seam.md) (stage 4 = the SKOS-graded lattice), [ir_canonical_ruleset](ir_canonical_ruleset.md)
+(the IR + frontends), [detection/audit.py::consume_sigma](../packages/detection/src/detection/audit.py) (stage 3 scorecard), [per_ttp_coverage_layers](per_ttp_coverage_layers.md) (stage 6),
+[detection/fidelity_scorecard.py](../packages/detection/src/detection/fidelity_scorecard.py) / [dataset_generator_product](dataset_generator_product.md) (stage 5), [engine_workspace_boundary](engine_workspace_boundary.md) (the manifest),
+[self_validation_architecture](self_validation_architecture.md) (provenance — this is canon dogfooding its own substrate on its own process).
 
 ## Why formalize the process
 
@@ -42,7 +42,7 @@ artifact. "Asserts" = the claim the stage earns; "status" = built / next / gated
   (`exactMatch`/`broadMatch`/`narrowMatch`/`relatedMatch`), earned by contents (clause-set ⊆, content_digest),
   with a callable `.why()`. Generalizes `admission.structural_relation` across the corpus. *Asserts:* the
   graded relation (dedup = the `exactMatch` slice; the rest is navigable order). **NEXT — corpus-free, not
-  gated** ([[rule_classification_skos]]).
+  gated** (see [skos_graded_mapping_seam](skos_graded_mapping_seam.md)).
 - **4 · ground (catch-set)** — run rules against **labeled** instances → per-rule `caught_on: [instance_cids]`;
   group rules by co-caught sets = true catch-set membership; verify tags claim-vs-catch. *Asserts:* what each
   rule *actually* detects (the only behavioral ground). **GATED on labeled data** — path below. Upgrades the
@@ -69,7 +69,7 @@ A run is pinned by a manifest, so the end-result knows its producing state:
 Consequences (the two asks): **reproducible** — same manifest → same `result` CID (re-run reproduces it
 exactly); **improvable** — swap one stage (a better lattice metric, more labels), re-run, **diff the two
 result CIDs** to measure whether the treatment improved. That diff-the-artifact loop is the ML-ish
-ablation/experiment loop, with provenance instead of vibes ([[regime_ledger]] / the canon-improves-itself
+ablation/experiment loop, with provenance instead of vibes ([regime_ledger](regime_ledger.md) / the canon-improves-itself
 thread).
 
 ## The catch-set grounding path (stage 4) — gated, not blocked

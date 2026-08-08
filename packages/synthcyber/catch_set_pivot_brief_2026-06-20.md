@@ -1,25 +1,19 @@
-# Catch-set grounding pivot — handoff brief (Maude)
+# Catch-set grounding pivot — work brief
 
-**Date:** 2026-06-20. **For:** the second instance ("Maude"), opened at `~/canon`. **Goal:** produce
-**catch-set grounding** — the behavioral ground truth (which rules actually catch which labeled instances)
-that the whole structural stack (rule lattice, tag claims, dedup) is a proxy for. This is the keystone.
+**Date:** 2026-06-20. **Goal:** produce **catch-set grounding** — the behavioral ground truth (which rules
+actually catch which labeled instances) that the whole structural stack (rule lattice, tag claims, dedup)
+is a proxy for. This is the keystone.
 
-## Coordination (avoid stepping on the main instance)
+Scope when written: `packages/synthcyber/` (scenarios), a new
+`packages/detection/src/detection/catch_set.py`, and an extension to
+`packages/detection/src/detection/fidelity_scorecard.py`. All telemetry stays in the workspace corpus
+directory, never committed (engine/workspace boundary; data is path-ref'd and skip-if-absent).
 
-- Work on your **own branch**: `git switch -c feat/catch-set-grounding`. The main instance stays on
-  `feat/sigma-treatment-pipeline` doing the structural lattice/product work — **do not** touch
-  `detection/rule_lattice.py` or `detection/atom_implication.py` (those are the main instance's).
-- **You own:** `packages/synthcyber/` (scenarios), new `packages/detection/src/detection/catch_set.py`,
-  `packages/detection/src/detection/fidelity_scorecard.py` (extend), and `~/data/`.
-- **Never delete branches** (the user does that). Commit + push your branch; do not merge to `main`.
-- **All telemetry stays in `~/data/`, never committed** (engine/workspace boundary; data is path-ref'd /
-  skip-if-absent).
-
-## What's already staged in ~/data (don't re-fetch)
+## Already staged locally (don't re-fetch)
 
 `otrf-security-datasets/LSASS_campaign_03` (1 OTRF set, T1003.001), `faker-kerberos` (Kerberos — the *right*
 data for the fan-out cross-check), `flaws-cloudtrail` (AWS), `bots-v3` (Splunk BOTS, scenario-level),
-`attack-flow-corpus` (campaign trajectories). 157 GB free.
+`attack-flow-corpus` (campaign trajectories).
 
 ## Target list — fetch to ~/data/ (the Windows per-technique gap)
 
@@ -49,8 +43,8 @@ Verify each `LICENSE` on clone (local research grounding is fine for all).
 3. **Run fidelity over the REAL labeled data** — `technique_fidelity` / `grounded_fidelity` per technique
    (claim-vs-catch + recall/FP). For techniques with real labeled instances, this is direct ground truth — no
    synthetic needed. Output the per-technique scorecard + the catch-set groups.
-4. **Compare** the catch-set groups to the structural keys (`content_signature`, and the main instance's rule
-   lattice) — does structural-related actually equal catch-related? That's the grounding result.
+4. **Compare** the catch-set groups to the structural keys (`content_signature` and the rule lattice) —
+   does structural-related actually equal catch-related? That's the grounding result.
 5. **Fill gaps with synthcyber + Fable 5** — for techniques with *no* real data: have **Fable 5** author
    `synthcyber.Scenario`s (the attack-signature events), **seeded from real attack docs** (atomic-red-team,
    campaign reports), grounded via `synthcyber.grounding.ground()` (inject into a real benign background), and

@@ -1,9 +1,9 @@
 # OCSF ingest normalization — an *optional* data-plane waist
 
 **Status:** design, not built. Branch `design/ocsf-ingest-normalization`.
-**Relates to:** [[engine_workspace_boundary]] (vocab + adapters are workspace config),
-[[skos_graded_mapping_seam]] (the Sigma↔OCSF map is a graded, lossy edge),
-[[verdict_coverage_space]] (missing-attribute = NONE, not FALSE).
+**Relates to:** [engine_workspace_boundary](engine_workspace_boundary.md) (vocab + adapters are workspace config),
+[skos_graded_mapping_seam](skos_graded_mapping_seam.md) (the Sigma↔OCSF map is a graded, lossy edge),
+[verdict_coverage_space](verdict_coverage_space.md) (missing-attribute = NONE, not FALSE).
 
 ## What this slice is — and is not
 
@@ -84,7 +84,7 @@ counts.
 Not just one global flag. Three levels, coarsest to finest:
 
 1. **Per-run / per-workspace** (default): `vocabulary: native | ocsf` in the workspace
-   manifest ([[engine_workspace_boundary]]), with the adapter/pipeline pin.
+   manifest ([engine_workspace_boundary](engine_workspace_boundary.md)), with the adapter/pipeline pin.
 2. **Per-source**: normalize the sources that benefit (multi-source join), leave a native
    source native. The round can fire against a *mixed* fleet only after a common target
    vocab is chosen — mixing is what OCSF buys, so per-source-off means "this source opts
@@ -92,7 +92,7 @@ Not just one global flag. Three levels, coarsest to finest:
 3. **Per-detection / per-field, informed by loss**: where the Sigma→OCSF map for a rule's
    fields is `exactMatch`, normalize freely; where it is `broad`/lossy on a **load-bearing**
    field, prefer native (or fire native as a fallback and flag the demotion). This ties the
-   on/off decision to the *same load-bearingness gate* as [[skos_graded_mapping_seam]] — the
+   on/off decision to the *same load-bearingness gate* as [skos_graded_mapping_seam](skos_graded_mapping_seam.md) — the
    system can tell you where normalization is safe instead of you guessing.
 
 ## Graded, lossy, validated — not assumed faithful
@@ -133,7 +133,7 @@ Sigma rules ───(pySigma OCSF pipeline)──> OCSF-rules ─┘
   (loudly) to fire OCSF rules on native events.
 - **Where things live:** the engine and the Sigma→OCSF pipeline are *universal* (canon);
   the source adapters, the vocab choice, and the pins are *workspace* config
-  ([[engine_workspace_boundary]]). The manifest records `{vocabulary, source_adapters,
+  ([engine_workspace_boundary](engine_workspace_boundary.md)). The manifest records `{vocabulary, source_adapters,
   pipeline_pin, per-detection overrides}`.
 
 ## First slice (concrete, scoped)

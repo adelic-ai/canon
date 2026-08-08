@@ -3,9 +3,9 @@
 **Status:** design note, 2026-06-20. Crystallizes a conversation thread: the detection IR is language-like, so
 *what is its vocabulary?* The answer is that it has three vocabularies of very different character, and the
 line between them is exactly the line between what should live in Python and what should live in RDF.
-**Relates to:** [[project_detection_ir_motif_ontology]] (the IR-as-RDF / emitter-per-language plan),
-[[project_skos_graded_mapping_seam]] (the open-field mapping seam), [[project_ocsf_ingest_normalization]]
-(the data-plane waist), [[project_rust_emitter]] (the language-neutral wire form), the earned-tier-via-SHACL
+**Relates to:** [detection_ir_motif_ontology](detection_ir_motif_ontology.md) (the IR-as-RDF / emitter-per-language plan),
+[skos_graded_mapping_seam](skos_graded_mapping_seam.md) (the open-field mapping seam), [ocsf_ingest_normalization](ocsf_ingest_normalization.md)
+(the data-plane waist), [rust_hot_path_emitter](rust_hot_path_emitter.md) (the language-neutral wire form), the earned-tier-via-SHACL
 mechanism in `packages/detection/src/detection/_verdict.py`.
 
 ## The IR is a formal language; vocabularies, not vocabulary

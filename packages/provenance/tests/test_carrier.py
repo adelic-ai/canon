@@ -1,6 +1,6 @@
 """Carrier tests — the Belnap bilattice, against the pinned contract.
 
-The contract (``~/canon/contracts/carrier.md``) ships explicit truth tables; these tests
+The contract (``contracts/carrier.md``) ships explicit truth tables; these tests
 ARE those tables, transcribed, plus the order/law/monotonicity properties. The whole
 domain is four values, so every property is checked **exhaustively** (a proof, not a
 sample) — no Hypothesis needed.

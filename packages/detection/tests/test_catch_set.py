@@ -7,6 +7,7 @@ structural edge); and a skip-if-absent integration test pinning the real n=1 OTR
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -100,8 +101,9 @@ def test_ground_lattice_surfaces_over_group_filter_blind():
 
 
 # ── real n=1 grounding: skip-if-absent (engine/workspace boundary — data is path-ref'd, never committed) ──
-_OTRF = Path("/Users/shunhonda/data/otrf-security-datasets/LSASS_campaign_03/lsass_campaign_03.json")
-_SIGMA = Path("/Users/shunhonda/canon/packages/semantic-cyber/data/sigma-rules")
+_DATA = Path(os.environ.get("CANON_DATA_ROOT", Path.home() / "data"))
+_OTRF = _DATA / "otrf-security-datasets/LSASS_campaign_03/lsass_campaign_03.json"
+_SIGMA = Path(__file__).resolve().parents[2] / "semantic-cyber/data/sigma-rules"
 
 
 @pytest.mark.skipif(not (_OTRF.exists() and _SIGMA.exists()),
@@ -121,7 +123,7 @@ def test_otrf_n1_grounding_two_catchers_related_not_exact():
 
 
 # ── multi-instance grounding on splunk/attack_data T1558.003 (Kerberoasting) — LFS data, skip-if-absent ──
-_KERB = Path("/Users/shunhonda/data/splunk-attack-data/datasets/attack_techniques/T1558.003")
+_KERB = _DATA / "splunk-attack-data/datasets/attack_techniques/T1558.003"
 _KERB_XML = [_KERB / "kerberoasting_spn_request_with_rc4_encryption" / "windows-xml.log",
              _KERB / "unusual_number_of_kerberos_service_tickets_requested" / "windows-xml.log"]
 

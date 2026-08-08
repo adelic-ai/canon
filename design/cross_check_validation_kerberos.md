@@ -1,11 +1,14 @@
 # Fan-out cross-check validation on faker-kerberos — the first positive battery result
 
-**Status:** validation result, 2026-06-20. The positive counterpart to [[cross_check_validation_otrf]]
-(which was negative — *wrong data*). Reproduced via `detection.fanout.load_kerberos_events` +
-`detect_fanout` / `detect_by_distinct_count` over `~/data/faker-kerberos/v1/export.csv`.
-**Relates to:** [[cross_check_validation_otrf]] (the matched-measure-to-phenomenon lesson),
-[[project_feature_engineering_is_a_product]] (revises "entropy unproven vs baseline"),
-[[project_canon_restart]] (closes the #1 open gap: cross-check operational value).
+**Status:** validation result, 2026-06-20. The positive counterpart to an earlier run of the same
+cross-check against the OTRF LSASS capture, which came back negative because the measure did not match
+the phenomenon in that data — the matched-measure-to-phenomenon lesson this result depends on.
+Reproduced via `detection.fanout.load_kerberos_events` + `detect_fanout` / `detect_by_distinct_count`
+over the faker-kerberos v1 corpus (`export.csv`; see
+[engine_workspace_boundary](engine_workspace_boundary.md) for why corpora live outside the repo).
+This closes what was the top open gap on the substrate — whether a cross-check disagreement carries
+operational value — and revises the earlier reading that entropy was unproven against the
+distinct-count baseline.
 
 ## Question
 

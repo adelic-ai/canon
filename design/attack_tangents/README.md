@@ -13,9 +13,11 @@
    *claims* vs what *catches*), and it's liftable to RDF when a consumer appears.
 
 This is canon's edge made concrete: *framework-OWL is infra; grounding is the edge.* The annotations
-**are** the grounding. Relates to [[project_detection_inversion_battery_framework]] (framework as
-callable verifier), [[project_fidelity_scorecard]] (claims ≠ catches), [[project_skos_graded_mapping_seam]]
-(rule↔technique mapping), and the chain checker (`detection/chain.py`).
+**are** the grounding. Relates to [detection_battery](../../web/detection/detection_battery.html)
+(framework as callable verifier),
+[detection/fidelity_scorecard.py](../../packages/detection/src/detection/fidelity_scorecard.py)
+(claims ≠ catches), [skos_graded_mapping_seam](../skos_graded_mapping_seam.md) (rule↔technique
+mapping), and the chain checker (`detection/chain.py`).
 
 ## Principles
 

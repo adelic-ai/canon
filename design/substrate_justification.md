@@ -3,14 +3,14 @@
 **Status:** DRAFT justification doc, 2026-06-25. Assembles the epistemic defense of *how* canon
 uses Belnap / SKOS / FCA (and the other borrowed wheels) and *how their composition* is made
 defensible. This is the internal, reviewable argument that must stand before any external paper.
-Source-of-truth docs it assembles: [[self_validation_architecture]] (§7 borrow ledger, §8
-wheel-vs-novel), [[guarantees_ledger]] (the epistemic register — the tests are the truth), the
-contracts [[carrier]] / [[fold_protocol]], and the application sites in code. Where this doc and a
+Source-of-truth docs it assembles: [self_validation_architecture](self_validation_architecture.md) (§7 borrow ledger, §8
+wheel-vs-novel), [guarantees_ledger](guarantees_ledger.md) (the epistemic register — the tests are the truth), the
+contracts [contracts/carrier](../contracts/carrier.md) / [contracts/fold_protocol](../contracts/fold_protocol.md), and the application sites in code. Where this doc and a
 cited test disagree, the test wins.
 **Correction 2026-06-25 (same day):** §6 / §9.1 / §7-table revised after verifying the code — the
 value-aware `content_signature` over-collapse fix is already landed and wired (firing path + audit
-bracket); the original draft trusted the stale [[project-content-digest-backlog]] note over the
-repo. Dogfooding the doc's own rule: the test/code is the truth, the note was stale.
+bracket); the original draft trusted a stale working note over the repo. Dogfooding the doc's own
+rule: the test/code is the truth, the note was stale.
 
 ## 0. The thesis of this document
 
@@ -49,7 +49,7 @@ written as a `≤_k`-monotone fold into `FOUR = {None, True, False, Both}`.
 
 - **What is proven (not just claimed):** the `(t,f)` model, all operation truth tables, negation
   monotonicity, and the complete-lattice/lfp basis are exhaustive over the 4-value domain
-  (`contracts/carrier.md`; PROVEN in [[guarantees_ledger]], `provenance/carrier.py` ·
+  (`contracts/carrier.md`; PROVEN in [guarantees_ledger](guarantees_ledger.md), `provenance/carrier.py` ·
   `test_carrier.py`). The universal **`≤_k`-monotonicity invariant** is CI-checked per fold
   (`test_monotone.py`).
 - **The carrier-choice argument (the one modeling claim a reviewer attacks):** *why Belnap, not
@@ -140,7 +140,7 @@ compose independently; justification is the same object as the result.**
 - **Per-result demotion (a distinct novel claim):** the guarantee tier a result earns is
   *computed* from runtime assumption checks and recorded in provenance, not asserted — honesty as
   a computed property (`provenance/guarantee.py`; conformal exchangeability monitor demotes
-  `bounded`→`well_formed` on real drifting data, [[guarantees_ledger]] ASSUMED).
+  `bounded`→`well_formed` on real drifting data, [guarantees_ledger](guarantees_ledger.md) ASSUMED).
 
 ## 5. SKOS — a proxy, honestly scoped (the strongest available position)
 
@@ -154,7 +154,7 @@ compose independently; justification is the same object as the result.**
   `ground_lattice`). A claim that states its own limit is defensible *because* it does.
 - **Requirements that keep it honest:** the grade must be **justified and callable** (`.why()` —
   shared/unique clauses, sub-scores) and demotion into the verdict tier is **gated on
-  load-bearingness** (a `closeMatch` on an unused field is inert) ([[skos_graded_mapping_seam]]).
+  load-bearingness** (a `closeMatch` on an unused field is inert) ([skos_graded_mapping_seam](skos_graded_mapping_seam.md)).
 - **Verdict:** beyond-reproach *if and only if* it is never represented as behavioral ground truth.
   The one failure mode is anyone (a paper, a verdict) treating the structural edge as "what the
   rule detects."
@@ -166,15 +166,15 @@ an FCA concept. There are now **two** concept keys (verified in code 2026-06-25)
 
 - **value-blind `signature`** = `(logsource, field-set)` — **over-collapses** (value-distinct
   detections sharing a field-set merge; the 32-macOS-detections-→-1 finding;
-  [[skos_graded_mapping_seam]], [[full_corpus_dedup_pass]]). Unsound as a general "these rules are
+  [skos_graded_mapping_seam](skos_graded_mapping_seam.md), [full_corpus_dedup_pass](full_corpus_dedup_pass.md)). Unsound as a general "these rules are
   equivalent" claim. `detection/sigma_panel.py::signature`.
 - **value-aware `content_signature`** = `(logsource, content_digest of the compiled IR)` — the
   over-collapse fix: rules sharing a field-set but matching different VALUES get distinct keys.
   `detection/sigma_panel.py::content_signature`.
 
 **The fix is landed and wired** (correcting an earlier draft of this section that listed it as
-un-landed backlog — the source was the stale [[project-content-digest-backlog]] note; the code had
-moved, and trusting the note over the repo is the exact failure this doc preaches against):
+un-landed backlog — the source was a stale working note; the code had moved, and trusting the note
+over the repo is the exact failure this doc preaches against):
 
 - The **recall-critical firing path keys on `content_signature`** (`detection/round.py`) — so
   value-distinct rules no longer collapse to one best-peer; the 32→1 *under-fire* hazard is closed
@@ -203,7 +203,7 @@ moved, and trusting the note over the repo is the exact failure this doc preache
 
 ## 7. Epistemic status — beyond-reproach vs strongly-arguable
 
-Mapped to the register in [[guarantees_ledger]] (the tests are the truth):
+Mapped to the register in [guarantees_ledger](guarantees_ledger.md) (the tests are the truth):
 
 <<<
 claim                                                  status        defended by
@@ -233,7 +233,7 @@ detection empirics (conformal/MI/IT advantage)         CAPPED/       guarantees_
   — plus **per-result guarantee demotion** (honesty as a computed property). Defensible today
   *because the independence is mechanically enforced, not claimed.*
 - **Not paper-ready (need data, not proof):** every *positive detection* claim — conformal-vs-
-  baseline, MI-coordination, IT-features. [[guarantees_ledger]] records these CAPPED/unproven on
+  baseline, MI-coordination, IT-features. [guarantees_ledger](guarantees_ledger.md) records these CAPPED/unproven on
   real data. A paper here today is a negative-results/methodology paper at best, gated on the
   discriminating corpus. Do not let a paper smuggle them past their own register.
 - **No paper (inherited):** Belnap, FCA, conformal, Chair–Varshney, SHACL — cite, don't claim.

@@ -3,10 +3,10 @@
 **Status:** EXPLORATION, 2026-06-21. Not a committed spec — a reflection that names a frame
 already implicit across the detection package. Rendered companion: `web/rules/resolution_axes.html`
 (the seed question verbatim beside its developed answer). Relates to:
-[[sigma_treatment_pipeline]] (the manifest that makes instance-ness explicit),
-[[warrant_is_relational]] (the principle this applies to our own work),
-[[skos_graded_mapping_seam]], [[full_corpus_dedup_pass]] (the content_digest gap),
-[[self_validation_architecture]] (the Belnap carrier).
+[sigma_treatment_pipeline](sigma_treatment_pipeline.md) (the manifest that makes instance-ness explicit),
+[warrant_is_relational](warrant_is_relational.md) (the principle this applies to our own work),
+[skos_graded_mapping_seam](skos_graded_mapping_seam.md), [full_corpus_dedup_pass](full_corpus_dedup_pass.md) (the content_digest gap),
+[self_validation_architecture](self_validation_architecture.md) (the Belnap carrier).
 
 ## The seed
 
@@ -18,7 +18,7 @@ for this purpose, and what else can raise resolution?
 ## "It's an instance" = warrant-is-relational, turned inward
 
 The treated Sigma corpus is a **derived result**, warranted only relative to its inputs
-`(corpus@cid, code@sha, labels)`. That is exactly [[warrant_is_relational]] applied to our own
+`(corpus@cid, code@sha, labels)`. That is exactly [warrant_is_relational](warrant_is_relational.md) applied to our own
 output, not a defect. The construction that makes the instance-ness explicit and *measurable* is
 the treatment manifest (`detection/treatment_pipeline.py`): pin the producing state, then **diff
 two result-CIDs when an input is swapped**. That diff IS the measurement of "how much is instance
@@ -33,7 +33,7 @@ That gives the actionable line — **machinery sharpens the portable structural 
 freely, no data needed: `content_digest`); **only data moves the data-bound behavioral half** (the
 actual instance: more/better-shaped corpora). The priority list below already respects this split;
 naming it up front is the refinement. (Independently confirmed: the main instance's bots-v3
-two-sided run is the first test of the data-bound half — see [[project-catch-set-grounding]].)
+two-sided run is the first test of the data-bound half — see [detection/catch_set.py](../packages/detection/src/detection/catch_set.py).)
 
 Define **resolution** = the power to distinguish things genuinely different and to merge things
 genuinely the same. Low resolution = over-collapse (FCA folding 32 macOS detections into 1) or
@@ -84,7 +84,7 @@ warrant/independence thesis (cost noted separately):
    free win). `ground_lattice.why()` already half-computes it. Complements #1: catch-profile makes
    behavioral resolution *richer*, ablation tests how much *generalizes*.
 3. **Filter-aware + value-aware structural keys** — the queued `content_digest`. FCA is value-blind,
-   `clause_set` is positive-only (filter-blind); both verified to over-group ([[full_corpus_dedup_pass]]).
+   `clause_set` is positive-only (filter-blind); both verified to over-group ([full_corpus_dedup_pass](full_corpus_dedup_pass.md)).
    **Cheap and needs no data — but low thesis-leverage**: it polishes the structural *proxy* that
    behavioral grounding (catch-set) is supposed to override anyway. Its real payoff is the SigmaHQ
    clean-dedup contribution path, not load-bearing resolution. Cheap ≠ important. (It *does* remain
@@ -106,7 +106,7 @@ pure-attack: no benign population (can't resolve precision/FP), cross-channel-di
 same-channel rule disagreement). This is the wall both the catch-set lane and the fan-out battery hit
 (2026-06-20). You cannot construct past thin data — the next jump needs differently-shaped data
 (benign background + same-channel variation; `bots-v3` the candidate), not more parsing of isolated
-captures. See [[project-catch-set-grounding]].
+captures. See [detection/catch_set.py](../packages/detection/src/detection/catch_set.py).
 
 ## One line
 

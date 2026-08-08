@@ -61,7 +61,7 @@
   <p style="font:13px/1.5 var(--mono,monospace);margin:0 0 22px"><a href="../index.html" style="color:#7db4ff;text-decoration:none">← Canon index</a></p>
   <h1>Canon — Detection Battery</h1>
   <p class="sub">A measurement layer (IT) feeding a decision layer (DT), dispatched across escalating tiers.</p>
-  <p class="stamp">design readout · 2026-05-30 · self_validation_architecture.md · it_detection_inference · dsp_vs_it_split · ~/dev/{tasc,pickering}</p>
+  <p class="stamp">design readout · 2026-05-30 · self_validation_architecture.md · it_detection_inference · dsp_vs_it_split · the pre-canon TASC and Pickering prototypes</p>
 
   <div class="note key">
     <strong>It is two disciplines, not one — and "IT" named only half of one of them.</strong>
@@ -207,7 +207,7 @@
     <li><strong>One detector-output contract.</strong> Every cell, every tier, returns
       <code>(score, W-record {who/what/when/where/how}, GuaranteeCertificate, provenance Entity)</code>.
       Uniform output is what lets the inference layer consume CFAR, entropy, beaconing and kill-chain
-      identically. <em>This schema is the standard to write into</em> <code>~/canon/contracts/</code>;
+      identically. <em>This schema is the standard to write into</em> <code>contracts/</code>;
       the grid plugs into it.</li>
   </ol>
 
@@ -223,7 +223,7 @@
   </div>
 
   <h2>Prior art — TASC and Pickering</h2>
-  <h3>TASC <span class="muted">(/Users/shunhonda/dev/tasc) — knowledge/framework layer</span></h3>
+  <h3>TASC <span class="muted">(pre-canon prototype, unpublished) — knowledge/framework layer</span></h3>
   <p>Knowledge graph (~4900 nodes) mapping detections claim → math → proof → implementation across
   15+ frameworks. IT-relevant: <code>adapters/_detection_protocol.py</code> (an early
   detector-output contract — <code>DetectionFinding</code> carries algorithm/schema/features/
@@ -232,7 +232,7 @@
   closures); <code>inference/{primitives,features,lattice}.py</code> (FCA over detection observables —
   the per-axis minimization, already exercised). No CFAR, no CUSUM. Catalogs detections; doesn't run
   them.</p>
-  <h3>Pickering <span class="muted">(/Users/shunhonda/dev/pickering) — execution layer</span></h3>
+  <h3>Pickering <span class="muted">(pre-canon prototype, unpublished) — execution layer</span></h3>
   <p>Working SIEM-like compiler on vendored <strong>signalforge</strong>.
   <code>signalforge/signal/_information.py</code> is the feature layer: <code>entropy</code>,
   <code>joint_entropy</code>, <code>mutual_information</code>, <code>kl_divergence</code>,
@@ -256,7 +256,7 @@
   <footer>
     Canon · web/index.html · transcript-grounded readout, 2026-05-30.<br>
     Sources: <code>design/self_validation_architecture.md</code>, <code>project_it_detection_inference.md</code>,
-    <code>project_dsp_vs_it_split.md</code>, repos <code>~/dev/tasc</code>, <code>~/dev/pickering</code>.
+    <code>project_dsp_vs_it_split.md</code>, and the pre-canon TASC and Pickering prototypes.
   </footer>
 
 </div>

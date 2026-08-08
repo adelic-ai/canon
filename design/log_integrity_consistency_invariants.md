@@ -2,10 +2,10 @@
 
 **Status:** design, 2026-06-20. The violation machinery exists (`detection/atom_implication.py`); designed/
 learned invariants and the build-provenance pinning do not.
-**Relates to:** [[atom_implication]] (the implication/exclusion-violation engine this builds on),
-[[self_validation_architecture]] (the validity fold — "the anomaly malforming its own telemetry"; the Belnap
-`Both` carrier), [[retention_and_aging]] (baseline drift / self-poisoning — inherited here), [[ocsf_ingest_normalization]]
-(schema impedance — inherited here at the source-schema level), [[dataset_generator_product]] (synthcyber's
+**Relates to:** [detection/atom_implication.py](../packages/detection/src/detection/atom_implication.py) (the implication/exclusion-violation engine this builds on),
+[self_validation_architecture](self_validation_architecture.md) (the validity fold — "the anomaly malforming its own telemetry"; the Belnap
+`Both` carrier), [retention_and_aging](retention_and_aging.md) (baseline drift / self-poisoning — inherited here), [ocsf_ingest_normalization](ocsf_ingest_normalization.md)
+(schema impedance — inherited here at the source-schema level), [dataset_generator_product](dataset_generator_product.md) (synthcyber's
 `field_profile`, extendable to field *correlations* = the learned invariants).
 
 ## The idea — a tamper is an unjustified assertion; the consistency-check is its justification test
@@ -71,7 +71,7 @@ follows canon's thesis — *don't assert a "should be" you can't justify*:
   unseen build), a deviation is **NONE (can't say)**, not `Both` (tamper). Never flag a tamper you can't
   justify — the same NONE≠FALSE discipline.
 - **Inherits the drift caveats.** Learned coherence has the conformal/baseline soft spots
-  ([[retention_and_aging]]): a legitimate update reads as a violation until the baseline catches up, and a
+  ([retention_and_aging](retention_and_aging.md)): a legitimate update reads as a violation until the baseline catches up, and a
   slow-burn attacker could poison the learned invariant. So invariant violations escalate to `Both`
   (held/investigated), not auto-FALSE — and learned invariants exclude flagged events from their own updates.
 

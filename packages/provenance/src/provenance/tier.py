@@ -1,6 +1,6 @@
 """Guarantee tiers — the honest-by-category ladder, as a total order.
 
-Contract: ``~/canon/contracts/guarantee_certificate.schema.json`` (the ``tier`` enum) and
+Contract: ``contracts/guarantee_certificate.schema.json`` (the ``tier`` enum) and
 architecture spine §4. The load-bearing finding §4 encodes: you **cannot** prove "Pfa ≤ α"
 (a statement about the input distribution, not a program property), so a result *earns* a
 tier from what actually held on its inputs — it is never asserted.

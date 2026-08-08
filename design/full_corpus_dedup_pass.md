@@ -3,8 +3,8 @@
 **Status:** result, 2026-06-20; **numbers regenerated 2026-06-21** after the fix below. Ran the `exactMatch`
 slice of the SKOS lattice over the **whole** SigmaHQ corpus to test whether it yields a fileable duplicate
 report for SigmaHQ. **It does not** — and the *original* run revealed that `exactMatch` itself over-grouped.
-**Relates to:** [[cross_check_validation_kerberos]], the catch-set grounding result (Maude's n=1 OTRF),
-[[project_sigma_consumption_audit]], [[project_skos_graded_mapping_seam]].
+**Relates to:** [cross_check_validation_kerberos](cross_check_validation_kerberos.md), the n=1 OTRF catch-set grounding result,
+[detection/audit.py::consume_sigma](../packages/detection/src/detection/audit.py), [skos_graded_mapping_seam](skos_graded_mapping_seam.md).
 
 > **UPDATE (2026-06-21) — the over-grouping this note diagnosed was FIXED.** The original run found 40 exact
 > edges / **31 classes / 66 rules**, most of them over-groups: rules with equal *positive clause-sets* but
@@ -43,7 +43,7 @@ Of 31 classes, **~zero are clean, fileable duplicates.** They decompose into fou
    entire distinction lives in `not 1 of filter_*` exclusion blocks, which `clause_set` excludes **by
    design** (filters are a separate, deferred axis). E.g. `[2]` svchost: *Masquerading As SvcHost* vs
    *Uncommon Svchost Parent* both reduce to `{Image endswith \svchost.exe}` — the discriminator is the
-   filter. **This is Maude's n=1 lesson, mirror image.** Not duplicates; not mergeable.
+   filter. **This is the n=1 OTRF lesson, mirror image.** Not duplicates; not mergeable.
 
 3. **Keyword-discriminator over-groups (several)** — the real discriminator is in **keyword blocks**, which
    `clause_set` skips (`rule_lattice.py` clause_set: "Keyword blocks have no field and are skipped"). A rule
@@ -70,7 +70,7 @@ svchost [2]  SvcMasq / SvcParent              → both clause_set = {Image endsw
              discriminator is `not 1 of filter_main_*` → filters EXCLUDED by design → false exact
 ```
 
-Both are **false positives** of exactMatch. Maude's n=1 OTRF result is the **false negative** of the same
+Both are **false positives** of exactMatch. The n=1 OTRF result is the **false negative** of the same
 proxy: two comsvcs catchers that co-catch the one labeled instance sit in the `related` band (share only
 `TargetImage endswith \lsass.exe`, differ on CallTrace+rundll32 vs StartModule). Put together:
 
@@ -93,7 +93,7 @@ not the positive-only `clause_set`:
 - **Keyword inclusion** would fix kind 3 (the auditd over-group) — a mechanical extractor fix.
 - **Filter-awareness** would fix kind 2 (svchost) — a `content_digest` that hashes exclusion blocks too;
   this is the deferred "separate axis" the `clause_set` docstring names.
-- Neither fixes the `related`-band synonymy Maude found (kind = false negative) — that is **irreducibly
+- Neither fixes the `related`-band synonymy that run surfaced (kind = false negative) — that is **irreducibly
   behavioral** and only catch-set grounding recovers it.
 
 Net: the dedup pass did its job by **failing informatively** — it bounded what structure can claim and

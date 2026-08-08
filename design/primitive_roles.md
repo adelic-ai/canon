@@ -9,7 +9,8 @@ another; this table records *which role each canon primitive serves*, so the ver
 > *for what*." Conformal lost as a detector because it was never one — it's a *calibrator*. Entropy ≈
 > distinct-count is a *redundancy*, which is exactly a *cross-check*. The detection battery was generating
 > empirical **role evidence**, and the regime ledger's `winner`/`beaten` is that evidence. This table is the
-> thin canon-specific slice; the broad reference is Atlas (`~/atlas`), linked later by primitive identity.
+> thin canon-specific slice; the broad reference is a separate primitive catalog (Atlas, not published
+> here), linked later by primitive identity.
 
 ## Roles
 

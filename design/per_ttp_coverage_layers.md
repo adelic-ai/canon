@@ -4,13 +4,13 @@
 the coverage join, and independence tested at the primitive grain). The rule-level content signature is
 **built** (commit `6591ac1`, `main`); the primitive/atom factoring, the battery-as-atoms unification, and the
 catch-class layer are **not built** (catch-class is synthcyber-gated).
-**Relates to:** [[detection_ir_motif_ontology]] (the molecule = bonded gadget), [[self_validation_architecture]]
+**Relates to:** [detection_ir_motif_ontology](detection_ir_motif_ontology.md) (the molecule = bonded gadget), [self_validation_architecture](self_validation_architecture.md)
 (content-addressed DAG; the recursive nested-seam / transparency knob; the Belnap independence risk §9; the
-machine-checked tier on accumulation primitives), [[skos_graded_mapping_seam]] (tag / IR-content / catch-set
-grounds), [[sigma_consumption_audit]] (the redundancy bracketing), [[project_detection_inversion_battery_framework]]
-(battery surfaces, rules verify), [[verdict_coverage_space]] (verdicts as locations; gaps both ways),
-[[project_abduction_loop_agent_design]] (uncovered anomalies → new-detection candidates),
-[[project_atlas_primitive_library]] (the primitive catalog).
+machine-checked tier on accumulation primitives), [skos_graded_mapping_seam](skos_graded_mapping_seam.md) (tag / IR-content / catch-set
+grounds), [detection/audit.py::consume_sigma](../packages/detection/src/detection/audit.py) (the redundancy bracketing), [detection_battery](../web/detection/detection_battery.html)
+(battery surfaces, rules verify), [verdict_coverage_space](verdict_coverage_space.md) (verdicts as locations; gaps both ways),
+and the abduction loop in which uncovered anomalies become new-detection candidates (a framing, not
+a document in this repo).
 
 ## The reframe
 
@@ -37,7 +37,7 @@ catch-class      rules firing on the same instances                 — the true
   `multiply`, `compare`/threshold, `rank` (→ quantile/percentile). Statistics are *not* atomic: Shannon
   entropy is `histogram → divide(proportions) → log₂ → multiply → sum → negate`; MI, CFAR, conformal all
   bottom out in the same handful. This is where the **machine-checked tier** lives (round-off proofs on the
-  accumulation/log primitives) and what [[project_atlas_primitive_library]] catalogs.
+  accumulation/log primitives), and the level at which a primitive catalog would be indexed.
 - **atom / molecule** — a single predicate or feature. A Sigma clause `(field, op, value)` is near-primitive
   (read field → one comparison). A statistic like `entropy(cmd_line in window)` is a **molecule** — a sub-DAG
   of primitives. The stack is therefore **recursive** (the architecture's nested-seam / transparency knob):
@@ -90,7 +90,7 @@ per-(entity, window) values. It is the load-bearing intermediate:
   **once** and feeds `entropy` *and* `distinct` *and* `mean`. Identical atoms across rules are one node (the
   Merkle dedup property), so *more rules firing ≠ more work* — the firing-volume worry dissolves.
 - **It is the warm-retention object.** raw log → artifact (kept) → verdicts (kept); the raw log can age out
-  while the artifact and verdicts survive ([[retention_and_aging]] — the artifact *is* the "cells" layer made
+  while the artifact and verdicts survive ([retention_and_aging](retention_and_aging.md) — the artifact *is* the "cells" layer made
   precise).
 
 Not built: `eval_ir` re-touches the data per rule; `motif-rs` batches but still per-rule. The artifact is the

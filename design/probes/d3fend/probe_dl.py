@@ -5,6 +5,8 @@
 (3) OWL DL reasoning via owlready2 — does subclass inheritance surface counters?
 """
 
+import pathlib
+
 from rdflib import Graph, Namespace, URIRef, BNode, RDF, RDFS, OWL
 from collections import defaultdict
 
@@ -74,7 +76,8 @@ for sup in g.objects(T1558_003, RDFS.subClassOf):
 print("\n=== (3) OWL DL REASONING WITH owlready2 ===\n")
 import owlready2
 
-onto = owlready2.get_ontology("file://" + "/Users/shunhonda/canon/design/probes/d3fend/d3fend.ttl").load()
+_TTL = pathlib.Path(__file__).resolve().parent / "d3fend.ttl"
+onto = owlready2.get_ontology("file://" + str(_TTL)).load()
 print(f"Loaded ontology: {onto.base_iri}")
 print(f"Classes: {len(list(onto.classes())):,}")
 

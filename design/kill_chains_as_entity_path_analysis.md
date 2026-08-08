@@ -3,8 +3,8 @@
 **Status:** design note, 2026-06-21. The conceptual frame behind the chain checker (`detection/chain.py`): a
 kill-chain is an actor's *path* toward a crown jewel, and detecting one is the same shape of problem as
 e-business navigation/funnel analysis. **Relates to:** the chain checker (`detection/chain.py`),
-[[project_abduction_loop_agent_design]], [[project_verdict_coverage_space]] (verdict as a location / chain as
-a trajectory), [[project_enterprise_allowlist_entrypoint]] (peer-group baseline), the killchain/HMM machinery.
+the abduction loop, [verdict_coverage_space](verdict_coverage_space.md) (verdict as a location / chain as
+a trajectory), [enterprise_allowlist_entrypoint](../web/adoption/enterprise_allowlist_entrypoint.html) (peer-group baseline), the killchain/HMM machinery.
 
 ## Detections don't go away — they become the observables
 
@@ -42,7 +42,7 @@ The mechanics transfer exactly, and canon already has a piece for each rung:
 - **"Normal for this user"** (vs their own history or their segment) → the baseline / the battery's
   anomaly-vs-normal.
 - **Segment / peer group** (compare a user to *similar* users) → the allowlist-derived identity class (device
-  account / service account / admin) from [[project_enterprise_allowlist_entrypoint]] — "is this path normal
+  account / service account / admin) from [enterprise_allowlist_entrypoint](../web/adoption/enterprise_allowlist_entrypoint.html) — "is this path normal
   *for this class*."
 
 So mature web-analytics path analysis (sessionization, funnel analysis, sequence mining, Markov navigation

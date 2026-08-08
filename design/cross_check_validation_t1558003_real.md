@@ -1,11 +1,12 @@
 # Real-data check of the kerberos fan-out battery (splunk T1558.003) — caveat NOT closed, regime bounded
 
-**Status:** validation result, 2026-06-20. The real-telemetry counterpart to [[cross_check_validation_kerberos]]
+**Status:** validation result, 2026-06-20. The real-telemetry counterpart to [cross_check_validation_kerberos](cross_check_validation_kerberos.md)
 (synthetic faker-kerberos, the positive result). **Outcome: the synthetic caveat is NOT closed — and the real
 data instead *bounds the regime* in which the synthetic finding holds.** Honest negative, higher value than a
-rubber-stamp. Data: `~/data/splunk-attack-data/datasets/attack_techniques/T1558.003/` (atomic-red-team,
-Apache-2.0; stays local, not committed). Relates to [[project_feature_engineering_is_a_product]],
-[[project_canon_restart]] (the applicability-map thesis), the CloudTrail-burst finding in `fanout.py`.
+rubber-stamp. Data: the Splunk `attack_data` T1558.003 datasets (atomic-red-team, Apache-2.0; fetched,
+not committed — see [engine_workspace_boundary](engine_workspace_boundary.md)). This is the
+applicability-map thesis in action: the question is not whether a primitive works but *where* it works.
+Relates also to the CloudTrail-burst finding in `fanout.py`.
 
 ## What the synthetic result claimed
 

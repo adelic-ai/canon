@@ -57,8 +57,9 @@ set of **classical detectors** that bundle feature and test.
 
 ## Status
 
-Implemented and tested — **17 modules, 207 passing tests**, ported from the
-`~/dev/forge` quarry via the Step-0 audit (`design/forge_core_step0_audit.md`).
+Implemented and tested — **17 modules, 207 passing tests**, ported from the pre-canon
+`forge` prototype (the quarry, a separate unpublished repo) via the Step-0 audit
+(`design/forge_core_step0_audit.md`).
 
 **The vertical slice is proven, not just designed.** `test_verdict.py` wires a growing
 set of producers end-to-end, spanning the **feature** axis (`count`, `entropy`, `KL`,

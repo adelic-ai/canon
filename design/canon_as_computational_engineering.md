@@ -3,10 +3,13 @@
 **Status:** EXPLORATION / vision synthesis, 2026-06-21. Captures a strategy thread: is canon on the Leap71
 "computational engineering" trajectory, what would put it there, what formal apparatus it should build on
 rather than reinvent, and what it can realistically beat. Not a spec — a map of where the program is headed.
-**Relates to:** [[project_full_self_validation_kigumi]], [[project_warrant_is_relational]],
-[[project_canon_as_agent_substrate]], [[project_detection_ir_motif_ontology]],
-[[project_abduction_loop_agent_design]], [[engine_workspace_boundary]], [[ir_vocabulary_stratification]],
-[[grounded_fidelity_bots_real_benign]], the resolution-axes exploration.
+**Relates to:** [self_validation_architecture](self_validation_architecture.md), [warrant_is_relational](warrant_is_relational.md),
+[detection_ir_motif_ontology](detection_ir_motif_ontology.md),
+[engine_workspace_boundary](engine_workspace_boundary.md), [ir_vocabulary_stratification](ir_vocabulary_stratification.md),
+[grounded_fidelity_bots_real_benign](grounded_fidelity_bots_real_benign.md),
+[resolution_axes_exploration](resolution_axes_exploration.md). Two framings it leans on are not
+written up as documents here: canon as the verifier half of an LLM-proposes / canon-verifies loop,
+and the abduction loop in which uncovered anomalies become detection candidates.
 
 ## The reference — Leap71 / computational engineering
 

@@ -94,7 +94,7 @@ def treat(rules: list[dict], techniques, *, code_commit: str | None = None,
         "compile": compile_cid,
         "verify_with_events": None,     # gated: faithful firing needs events (attest_ir_faithful)
         "categorize": categorize_cid,
-        "ground": None,                 # gated: catch-set needs labels (stage 4, Maude's lane)
+        "ground": None,                 # gated: catch-set needs labels (stage 4)
         "coverage": coverage_cid,       # corpus-derivable: structural per-TTP layers (catch-class deferred)
     }
     result_cid = _cid({k: v for k, v in stage_cids.items() if v is not None})

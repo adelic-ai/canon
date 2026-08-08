@@ -1,6 +1,6 @@
 """The custody fold — were the bytes tampered between entry and evaluation?
 
-Contract: ``~/canon/contracts/custody.md`` + architecture spine §6. Custody answers a
+Contract: ``contracts/custody.md`` + architecture spine §6. Custody answers a
 *different* question from provenance: provenance is "how was it computed" (the PROV fold
 inside the computation); custody is "were the ingested bytes tampered between the log's
 point of entry and evaluation". The two meet at the keystone source node.

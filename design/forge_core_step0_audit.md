@@ -1,6 +1,6 @@
 # forge-core step-0 audit — port / fix / drop
 
-Audit of `~/dev/forge` (the quarry) for the fresh agnostic build at `~/canon/packages/forge-core/`. Produced 2026-05-28 by three parallel subsystem auditors. ~7.5k LOC, ~50 files. Read-only; no changes made.
+Audit of the pre-canon `forge` prototype (the quarry — a separate, unpublished repo) for the fresh agnostic build at `packages/forge-core/`. Produced 2026-05-28 by an automated audit pass over three subsystems in parallel. ~7.5k LOC, ~50 files. Read-only; no changes made.
 
 ## Headline findings (verified against committed decisions)
 
@@ -13,7 +13,7 @@ Audit of `~/dev/forge` (the quarry) for the fresh agnostic build at `~/canon/pac
 
 ## Three stale weakness-list items CORRECTED by the audit
 1. **"Pipeline constraint-resolution pending — define out"** → already ABSENT. Grep finds no constraint/reconcile/global-plan in `graph/` or `chain.py`; `_core.py:31` already states "each Op carries its own plan; mismatches raise at execution." Nothing to remove. ✓ already as desired.
-2. **"`detection_features`→`salient_features` rename"** → the symbol DOES NOT EXIST in `~/dev/forge` (grep: zero). No cyber-leaning op names; "detection" strings are all signal-detection (period/cadence). Rename is a no-op here — the target, if any, lives in TASC/assemble contracts, not forge.
+2. **"`detection_features`→`salient_features` rename"** → the symbol DOES NOT EXIST in the quarry (grep: zero). No cyber-leaning op names; "detection" strings are all signal-detection (period/cadence). Rename is a no-op here — the target, if any, lives in TASC/assemble contracts, not forge.
 3. **"Schema inference shipped as core (`infer_axes`)"** → NOT on any default path. `signal/_infer.py::infer_axes` is called only by its test. It IS cyber-leaning (docstring: "security telemetry", "so TASC can validate", adapted from pickering/fpass; depends on `_l0_axes`). So the action is RELOCATE to forge-cyber's boundary, not "make opt-in" (already is).
 
 ## grain / bin / hop / window — confirmed the bug-prone area (the real bugs)

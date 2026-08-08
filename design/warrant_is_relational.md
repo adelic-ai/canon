@@ -50,7 +50,7 @@ Treat the framework **non-uniformly**.
 A reasoner's inference is *sound* (truth-preserving). But soundness preserves truth **from** the premises;
 it doesn't establish them. So a conclusion derived over a framework **inherits the epistemic grade of its
 weakest axiom**: rest only on mechanistic axioms → sound *and* well-grounded; lean on a coverage or
-tactic-assignment axiom → sound-but-hypothetical. This is the [[project_skos_graded_mapping_seam]] idea
+tactic-assignment axiom → sound-but-hypothetical. This is the [skos_graded_mapping_seam](skos_graded_mapping_seam.md) idea
 turned on the framework's *own statements* — grade the axioms by type (definitional / mechanistic /
 taxonomic / empirical / coverage), and let the warrant fold over them by weakest-link, exactly as the
 guarantee tier already folds.

@@ -75,8 +75,8 @@ wrong one; it gates and entrenches. The guardrails:
    campaigns become false negatives.
 
 **Unifying rule:** fidelity is a graded **additive** warrant, never a subtractive gate, and its components
-stay visible. It is the same `≤_k` / warrant-is-relational / `NONE`≠`FALSE` discipline ([[project_warrant_is_relational]],
-[[project_skos_graded_mapping_seam]]) applied to the coverage space.
+stay visible. It is the same `≤_k` / warrant-is-relational / `NONE`≠`FALSE` discipline ([warrant_is_relational](warrant_is_relational.md),
+[skos_graded_mapping_seam](skos_graded_mapping_seam.md)) applied to the coverage space.
 
 ## What's built vs. what this frame names
 

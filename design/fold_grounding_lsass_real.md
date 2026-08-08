@@ -1,11 +1,11 @@
 # The first real-data grounding of the partial-kill-chain fold
 
 **Status:** validation result, 2026-07-31. The composition-layer counterpart to the
-atom-level real-data results ([[cross_check_validation_kerberos]] fan-out; the Kerberos
+atom-level real-data results ([cross_check_validation_kerberos](cross_check_validation_kerberos.md) fan-out; the Kerberos
 ticket-hash golden in `range/kerberos-ticket-hash/FINDINGS.md`; the comsvcs+lsass subgraph
 in `experiments/lsass_subgraph_detection.py`). Reproduced via
 `experiments/fold_grounding_lsass_real.py` over the real OTRF `LSASS_campaign_03` capture.
-**Relates to:** [[kill_chains_as_entity_path_analysis]] (completeness × abnormality — the
+**Relates to:** [kill_chains_as_entity_path_analysis](kill_chains_as_entity_path_analysis.md) (completeness × abnormality — the
 frame), `detection/partial_chain.py` + `detection/completeness.py` + `detection/anchor_posterior.py`
 (the fold under test), `detection/hmm.py` (the decode gate).
 

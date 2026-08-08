@@ -4,12 +4,12 @@
 atom-factoring / per-TTP discussion. The lowering (`compile_rule`), atom factoring, the atom→TTP
 index, and Phase-B entailment are **built**; the IR-as-canonical posture, statistical atoms as
 first-class IR, and the native authoring surface are **not** (this names a deliberate fork).
-**Relates to:** [[per_ttp_coverage_layers]] (the atom/composition/catch-class model this extends),
-[[detection_ir_motif_ontology]] (the IR + emitters), [[self_validation_architecture]] (logic +
+**Relates to:** [per_ttp_coverage_layers](per_ttp_coverage_layers.md) (the atom/composition/catch-class model this extends),
+[detection_ir_motif_ontology](detection_ir_motif_ontology.md) (the IR + emitters), [self_validation_architecture](self_validation_architecture.md) (logic +
 warrant fused in the content-addressed artifact; the arithmetic primitives where the
-machine-checked tier lives), [[ocsf_ingest_normalization]] (the data-plane waist),
-[[skos_graded_mapping_seam]] (tag / IR / catch-set grounds), [[sigma_consumption_audit]] (the
-redundancy bracketing), [[project_abduction_loop_agent_design]] (uncovered anomalies → candidates).
+machine-checked tier lives), [ocsf_ingest_normalization](ocsf_ingest_normalization.md) (the data-plane waist),
+[skos_graded_mapping_seam](skos_graded_mapping_seam.md) (tag / IR / catch-set grounds), [detection/audit.py::consume_sigma](../packages/detection/src/detection/audit.py) (the
+redundancy bracketing), and the abduction loop that turns uncovered anomalies into rule candidates.
 
 ## The closure argument — why you can't express statistics in Sigma, and why "precompute and threshold" games it
 
@@ -46,7 +46,7 @@ imports constants; it does not extend the operation set.
 ## The resolution — the IR is the canonical ruleset; Sigma is one lowered frontend
 
 The IR already *is* the closed algebra: it has **both** match-ops (clauses) **and** the arithmetic
-primitives (count, sum, divide, log₂, multiply, compare, rank — [[per_ttp_coverage_layers]] §1). So the
+primitives (count, sum, divide, log₂, multiply, compare, rank — [per_ttp_coverage_layers](per_ttp_coverage_layers.md) §1). So the
 move is to make the **IR the canonical detection language**, and relate everything else to it:
 
 - **Ingest Sigma as a faithfully-lowered frontend**, structure preserved — exactly `compile_rule`

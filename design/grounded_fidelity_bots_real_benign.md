@@ -4,8 +4,8 @@
 benign background** (vs the synthetic faker / regime-bounded battery results). Answers the population-frontier
 question for the **rule detectors**: do they catch real attacks while staying clean on real benign?
 **Data stays local** (`~/data/bots-v3/...`, `~/data/otrf-security-datasets/...`); only this note is committed.
-**Relates to:** [[cross_check_validation_kerberos]] (the synthetic-only predecessor), the catch-set grounding
-result, [[project_fidelity_scorecard]], the engine/workspace boundary (data outside the repo).
+**Relates to:** [cross_check_validation_kerberos](cross_check_validation_kerberos.md) (the synthetic-only predecessor), the catch-set grounding
+result, [detection/fidelity_scorecard.py](../packages/detection/src/detection/fidelity_scorecard.py), the engine/workspace boundary (data outside the repo).
 
 ## Setup — real benign + causally-labeled attack
 

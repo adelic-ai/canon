@@ -6,7 +6,7 @@
 **Environment:** Azure, 2× Windows Server 2025 (Gen2) — `dc01` (DC, corp.local) + `mbr01`
 **Detector under test:** `packages/detection/src/detection/kerberos_tickets.py::detect_ticket_attacks`
 
-This is a **falsifier**, in the house style of `~/dev/experiments`: the claims,
+This is a **falsifier**, in the house style used for these experiments: the claims,
 the nulls, and the expected per-action outcomes are committed **before** the
 capture. The capture is then allowed to refute them.
 

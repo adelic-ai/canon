@@ -1,6 +1,6 @@
 """DetectionVerdict — the canonical detection unit, assembled from the five folds.
 
-Contract: ``~/canon/contracts/detection_verdict.schema.json`` (PINNED). This is the
+Contract: ``contracts/detection_verdict.schema.json`` (PINNED). This is the
 **first producer** of that standard — a detector conforms to canon iff it emits a
 DetectionVerdict. The verdict is a *sixth interpreter* over the one content-addressed
 provenance DAG: it reads the outputs of the five built folds at the detection's **root

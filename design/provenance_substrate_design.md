@@ -6,10 +6,10 @@
 > semantic-cyber composition-link). The effort was then **reframed to FULL self-validation
 > / kigumi** — provenance is now the *master joint* of a larger architecture (every
 > cross-cutting concern a `≤_k`-monotone fold over one content-addressed DAG; chain of
-> custody; honest guarantee tiers; the `~/canon/contracts/` narrow-waist base). **Phase 5
+> custody; honest guarantee tiers; the `contracts/` narrow-waist base). **Phase 5
 > here (semantic-core wiring) is subsumed, not the standalone next step.** Current
 > direction: `self_validation_architecture.md` + `self_validation_v{1,2}_*.md` +
-> `~/canon/contracts/`. The provenance facts below are still accurate as built; the
+> `contracts/`. The provenance facts below are still accurate as built; the
 > "what's next" framing is not.
 
 **Status:** proposed 2026-05-29. Decision committed: unified canon-wide, PROV-O-shaped,
@@ -131,7 +131,7 @@ A DAG fold; the value is just one fold among many.
 
 Convenience: `Entity.value()` calls `evaluate(self)`.
 
-## CASE/UCO probe outcome — two borrowed patterns (`~/canon/design/probes/case/FINDINGS.md`)
+## CASE/UCO probe outcome — two borrowed patterns (`design/probes/case/FINDINGS.md`)
 
 The probe confirmed canon should **not** adopt CASE/UCO (no compute layer; forensics-shaped
 representation; and CASE itself *re-implements* PROV-O rather than importing it — so it's one

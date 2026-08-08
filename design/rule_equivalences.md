@@ -2,8 +2,8 @@
 
 **Status:** design note, 2026-06-21. Describes the actual structure already in the code
 (`clause_set` / `content_digest` / `catch_set`); not speculative. **Relates to:**
-[[ir_vocabulary_stratification]], the catch-set grounding (`detection/catch_set.py`), the rule lattice
-(`detection/rule_lattice.py`), [[project_warrant_is_relational]].
+[ir_vocabulary_stratification](ir_vocabulary_stratification.md), the catch-set grounding (`detection/catch_set.py`), the rule lattice
+(`detection/rule_lattice.py`), [warrant_is_relational](warrant_is_relational.md).
 
 ## Three different ways to say two rules are "the same"
 

@@ -1,12 +1,12 @@
 # Live stream ingest — reading a forgetful source continuously
 
 **Status:** design, not built. Captured 2026-06-19 from the live-macOS / eslogger thread.
-**Relates to:** [[retention_and_aging]] (what the stream's accumulated state ages into —
-this doc is the *intake*, that one is the *outflow*), [[ocsf_ingest_normalization]] (each
-streamed event is normalized through a source→OCSF adapter), [[engine_workspace_boundary]]
-(a running monitor is one engine process bound to one workspace), [[self_validation_architecture]]
+**Relates to:** [retention_and_aging](retention_and_aging.md) (what the stream's accumulated state ages into —
+this doc is the *intake*, that one is the *outflow*), [ocsf_ingest_normalization](ocsf_ingest_normalization.md) (each
+streamed event is normalized through a source→OCSF adapter), [engine_workspace_boundary](engine_workspace_boundary.md)
+(a running monitor is one engine process bound to one workspace), [self_validation_architecture](self_validation_architecture.md)
 (feed-liveness = custody, §6; per-event vs windowed maps to verifier vs surfacer),
-[[verdict_coverage_space]] (a feed gap is a NONE, not a FALSE).
+[verdict_coverage_space](verdict_coverage_space.md) (a feed gap is a NONE, not a FALSE).
 
 ## The source forgets — so continuous capture is the only history
 
@@ -18,14 +18,14 @@ were never delivered and are unrecoverable. (`osquery`'s `es_process_events` is 
 model; Unified Logging persists but is thinner — no full command lines; OpenBSM persists only
 if configured.) **You keep exactly what you capture.** A gap when the monitor is down is an
 honest **NONE** for that window — not FALSE — which is the feed-liveness signal the temporal
-fold already wants ([[self_validation_architecture]] §6: a live, unbroken feed *is* intact
+fold already wants ([self_validation_architecture](self_validation_architecture.md) §6: a live, unbroken feed *is* intact
 chain-of-custody).
 
 ## Raw ingest is trivial; "live detection" splits into two shapes
 
 Reading the stream is straightforward: `eslogger exec` emits NDJSON (one event per line);
 read line-by-line, normalize each through the eslogger→OCSF adapter
-([[ocsf_ingest_normalization]]), feed the result onward. canon already *models* a live feed
+([ocsf_ingest_normalization](ocsf_ingest_normalization.md)), feed the result onward. canon already *models* a live feed
 even though it doesn't yet read one — `ingest.attest(..., feed_live=True)` exists; a real
 stream supplies that signal instead of hardcoding it.
 
@@ -50,7 +50,7 @@ eslogger exec ──(root)──▶  NDJSON  ──(unprivileged reader)──�
                                   per-event: fire the Sigma round            every interval: run the battery
                                   → verdict on a hit (streamable)            over the trailing window (micro-batch)
                                                                   │
-                                                         emit verdicts → workspace store ([[retention_and_aging]])
+                                                         emit verdicts → workspace store ([retention_and_aging](retention_and_aging.md))
 ```
 
 The body is a generator that follows the source like `tail -f` (`iter_ndjson(path)` yielding
@@ -68,7 +68,7 @@ stateless; the windowed consumer holds the trailing window (the only in-memory s
   runs under a process manager;
 - **stateful** — the trailing window (and the feed-liveness signal) live in the process;
   batch runs reconstruct everything from the input each time, a daemon accumulates;
-- **bound to a workspace** ([[engine_workspace_boundary]]) — the per-host state (baselines,
+- **bound to a workspace** ([engine_workspace_boundary](engine_workspace_boundary.md)) — the per-host state (baselines,
   verdict store, vocab/adapter pins, retention horizons) is workspace, not engine. One engine
   process pointed at one workspace = one **instance**. N hosts → N instances → N workspaces,
   one engine — the enterprise-ingest picture at scale; for one Mac, a single daemon.
@@ -95,7 +95,7 @@ producer to the unprivileged reader.* Three options, judged against canon's own 
   last **checkpointed offset**. A reader restart resumes with **no gap**; producer and consumer
   are decoupled (no backpressure stall); the only gap is genuine downtime — an honest NONE the
   feed-liveness signal records. Cost is disk growth, already governed by
-  [[retention_and_aging]] (rotate + carry the offset across rotations).
+  [retention_and_aging](retention_and_aging.md) (rotate + carry the offset across rotations).
 - **Unix domain socket.** True streaming with real backpressure, but needs a spool to survive
   reader restarts — more moving parts for no NONE-honesty gain over the file.
 
@@ -127,7 +127,7 @@ LaunchAgent  (user):     reader tails exec.ndjson from a checkpointed byte offse
 
 - **Built:** nothing here. `evaluate_round` and the battery are batch (`list[dict]` in); there
   is no stream reader, no daemon, no workspace store yet. The eslogger→OCSF adapter (step 2 of
-  [[ocsf_ingest_normalization]]) is the one piece that exists.
+  [ocsf_ingest_normalization](ocsf_ingest_normalization.md)) is the one piece that exists.
 - **Smallest first step:** the reader loop run *by hand* against a live `eslogger` stream
   (per-event Sigma firing only — no window state) to prove the intake. The launchd plists and
   the windowed battery come after the loop does what it should.
