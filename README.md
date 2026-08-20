@@ -1,38 +1,16 @@
 # canon
 
-**A substrate where no result is asserted that isn't justified back to its inputs and shown on demand —
-where the justification of a result *is the same object* as the result, not a log written beside it.**
+canon binds a result to the derivation and evidence that produced it, so the warrant for a claim travels
+with the claim itself instead of sitting in a separate log someone has to go find.
 
-canon is a research and learning artifact, not an adoption play. It must stand as an object of thought on
-its own *and* actually work; working is necessary, not sufficient. It is the deliberate inversion of how
-AI systems present themselves today — fluent, confident, and unjustified.
+canon is a research and learning artifact, not an adoption play — it has to work, and working is necessary
+but not sufficient. `design/` records negative results alongside what worked: cases where a more
+sophisticated method was tried against a real corpus and didn't beat a simple baseline, kept rather than
+dropped.
 
 > **[START-HERE.md](START-HERE.md)** routes you to the shortest path for whatever brought you here — the
 > core idea, the enforcement contracts, the ontology work, or the cross-corpus mapping — and says what to
 > skip. Most of this repo won't be what you came for.
-
-## The one structural idea
-
-> Every cross-cutting concern is a **`≤_k`-monotone fold** from one content-addressed computation DAG into
-> a partially-ordered carrier (a **Belnap four-valued bilattice**).
-
-That single sentence is the joinery. Three things follow from it:
-
-- **The concerns compose because they share a shape.** Value, provenance, custody, validation, guarantee,
-  confidence, temporal matching, partiality — each is a homomorphism over the same DAG into its own
-  carrier. Homomorphisms over a fixed structure are independent: each reads the node set and its own
-  carrier, nothing else.
-- **The acceptance test is a theorem, not a vibe.** "Add concern N without touching concern M" is exactly
-  `≤_k`-monotonicity of each fold — CI-checkable. Every fold ships a property test that feeds `None`/`Both`
-  and asserts no knowledge-order violation. A fold that can't be written monotone is rejected and re-cut.
-- **Justification is not metadata.** Provenance, custody, validation, and guarantee are folds *of the
-  authoritative structure*, not side-logs. So the warrant for a result is the same object as the result,
-  and it survives composition instead of being dropped at the first aggregation step.
-
-The DAG itself is **not novel and is not defended as such** — it is a Merkle DAG with IPLD CIDs, sitting at
-a known point in *Build Systems à la Carte* (applicative task, constructive traces, suspending scheduler).
-Naming it correctly inherits decades of proofs. `design/` carries an explicit **borrow ledger** and a
-**wheel-vs-novel ledger** separating what is taken from where from what is actually canon's.
 
 ## Layout
 
@@ -61,9 +39,30 @@ requirements), `guarantee_certificate.schema.json` (per-node tier + recorded abs
 Also: `design/` (48 documents — the architecture, the ledgers, and the probe findings), `range/` (real
 capture ranges), `rust/` (a motif emitter spike), `web/` (visualization surfaces).
 
+## The one structural idea
+
+Every cross-cutting concern above — provenance, custody, validation, guarantee, confidence, temporal
+matching, partiality — is implemented as a **`≤_k`-monotone fold** from the same content-addressed
+computation DAG into a partially-ordered carrier (a **Belnap four-valued bilattice**). That's the joinery
+holding the packages in the table above together. Three consequences follow:
+
+- **The concerns compose because they share a shape.** Each is a homomorphism over the same DAG into its
+  own carrier. Homomorphisms over a fixed structure are independent: each reads the node set and its own
+  carrier, nothing else.
+- **"Add concern N without touching concern M" is CI-checked, not just claimed.** It reduces to
+  `≤_k`-monotonicity of each fold. Every fold ships a property test that feeds `None`/`Both` and asserts no
+  knowledge-order violation; a fold that can't be written monotone is rejected and re-cut.
+- **Provenance, custody, validation, and guarantee are computed from the same structure that produced the
+  result, not attached afterward.** The warrant for a result is bound to that structure and survives
+  composition instead of being dropped at the first aggregation step.
+
+The DAG itself is not novel — it's a Merkle DAG with IPLD CIDs, sitting at a known point in *Build Systems
+à la Carte* (applicative task, constructive traces, suspending scheduler). `design/` carries an explicit
+borrow ledger and wheel-vs-novel ledger separating what's taken from where from what's actually canon's.
+
 ## Status
 
-Honest accounting, as of 2026-08-07:
+Honest accounting, re-verified 2026-08-19:
 
 - **1,003 tests, 0 fail** (`uv run pytest -q`) — but the pass/skip split depends entirely on whether the
   corpora are present:
