@@ -15,6 +15,7 @@ decide lifetime.
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -23,12 +24,27 @@ from provenance import Entity, to_prov
 
 from detection.render import render_dict, report_from_dict, render_dot
 
+_DIGESTED_FIELDS = ("cid", "tag", "record", "prov_ttl", "dot")
+
+
+class VerdictIntegrityError(ValueError):
+    """Raised when a stored verdict's contents don't match its recorded digest — the file was
+    edited (by hand or otherwise) after :func:`save_verdict` wrote it. The root CID identifies the
+    *computation recipe*, not the serialized store object, so it can't catch this on its own — this
+    digest is what actually binds the envelope."""
+
+
+def _record_digest(blob: dict) -> str:
+    body = json.dumps({k: blob[k] for k in _DIGESTED_FIELDS}, sort_keys=True)
+    return hashlib.sha256(body.encode("utf-8")).hexdigest()
+
 
 def save_verdict(verdict: DetectionVerdict, root: Entity | None, store_dir: str, *,
                  tag: str | None = None) -> str:
     """Persist ``verdict`` (+ its ``root`` for lineage/graph) under ``store_dir``, keyed by the root CID.
     Returns the CID. Writes ``{store_dir}/{cid}.json`` holding the render record, the PROV-O Turtle, the
-    DAG DOT, and the ``tag``. Idempotent: re-saving the same verdict overwrites the same file."""
+    DAG DOT, the ``tag``, and a ``record_digest`` binding all of them together (see :func:`load_verdict`).
+    Idempotent: re-saving the same verdict overwrites the same file."""
     cid = verdict.to_contract()["provenance"]
     blob = {
         "cid": cid,
@@ -37,6 +53,7 @@ def save_verdict(verdict: DetectionVerdict, root: Entity | None, store_dir: str,
         "prov_ttl": to_prov(root).serialize(format="turtle") if root is not None else None,
         "dot": render_dot(root) if root is not None else None,                 # the chart
     }
+    blob["record_digest"] = _record_digest(blob)
     d = Path(store_dir)
     d.mkdir(parents=True, exist_ok=True)
     (d / f"{cid}.json").write_text(json.dumps(blob, indent=2))
@@ -44,8 +61,16 @@ def save_verdict(verdict: DetectionVerdict, root: Entity | None, store_dir: str,
 
 
 def load_verdict(cid: str, store_dir: str) -> dict:
-    """Load the stored blob for ``cid`` (``{cid, tag, record, prov_ttl, dot}``)."""
-    return json.loads((Path(store_dir) / f"{cid}.json").read_text())
+    """Load the stored blob for ``cid`` (``{cid, tag, record, prov_ttl, dot, record_digest}``).
+    Raises :class:`VerdictIntegrityError` if the loaded fields don't match ``record_digest`` — the
+    file was modified since :func:`save_verdict` wrote it."""
+    blob = json.loads((Path(store_dir) / f"{cid}.json").read_text())
+    if _record_digest(blob) != blob.get("record_digest"):
+        raise VerdictIntegrityError(
+            f"stored verdict {cid!r} in {store_dir!r} failed its integrity check — "
+            "the file was modified after save_verdict wrote it"
+        )
+    return blob
 
 
 def render_stored(cid: str, store_dir: str, *, title: str | None = None) -> str:

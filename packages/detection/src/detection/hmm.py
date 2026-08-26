@@ -146,6 +146,12 @@ def decode_gated(
     if emissions is None:
         emissions = emission_model(corpus)
     fallback = fallback or {}
+    if not emissions:
+        # No corpus support at all — the all-techniques-uncovered case of the partial-coverage
+        # path below. Viterbi has no states to decode over (`states = sorted(emissions)` would be
+        # empty and its `max(states, ...)` calls raise); go straight to the same fallback lookup
+        # the covered-but-out-of-corpus case already uses one line down.
+        return [fallback.get(obs, obs) for obs in observations]
     covered = {tech for em in emissions.values() for tech in em}   # techniques the corpus can emit
     decoded = viterbi(observations, transitions, emissions, starts)
     return [d if obs in covered else fallback.get(obs, d)
