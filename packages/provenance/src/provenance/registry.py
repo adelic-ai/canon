@@ -16,6 +16,17 @@ object each time but the same code object, so repeated legitimate calls never tr
 this — only a second, distinct call site reusing the same name does. Mirrors
 ``forge_core.ops``'s existing ``register()``/``_REGISTRY`` ("one name, one Op"),
 generalized for callers outside forge-core that build DAG nodes with raw ``derive()``.
+
+**This is semantic binding, not memoization.** ``_REGISTRY`` is process-global and
+grows monotonically for the life of the process — it never forgets an ``op_name``
+once bound, and it is not scoped per-DAG, per-call, or per-test. That's *why* a
+production ``op_name`` must be a real, stable, ideally package-qualified identifier
+for one implementation (an operation identity), and *why* the provenance test
+suite's generic names (``"add"``, ``"inc"``, ``"join"``, …) stay on raw ``derive()``
+instead of this registry — reusing a generic name across independent test modules
+here would collide across unrelated tests in the same pytest process, which is a
+correctness problem for a semantic registry even though it's exactly the intended
+dedup behavior for ``derive()`` itself.
 """
 from __future__ import annotations
 
