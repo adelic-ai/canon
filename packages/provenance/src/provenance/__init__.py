@@ -10,6 +10,7 @@ validation as further interpreters. See
 """
 from provenance.entity import Activity, Entity, derive, source
 from provenance.interpret import evaluate, explain, lineage
+from provenance.registry import OperationIdentityError, derive_registered
 from provenance.carrier import (
     ALL,
     BOTH,
@@ -67,6 +68,8 @@ __all__ = [
     "Activity",
     "source",
     "derive",
+    "derive_registered",
+    "OperationIdentityError",
     "evaluate",
     "lineage",
     "explain",

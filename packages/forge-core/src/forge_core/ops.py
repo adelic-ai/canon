@@ -31,7 +31,7 @@ from __future__ import annotations
 
 from typing import Any, Callable, Protocol, runtime_checkable
 
-from provenance import Entity, derive, source
+from provenance import Entity, derive_registered, source
 
 from forge_core.signal import Signal, SignalKind
 
@@ -112,7 +112,7 @@ def _make_op(
                     continue
                 params.pop(key)
                 used.append(val if isinstance(val, Entity) else source(val))
-            return derive(self.name, self.fn, tuple(used), params)
+            return derive_registered(self.name, self.fn, tuple(used), params)
 
         def _source_primary(self, signal: Signal | Entity) -> Entity:
             if isinstance(signal, Entity):

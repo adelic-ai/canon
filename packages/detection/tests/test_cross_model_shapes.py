@@ -47,6 +47,29 @@ def test_plain_detection_conforms_vacuously():
     assert validate_graph(to_prov(build_detection_root("x", {"a": 1})), _SHAPE).conforms
 
 
+def test_op_name_is_part_of_the_shacl_contract_surface():
+    """Regression documenting a coupling discovered while hardening operation identity
+    (see `provenance.registry`): `to_prov` types each Activity's RDF node as
+    `OP[op_name]` (`rdf.py`), and `cross_model.shapes.ttl` targets that class by the
+    EXACT LITERAL `op:sigma_corroboration`. Renaming `"sigma_corroboration"` — e.g. to
+    a package-qualified `"canon.detection.sigma_corroboration"` — silently empties the
+    shape's target set, so `test_witness_removed_fails` below would stop failing (a
+    tampered graph would wrongly conform) with NO error anywhere: `op_name` is not just
+    an internal implementation label, it's part of the pinned contract surface. Any
+    future op_name rename in `detection/_verdict.py` MUST update `contracts/shapes/`
+    in the same change, not as a follow-up."""
+    root = build_detection_root("kerberoast|svc_rubeus|0", {"entity": "svc_rubeus", "bin": 0}, CORRO)
+    g = to_prov(root)
+    op = URIRef("urn:canon:op#sigma_corroboration")
+    from rdflib import RDF
+
+    assert any(g.triples((None, RDF.type, op))), (
+        "no node is typed as urn:canon:op#sigma_corroboration — either build_detection_root's "
+        "op_name changed, or to_prov's OP[op_name] typing changed. Update contracts/shapes/ "
+        "cross_model.shapes.ttl's sh:targetClass to match before changing either."
+    )
+
+
 def test_witness_removed_fails():
     # tamper a REAL corroborated graph: drop the prov:used edges to the sigma-rule witnesses
     root = build_detection_root("kerberoast|svc_rubeus|0", {"entity": "svc_rubeus", "bin": 0}, CORRO)
