@@ -36,7 +36,7 @@ def build_atom_reuse(rules: list[dict]) -> dict[str, int]:
             continue
         try:
             ir = compile_rule(r)
-        except Exception:
+        except (ValueError, KeyError, TypeError, AttributeError):
             continue
         pol = block_polarities(ir)
         seen: set[str] = set()

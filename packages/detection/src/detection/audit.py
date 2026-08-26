@@ -72,7 +72,7 @@ def consume_sigma(root: Path = SIGMA) -> dict:
         total += 1
         try:
             r = yaml.safe_load(p.read_text())
-        except Exception:
+        except (yaml.YAMLError, OSError, UnicodeDecodeError):
             reasons["unparseable"] += 1
             continue
         if not isinstance(r, dict):
@@ -90,7 +90,7 @@ def consume_sigma(root: Path = SIGMA) -> dict:
             classes[signature(r)].append(rid)
             try:
                 content_classes[content_signature(r)].append(rid)
-            except Exception:
+            except (ValueError, KeyError, TypeError, AttributeError):
                 content_classes[("uncompilable", rid)].append(rid)   # never silently merge an outlier
 
     distinct = len(classes)
