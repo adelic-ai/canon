@@ -15,11 +15,14 @@ The model is the op-on-edge categorical one, and it *is* W3C PROV-O:
 Two design properties hold here and are tested:
 
 * **Lazy** — :func:`derive` records structure only; it never calls the kernel.
-* **Content-addressed by derivation** — an Entity's id is the sha256 of its
-  *construction* (op_name, params, parent ids), not its data. Identical sub-DAGs
-  share an id, so an interpreter can dedup/memoise them for free. Source identity
-  is by *reference* (an explicit ``name``) or, for anonymous sources, by the
-  payload's object identity — we never hash large payloads.
+* **Content-addressed by derivation** — an Entity's id is a real CID
+  (:mod:`provenance.cid`, ``contracts/cid.md`` PIN 2) over its *construction*
+  (op_name, params, parent ids), not its data. Identical sub-DAGs share an id, so
+  an interpreter can dedup/memoise them for free. Source identity is by
+  *reference* (an explicit ``name``) or, for anonymous sources, by the payload's
+  object identity — we never hash large payloads. This dedup contract is why the
+  kernel stays out of identity — see :mod:`provenance.registry` for the guard
+  that keeps an ``op_name`` 1:1 with one implementation despite that.
 
 The kernel is an opaque ``Callable`` and is excluded from identity, so this
 package stays domain-agnostic: it never imports forge-core and does not know what
@@ -32,16 +35,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
-_ID_LEN = 16
-
-
-def _hash(*parts: str) -> str:
-    """Stable short content address over null-delimited string parts."""
-    h = hashlib.sha256()
-    for p in parts:
-        h.update(p.encode("utf-8"))
-        h.update(b"\x00")
-    return h.hexdigest()[:_ID_LEN]
+from provenance.cid import recipe_cid
 
 
 def evidence_digest(payload: bytes | str) -> str:
@@ -49,9 +43,10 @@ def evidence_digest(payload: bytes | str) -> str:
 
     This is the digest that, under the keystone (cid.md PIN 4, custody.md), *is* the source
     CID and the in-toto product digest: ``source.id == evidence_digest(payload) ==
-    in-toto product digest``. Full-length (not truncated like :func:`_hash`'s recipe ids),
-    because it must equal a real in-toto sha256 product digest. Only byte/str evidence is in
-    scope — arrays are inputs, not evidence, and are never hashed for identity (cid.md)."""
+    in-toto product digest``. A plain sha256 hex digest, deliberately **not** wrapped as a
+    :mod:`provenance.cid` CID like derived-node ids are, because it must equal a real in-toto
+    sha256 product digest byte-for-byte. Only byte/str evidence is in scope — arrays are
+    inputs, not evidence, and are never hashed for identity (cid.md)."""
     if isinstance(payload, str):
         b = payload.encode("utf-8")
     elif isinstance(payload, (bytes, bytearray)):
@@ -81,12 +76,7 @@ class Activity:
 
     @property
     def id(self) -> str:
-        return _hash(
-            "act",
-            self.op_name,
-            repr(self.params),
-            *(u.id for u in self.used),
-        )
+        return recipe_cid(self.op_name, dict(self.params), tuple(u.id for u in self.used))
 
     def __eq__(self, other: object) -> bool:
         return isinstance(other, Activity) and other.id == self.id
@@ -133,6 +123,13 @@ class Entity:
         return self.reference
 
     @property
+    def is_ephemeral(self) -> bool:
+        """A by-object-identity anonymous source (no ``name``, not evidence) — its id is
+        process-local (``id(payload)``-derived) and will NOT match across a fresh process or a
+        rebuilt DAG. Not reproducible/content-addressed; do not treat its id as durable."""
+        return self.producer is None and self.evidence_id is None and self.source_id is None
+
+    @property
     def id(self) -> str:
         if self.producer is None:
             # Evidence source: the CID IS the payload digest (the keystone — cid.md PIN 4).
@@ -144,7 +141,7 @@ class Entity:
                 if self.source_id is not None
                 else f"obj:{id(self.payload):x}"
             )
-            return _hash("src", ref)
+            return recipe_cid("source", {"ref": ref}, ())
         return self.producer.id
 
     def __eq__(self, other: object) -> bool:
@@ -196,6 +193,24 @@ def source(
         evidence_id=evidence_id,
         reference=reference,
     )
+
+
+def ephemeral_source(payload: Any, *, kind: str | None = None, label: str | None = None) -> Entity:
+    """A source with no durable identity: id is process-local object identity (:attr:`Entity.is_ephemeral`
+    is ``True``). Never claim this participates in a cross-run reproducible/content-addressed result —
+    rebuild the DAG in a fresh process and this node's id will differ. Equivalent to ``source(payload)``
+    with no ``name``/``evidence``; named explicitly so a call site states its own reproducibility posture
+    instead of it being implicit in which kwargs were omitted."""
+    return source(payload, kind=kind, label=label)
+
+
+def reference_source(name: str, payload: Any, *, kind: str | None = None, label: str | None = None,
+                     reference: bool = False) -> Entity:
+    """A by-reference source: id is the stable ``name`` (cid.md PIN 4 — identifies a *trusted handle*,
+    carries NO integrity claim on its own). Equivalent to ``source(payload, name=name)``; named
+    explicitly to make the by-reference (as opposed to ephemeral or evidence) identity route a
+    deliberate call-site choice."""
+    return source(payload, name=name, kind=kind, label=label, reference=reference)
 
 
 def derive(

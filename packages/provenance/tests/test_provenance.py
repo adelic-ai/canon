@@ -124,6 +124,21 @@ def test_source_identity_by_name():
     assert source([1]).id != source([1]).id
 
 
+def test_ephemeral_vs_reference_vs_evidence_source_kinds():
+    from provenance import ephemeral_source, reference_source
+
+    eph = ephemeral_source([1])
+    ref = reference_source("cfg", [1])
+    ev = source(b"payload", evidence=True)
+
+    assert eph.is_ephemeral and not ref.is_ephemeral and not ev.is_ephemeral
+    assert not eph.is_evidence and not ref.is_evidence and ev.is_evidence
+    # ephemeral ids don't dedup across construction (matches source([1]) above);
+    # reference ids dedup by name regardless of payload.
+    assert ephemeral_source([1]).id != ephemeral_source([1]).id
+    assert reference_source("cfg", [1]).id == reference_source("cfg", [999]).id
+
+
 # ── metadata passthrough ─────────────────────────────────────────────────────
 
 
