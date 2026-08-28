@@ -91,7 +91,7 @@ def ground_lattice(rules: list[tuple[str, dict]], instances: list[dict]) -> dict
         if is_evaluable(rule):
             try:
                 irs[rid] = compile_rule(rule)
-            except Exception:
+            except (ValueError, KeyError, TypeError, AttributeError):
                 pass                                    # outside the evaluable subset — excluded, recorded below
     catch = rule_catch_sets(rules, instances)
     catchers = sorted(rid for rid, cs in catch.items() if cs and rid in irs)

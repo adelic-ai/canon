@@ -58,7 +58,7 @@ def gather(technique: str, *, root: Path = SIGMA) -> list[tuple[Path, dict]]:
             if tag not in txt.lower():
                 continue
             r = yaml.safe_load(txt)
-        except Exception:
+        except (yaml.YAMLError, OSError, UnicodeDecodeError):
             continue
         if (isinstance(r, dict) and isinstance(r.get("detection"), dict)
                 and isinstance(r.get("logsource"), dict)):

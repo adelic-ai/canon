@@ -8,8 +8,16 @@ computing). The optional ``[rdf]`` extra (Phase 2) adds PROV-O emission and SHAC
 validation as further interpreters. See
 ``design/provenance_substrate_design.md``.
 """
-from provenance.entity import Activity, Entity, derive, source
+from provenance.entity import (
+    Activity,
+    Entity,
+    derive,
+    ephemeral_source,
+    reference_source,
+    source,
+)
 from provenance.interpret import evaluate, explain, lineage
+from provenance.registry import OperationIdentityError, derive_registered
 from provenance.carrier import (
     ALL,
     BOTH,
@@ -66,7 +74,11 @@ __all__ = [
     "Entity",
     "Activity",
     "source",
+    "ephemeral_source",
+    "reference_source",
     "derive",
+    "derive_registered",
+    "OperationIdentityError",
     "evaluate",
     "lineage",
     "explain",

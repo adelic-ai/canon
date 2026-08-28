@@ -29,11 +29,18 @@ from provenance import (
     Entity,
     Four,
     Tier,
-    derive,
+    derive_registered,
     evidence_digest,
     lineage,
     source,
 )
+
+def _structural(_p):
+    """A placeholder kernel for a node the folds only render, never evaluate — the recipe
+    `params` (not this callable) carry the content. One stable function so `derive_registered`
+    sees the same code object across every `build_detection_root` call."""
+    return None
+
 
 _PD = 0.9  # nominal detection probability for the confidence leaf (no calibrated Pd per detector)
 _SHAPES_DIR = Path(__file__).parents[4] / "contracts" / "shapes"
@@ -66,12 +73,12 @@ def build_detection_root(ref: str, params: dict, corroboration: dict | None = No
         src = source(evidence, name=ref, evidence=True)  # content-addressed by the evidence digest (keystone)
     else:
         src = source(ref, name=ref)  # by-reference identity — carries NO integrity (unattested log)
-    root = derive("detection", lambda _p: None, (src,), params)  # structural; the folds never evaluate it
+    root = derive_registered("detection", _structural, (src,), params)  # structural; the folds never evaluate it
     if corroboration and corroboration.get("rules"):
         # the external witnesses, as related artifacts the corroboration `used` (a real PROV-O edge)
         rule_ents = [source(f"sigma-rule:{n}", name=f"sigma-rule:{n}", kind="sigma-rule", reference=True)
                      for n in corroboration["rules"]]  # reference data, not evidence — custody excludes it
-        root = derive("sigma_corroboration", lambda _p: None, (root, *rule_ents),
+        root = derive_registered("sigma_corroboration", _structural, (root, *rule_ents),
                       {"votes": corroboration["votes"], "classes": corroboration.get("classes"),
                        "technique": corroboration.get("technique"),
                        "logsource": corroboration.get("logsource")})

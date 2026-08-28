@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from provenance import Entity, derive, source
+from provenance import Entity, derive_registered, source
 from semantic_core.graph import Graph
 
 from . import attack, d3fend, sigma, ukc
@@ -100,8 +100,8 @@ def defensive_coverage(
     technique_src = source(
         attack_id, name=f"attack:{attack_id}", kind="attack_technique", label=attack_id
     )
-    prov = derive(
-        "defensive_coverage",
+    prov = derive_registered(
+        "canon.semantic_cyber.defensive_coverage",
         lambda *_inputs, _t=technique, _d=defenses, **_p: CoverageReport(
             technique=_t, defenses=_d
         ),
@@ -148,8 +148,8 @@ def detection_coverage(
         source(r, name=f"sigma:{r.id or r.title}", kind="sigma_rule", label=r.id or r.title)
         for r in ordered
     )
-    prov = derive(
-        "detection_coverage",
+    prov = derive_registered(
+        "canon.semantic_cyber.detection_coverage",
         lambda *_inputs, _t=report.technique, _d=report.defenses, _s=ordered, **_p: CoverageReport(
             technique=_t, defenses=_d, sigma_rules=_s
         ),

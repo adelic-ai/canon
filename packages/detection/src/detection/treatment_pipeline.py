@@ -44,7 +44,7 @@ def current_commit() -> str | None:
     """The repo's HEAD commit, for the manifest's code pin — ``None`` if not in a git repo."""
     try:
         return subprocess.check_output(["git", "rev-parse", "HEAD"], text=True, stderr=subprocess.DEVNULL).strip()
-    except Exception:
+    except (subprocess.CalledProcessError, FileNotFoundError, OSError):
         return None
 
 

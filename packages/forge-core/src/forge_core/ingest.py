@@ -37,7 +37,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from provenance import NONE, TRUE, Entity, Four, Tier, Validity, derive, malformed, VALID
+from provenance import NONE, TRUE, Entity, Four, Tier, Validity, derive_registered, malformed, VALID
 
 from forge_core.signal import Signal, SignalKind
 
@@ -104,8 +104,8 @@ def decode_float64_stream(
         arr = np.frombuffer(payload, dtype=np.float64)
         return Signal(arr, fs=fs, kind=SignalKind.REAL)
 
-    return derive(
-        "decode_float64_stream",
+    return derive_registered(
+        "canon.forge_core.decode_float64_stream",
         _decode,
         (raw_src,),
         {"fs": fs, "min_samples": min_samples},

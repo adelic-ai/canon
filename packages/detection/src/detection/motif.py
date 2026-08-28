@@ -299,7 +299,7 @@ def record_selector_provenance(path: str):
     import inspect
     from pathlib import Path
 
-    from provenance import derive, source
+    from provenance import derive_registered, source
 
     from detection.coverage_space import _comsvcs_positive
     from detection.subgraph import load_sysmon_events
@@ -308,7 +308,7 @@ def record_selector_provenance(path: str):
     corpus = source(raw, name=f"corpus:{path}", evidence=True, kind="corpus",
                     label="OTRF LSASS corpus")
     selector_src = inspect.getsource(_comsvcs_positive)
-    return derive(
+    return derive_registered(
         "comsvcs_positive_select",
         # params double as the prov:Plan AND kernel kwargs (interpret passes them through), so the
         # kernel accepts selector_cid even though it re-selects from the corpus rather than using it.
